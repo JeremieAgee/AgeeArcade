@@ -139,14 +139,20 @@
 
   /* ── Pause / contextual visibility ──────────────── */
   setInterval(() => {
-    const paused = !!(document.getElementById('pauseMenu') &&
-                      document.getElementById('pauseMenu').style.display === 'flex');
-    const vis = paused ? 'hidden' : 'visible';
-    joyRing.style.visibility      = vis;
-    joyZone.style.pointerEvents   = paused ? 'none' : 'all';
-    mobileRight.style.visibility  = vis;
+    const titleEl  = document.getElementById('titleScreen');
+    const pauseEl  = document.getElementById('pauseMenu');
+    const deathEl  = document.getElementById('deathScreen');
+    const onTitle  = !!(titleEl  && titleEl.classList.contains('active'));
+    const onDeath  = !!(deathEl  && deathEl.classList.contains('active'));
+    const paused   = !!(pauseEl  && pauseEl.style.display   === 'flex');
+    const inGame   = !onTitle && !onDeath && !paused;
 
-    if (paused) {
+    const vis = inGame ? 'visible' : 'hidden';
+    joyRing.style.visibility     = vis;
+    joyZone.style.pointerEvents  = inGame ? 'all' : 'none';
+    mobileRight.style.visibility = vis;
+
+    if (!inGame) {
       window._mobileCtrl.active = false;
       window._mobileCtrl.joyNx = 0;
       window._mobileCtrl.joyNy = 0;

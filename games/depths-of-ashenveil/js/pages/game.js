@@ -567,19 +567,6 @@ const Game = (() => {
         // Consume pending actions
         if (mc.attackPending && running && !stairActive && !UI.isPanelOpen() && !UI.isPauseMenuOpen()) {
           mc.attackPending = false;
-          // Auto-aim: snap to nearest enemy before swinging
-          let nearest = null, bestDSq = Infinity;
-          const autoRange = (Player.atkRange(player) * 3.5) ** 2;
-          for (const e of enemies) {
-            if (e.dead) continue;
-            const dx = e.x - player.x, dz = e.z - player.z;
-            const dSq = dx * dx + dz * dz;
-            if (dSq < bestDSq && dSq < autoRange) { bestDSq = dSq; nearest = e; }
-          }
-          if (nearest) {
-            aimAngleVal = Math.atan2(nearest.z - player.z, nearest.x - player.x);
-            Engine.setAimAngleDirect(aimAngleVal);
-          }
           doAttack();
         }
         if (mc.interactPending && running && !stairActive) { mc.interactPending = false; tryInteract(); }
