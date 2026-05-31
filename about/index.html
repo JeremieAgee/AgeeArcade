@@ -89,6 +89,9 @@
     </div>
 
     <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="../js/analytics.js"></script>
+    <script>if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('about_opened');</script>
     <script src="../ads/adsense.js"></script>
 
 </body>

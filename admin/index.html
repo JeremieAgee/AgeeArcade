@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+    style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src    'self' https://fonts.gstatic.com;
+    connect-src 'self'
+                https://xdvrgeaivfqpcsmuqeyi.supabase.co
+                wss://xdvrgeaivfqpcsmuqeyi.supabase.co;
+    img-src     'self' data:;
+    frame-src   'none';
+    object-src  'none';
+  ">
+  <title>Analytics — Agee Arcade Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Tokens ── */
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #12121a;
+      --surface-2: #1a1a24;
+      --surface-3: #22223a;
+      --accent:    #6c3bff;
+      --accent2:   #22cc66;
+      --accent3:   #ff9922;
+      --accent4:   #22aaff;
+      --text:      #e8e8f0;
+      --muted:     #8888aa;
+      --border:    #1e1e2e;
+      --border-2:  #2a2a3e;
+      --red:       #cc2244;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+    }
+    a { color: var(--accent); text-decoration: none; }
+
+    /* ── Auth gate ── */
+    #authGate {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .auth-box {
+      background: var(--surface);
+      border: 1px solid var(--border-2);
+      border-radius: 12px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 420px;
+    }
+    .auth-box h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 18px;
+      letter-spacing: 2px;
+      margin-bottom: 0.5rem;
+    }
+    .auth-box p { color: var(--muted); font-size: 13px; margin-bottom: 1.5rem; }
+    .auth-box label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .auth-box input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border-2);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: monospace;
+      font-size: 13px;
+      padding: 10px 12px;
+      margin-bottom: 1rem;
+      outline: none;
+    }
+    .auth-box input:focus { border-color: var(--accent); }
+    .auth-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      letter-spacing: 1px;
+      padding: 11px;
+      cursor: pointer;
+    }
+    .auth-btn:hover { background: #8a5aff; }
+    #authError { color: var(--red); font-size: 13px; margin-top: 0.75rem; display: none; }
+
+    /* ── Main dashboard ── */
+    #dashboard { display: none; }
+
+    /* ── Header ── */
+    .dash-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 60px;
+      background: rgba(10,10,15,0.95);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .dash-header h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      letter-spacing: 2px;
+      color: var(--text);
+    }
+    .dash-header-right { display: flex; align-items: center; gap: 1rem; }
+    .range-select {
+      background: var(--surface-2);
+      border: 1px solid var(--border-2);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .refresh-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border-2);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+    .refresh-btn:hover { color: var(--text); border-color: var(--accent); }
+    .sign-out-btn {
+      background: none;
+      border: 1px solid var(--border-2);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .sign-out-btn:hover { color: var(--red); border-color: var(--red); }
+
+    /* ── Page body ── */
+    .dash-body { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+
+    /* ── Loading state ── */
+    #loadingBar {
+      height: 3px;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s;
+      position: fixed;
+      top: 60px;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+
+    /* ── Stat cards row ── */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+    }
+    .stat-card__label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+    .stat-card__value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .stat-card__sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+    .c-purple  { color: var(--accent); }
+    .c-green   { color: var(--accent2); }
+    .c-orange  { color: var(--accent3); }
+    .c-blue    { color: var(--accent4); }
+    .c-red     { color: var(--red); }
+    .c-muted   { color: var(--muted); }
+
+    /* ── Two-col layout ── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 1100px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 700px)  { .grid-3 { grid-template-columns: 1fr; } }
+
+    /* ── Panel ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-head h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .panel-head-count {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .panel-body { padding: 0; }
+
+    /* ── Bar chart ── */
+    .bar-chart { padding: 1rem 1.25rem; }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.6rem;
+    }
+    .bar-row:last-child { margin-bottom: 0; }
+    .bar-label {
+      width: 110px;
+      font-size: 12px;
+      color: var(--text);
+      flex-shrink: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--surface-3);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--accent);
+      transition: width 0.5s ease;
+    }
+    .bar-val {
+      font-size: 12px;
+      color: var(--muted);
+      width: 40px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ── Funnel ── */
+    .funnel { padding: 1rem 1.25rem; }
+    .funnel-step {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+      position: relative;
+    }
+    .funnel-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 14px;
+      top: 28px;
+      width: 1px;
+      height: calc(100% + 0.25rem);
+      background: var(--border-2);
+    }
+    .funnel-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface-3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+      z-index: 1;
+    }
+    .funnel-info { flex: 1; }
+    .funnel-name { font-size: 13px; color: var(--text); }
+    .funnel-count { font-size: 12px; color: var(--muted); }
+    .funnel-pct {
+      font-size: 12px;
+      font-weight: 600;
+      width: 48px;
+      text-align: right;
+    }
+    .funnel-track {
+      width: 100px;
+      height: 4px;
+      background: var(--surface-3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .funnel-bar {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent2);
+      transition: width 0.5s ease;
+    }
+
+    /* ── Table ── */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      padding: 0.6rem 1.25rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-weight: 500;
+    }
+    .data-table td {
+      font-size: 13px;
+      padding: 0.65rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--surface-2); }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--surface-3);
+      color: var(--muted);
+    }
+    .badge-green  { background: rgba(34,204,102,0.12); color: var(--accent2); }
+    .badge-purple { background: rgba(108,59,255,0.12); color: var(--accent); }
+    .badge-orange { background: rgba(255,153,34,0.12); color: var(--accent3); }
+    .badge-blue   { background: rgba(34,170,255,0.12); color: var(--accent4); }
+
+    /* ── Activity feed ── */
+    .feed { padding: 0; max-height: 340px; overflow-y: auto; }
+    .feed-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.7rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .feed-item:last-child { border-bottom: none; }
+    .feed-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+    .feed-dot-green  { background: var(--accent2); }
+    .feed-dot-orange { background: var(--accent3); }
+    .feed-text { flex: 1; color: var(--text); line-height: 1.5; }
+    .feed-time { color: var(--muted); flex-shrink: 0; }
+
+    /* ── Mini sparkline ── */
+    .sparkline-wrap { padding: 0.75rem 1.25rem 1rem; }
+    .sparkline-svg { width: 100%; height: 48px; overflow: visible; }
+
+    /* ── Empty state ── */
+    .empty { padding: 2rem 1.25rem; text-align: center; color: var(--muted); font-size: 13px; }
+
+    /* ── Section title ── */
+    .section-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Auth Gate ──────────────────────────────────────── -->
+<div id="authGate">
+  <div class="auth-box">
+    <h1>AGEE ARCADE</h1>
+    <p>Analytics dashboard — sign in with your Agee Arcade admin account.</p>
+    <label for="emailInput">Email</label>
+    <input id="emailInput" type="email" placeholder="you@example.com" autocomplete="email" />
+    <label for="passInput">Password</label>
+    <input id="passInput" type="password" placeholder="••••••••" autocomplete="current-password" />
+    <button class="auth-btn" onclick="Admin.login()">SIGN IN</button>
+    <p id="authError">Sign-in failed. Check your credentials or confirm your account has admin access.</p>
+  </div>
+</div>
+
+<!-- ── Dashboard ─────────────────────────────────────── -->
+<div id="dashboard">
+
+  <div id="loadingBar"></div>
+
+  <header class="dash-header">
+    <h1>⚡ ARCADE ANALYTICS</h1>
+    <div class="dash-header-right">
+      <select class="range-select" id="rangeSelect" onchange="Admin.reload()">
+        <option value="1">Last 24 hours</option>
+        <option value="7" selected>Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="0">All time</option>
+      </select>
+      <button class="refresh-btn" onclick="Admin.reload()">↻ Refresh</button>
+      <button class="sign-out-btn" onclick="Admin.signOut()">Sign out</button>
+    </div>
+  </header>
+
+  <div class="dash-body">
+
+    <!-- ── KPI row ── -->
+    <div class="stat-row" id="kpiRow">
+      <div class="stat-card"><div class="stat-card__label">Total Sessions</div><div class="stat-card__value c-purple" id="kpiSessions">—</div><div class="stat-card__sub">site visits</div></div>
+      <div class="stat-card"><div class="stat-card__label">Unique Visitors</div><div class="stat-card__value c-blue" id="kpiVisitors">—</div><div class="stat-card__sub">distinct visitor IDs</div></div>
+      <div class="stat-card"><div class="stat-card__label">Return Visitors</div><div class="stat-card__value c-green" id="kpiReturning">—</div><div class="stat-card__sub">came back again</div></div>
+      <div class="stat-card"><div class="stat-card__label">Game Starts</div><div class="stat-card__value c-orange" id="kpiGameStarts">—</div><div class="stat-card__sub">Depths of Ashenveil</div></div>
+      <div class="stat-card"><div class="stat-card__label">Avg Play Time</div><div class="stat-card__value c-green" id="kpiAvgPlay">—</div><div class="stat-card__sub">per completed session</div></div>
+      <div class="stat-card"><div class="stat-card__label">Page Views</div><div class="stat-card__value c-muted" id="kpiPageViews">—</div><div class="stat-card__sub">across all pages</div></div>
+    </div>
+
+    <!-- ── Traffic + Funnel ── -->
+    <div class="grid-2">
+
+      <div class="panel">
+        <div class="panel-head"><h2>Traffic by Source</h2></div>
+        <div class="panel-body bar-chart" id="sourceChart"><div class="empty">Loading...</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Conversion Funnel</h2></div>
+        <div class="panel-body funnel" id="funnelChart"><div class="empty">Loading...</div></div>
+      </div>
+
+    </div>
+
+    <!-- ── Game stats ── -->
+    <div class="grid-3">
+
+      <div class="panel">
+        <div class="panel-head"><h2>Floor Progression</h2></div>
+        <div class="panel-body bar-chart" id="floorChart"><div class="empty">Loading...</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Deaths by Floor</h2></div>
+        <div class="panel-body bar-chart" id="deathChart"><div class="empty">Loading...</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Top Events</h2></div>
+        <div class="panel-body bar-chart" id="eventsChart"><div class="empty">Loading...</div></div>
+      </div>
+
+    </div>
+
+    <!-- ── Sessions table + Feed ── -->
+    <div class="grid-2">
+
+      <div class="panel">
+        <div class="panel-head"><h2>Recent Game Sessions</h2><span class="panel-head-count" id="gsCount"></span></div>
+        <div class="panel-body">
+          <table class="data-table" id="gsTable">
+            <thead><tr>
+              <th>Source</th><th>Floor</th><th>Level</th><th>Duration</th><th>End</th><th>Time</th>
+            </tr></thead>
+            <tbody id="gsBody"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Live Event Feed</h2></div>
+        <div class="panel-body feed" id="eventFeed"><div class="empty">Loading...</div></div>
+      </div>
+
+    </div>
+
+    <!-- ── Page views table ── -->
+    <div class="panel" style="margin-bottom:1.5rem;">
+      <div class="panel-head"><h2>Top Pages</h2></div>
+      <div class="panel-body">
+        <table class="data-table">
+          <thead><tr><th>Page</th><th>Views</th><th>Sources</th></tr></thead>
+          <tbody id="pagesBody"><tr><td colspan="3" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /dash-body -->
+</div><!-- /dashboard -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const Admin = (() => {
+  'use strict';
+
+  const SUPABASE_URL      = 'https://xdvrgeaivfqpcsmuqeyi.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_1UoSYMFfHQerkvlvHvbpRQ_JGIYH14O';
+
+  // sessionStorage means the auth token is never written to localStorage —
+  // it dies automatically when the tab closes or the user navigates away.
+  const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { storage: sessionStorage, persistSession: true, autoRefreshToken: true }
+  });
+
+  /* ── Inactivity timeout (30 min) ────────── */
+  const INACTIVE_MS = 30 * 60 * 1000;
+  let _inactiveTimer = null;
+
+  function _resetTimer() {
+    clearTimeout(_inactiveTimer);
+    _inactiveTimer = setTimeout(signOut, INACTIVE_MS);
+  }
+
+  function _startInactivityWatch() {
+    ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'].forEach(ev => {
+      document.addEventListener(ev, _resetTimer, { passive: true });
+    });
+    _resetTimer();
+  }
+
+  // Sign out when the tab is closed or the user navigates away
+  window.addEventListener('pagehide', () => { _sb.auth.signOut(); });
+
+  /* ── Auth ───────────────────────────────── */
+  async function login() {
+    const email = document.getElementById('emailInput').value.trim();
+    const pass  = document.getElementById('passInput').value;
+    if (!email || !pass) return;
+
+    const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
+    if (error) {
+      document.getElementById('authError').style.display = 'block';
+      return;
+    }
+
+    // Verify the user actually has admin role in app_metadata
+    const role = data.user?.app_metadata?.role;
+    if (role !== 'admin') {
+      await _sb.auth.signOut();
+      document.getElementById('authError').style.display = 'block';
+      document.getElementById('authError').textContent = 'Account does not have admin access.';
+      return;
+    }
+
+    showDashboard();
+  }
+
+  async function signOut() {
+    await _sb.auth.signOut();
+    location.reload();
+  }
+
+  function showDashboard() {
+    document.getElementById('authGate').style.display  = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    _startInactivityWatch();
+    reload();
+  }
+
+  /* ── Date range ─────────────────────────── */
+  function _since() {
+    const days = parseInt(document.getElementById('rangeSelect').value, 10);
+    if (!days) return null;
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return d.toISOString();
+  }
+
+  function _addSince(query, col) {
+    const s = _since();
+    return s ? query.gte(col, s) : query;
+  }
+
+  /* ── Loading bar ────────────────────────── */
+  let _loadPct = 0;
+  function _startLoad() { _loadPct = 10; _setLoad(); }
+  function _tickLoad()  { _loadPct = Math.min(_loadPct + 12, 90); _setLoad(); }
+  function _doneLoad()  { _loadPct = 100; _setLoad(); setTimeout(() => { _loadPct = 0; _setLoad(); }, 400); }
+  function _setLoad()   { document.getElementById('loadingBar').style.width = _loadPct + '%'; }
+
+  /* ── Reload all ─────────────────────────── */
+  async function reload() {
+    if (!_sb) return;
+    _startLoad();
+    await Promise.all([
+      loadKPIs(),
+      loadSourceChart(),
+      loadFunnelChart(),
+      loadFloorChart(),
+      loadDeathChart(),
+      loadEventsChart(),
+      loadGameSessions(),
+      loadEventFeed(),
+      loadPageViews(),
+    ]);
+    _doneLoad();
+  }
+
+  /* ── Helpers ────────────────────────────── */
+  function _fmt(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n); }
+
+  function _fmtDur(secs) {
+    if (!secs || secs <= 0) return '—';
+    if (secs < 60) return secs + 's';
+    return Math.floor(secs / 60) + 'm ' + (secs % 60) + 's';
+  }
+
+  function _timeAgo(ts) {
+    const diff = Math.floor((Date.now() - new Date(ts)) / 1000);
+    if (diff < 60)   return diff + 's ago';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return Math.floor(diff / 86400) + 'd ago';
+  }
+
+  function _barChart(containerId, rows, colorVar) {
+    const el  = document.getElementById(containerId);
+    if (!rows || !rows.length) { el.innerHTML = '<div class="empty">No data yet</div>'; return; }
+    const max = Math.max(...rows.map(r => r.val));
+    el.innerHTML = rows.map(r => `
+      <div class="bar-row">
+        <span class="bar-label" title="${r.label}">${r.label}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${max ? Math.round(r.val / max * 100) : 0}%;background:${colorVar || 'var(--accent)'}"></div></div>
+        <span class="bar-val">${_fmt(r.val)}</span>
+      </div>`).join('');
+  }
+
+  const SOURCE_LABELS = {
+    linkedin: 'LinkedIn', facebook: 'Facebook', google: 'Google',
+    github_pages: 'GitHub Pages', direct: 'Direct', other: 'Other'
+  };
+
+  /* ── KPIs ───────────────────────────────── */
+  async function loadKPIs() {
+    const since = _since();
+
+    let sq = _sb.from('arcade_sessions').select('visitor_id, is_returning', { count: 'exact', head: false });
+    if (since) sq = sq.gte('first_seen', since);
+    const { data: sessions, count: sessCount } = await sq;
+
+    let pvq = _sb.from('arcade_page_views').select('id', { count: 'exact', head: true });
+    if (since) pvq = pvq.gte('created_at', since);
+    const { count: pvCount } = await pvq;
+
+    let gsq = _sb.from('arcade_game_sessions').select('duration_seconds', { count: 'exact', head: false });
+    if (since) gsq = gsq.gte('started_at', since);
+    const { data: gameSess, count: gsCount } = await gsq;
+
+    const visitors  = new Set((sessions || []).map(s => s.visitor_id)).size;
+    const returning = (sessions || []).filter(s => s.is_returning).length;
+    const durations = (gameSess || []).map(g => g.duration_seconds || 0).filter(d => d > 30);
+    const avgPlay   = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+
+    document.getElementById('kpiSessions').textContent  = _fmt(sessCount || 0);
+    document.getElementById('kpiVisitors').textContent  = _fmt(visitors);
+    document.getElementById('kpiReturning').textContent = _fmt(returning);
+    document.getElementById('kpiGameStarts').textContent = _fmt(gsCount || 0);
+    document.getElementById('kpiAvgPlay').textContent   = _fmtDur(avgPlay);
+    document.getElementById('kpiPageViews').textContent = _fmt(pvCount || 0);
+    _tickLoad();
+  }
+
+  /* ── Source chart ───────────────────────── */
+  async function loadSourceChart() {
+    let q = _sb.from('arcade_sessions').select('source');
+    if (_since()) q = q.gte('first_seen', _since());
+    const { data } = await q;
+    const counts = {};
+    (data || []).forEach(r => { counts[r.source || 'other'] = (counts[r.source || 'other'] || 0) + 1; });
+    const rows = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([k, v]) => ({ label: SOURCE_LABELS[k] || k, val: v }));
+    _barChart('sourceChart', rows, 'var(--accent)');
+    _tickLoad();
+  }
+
+  /* ── Funnel ─────────────────────────────── */
+  async function loadFunnelChart() {
+    const since = _since();
+
+    async function countEvent(type) {
+      let q = _sb.from('arcade_events').select('id', { count: 'exact', head: true }).eq('event_type', type);
+      if (since) q = q.gte('created_at', since);
+      const { count } = await q;
+      return count || 0;
+    }
+
+    let sessQ = _sb.from('arcade_page_views').select('id', { count: 'exact', head: true });
+    if (since) sessQ = sessQ.gte('created_at', since);
+    const { count: pageViews } = await sessQ;
+
+    const [playClicks, gameLoaded, gameStarted, floor2] = await Promise.all([
+      countEvent('play_button_clicked'),
+      countEvent('game_loaded'),
+      countEvent('game_started'),
+      (async () => {
+        let q = _sb.from('arcade_events').select('id', { count: 'exact', head: true })
+          .eq('event_type', 'floor_reached');
+        if (since) q = q.gte('created_at', since);
+        const { count } = await q;
+        return count || 0;
+      })(),
+    ]);
+
+    const steps = [
+      { icon: '🌐', name: 'Page view',       count: pageViews  || 0 },
+      { icon: '🎮', name: 'Play clicked',    count: playClicks || 0 },
+      { icon: '⚙',  name: 'Game loaded',     count: gameLoaded || 0 },
+      { icon: '⚔',  name: 'Game started',    count: gameStarted|| 0 },
+      { icon: '📉', name: 'Floor 2+ reached',count: floor2     || 0 },
+    ];
+
+    const top = steps[0].count || 1;
+    const el  = document.getElementById('funnelChart');
+    el.innerHTML = steps.map(s => {
+      const pct = top ? Math.round(s.count / top * 100) : 0;
+      return `
+        <div class="funnel-step">
+          <div class="funnel-icon">${s.icon}</div>
+          <div class="funnel-info">
+            <div class="funnel-name">${s.name}</div>
+            <div class="funnel-count">${_fmt(s.count)} events</div>
+          </div>
+          <div class="funnel-track"><div class="funnel-bar" style="width:${pct}%"></div></div>
+          <div class="funnel-pct c-green">${pct}%</div>
+        </div>`;
+    }).join('');
+    _tickLoad();
+  }
+
+  /* ── Floor progression ──────────────────── */
+  async function loadFloorChart() {
+    let q = _sb.from('arcade_game_sessions').select('max_floor');
+    if (_since()) q = q.gte('started_at', _since());
+    const { data } = await q;
+    const counts = {};
+    (data || []).forEach(r => {
+      const f = r.max_floor || 1;
+      counts[f] = (counts[f] || 0) + 1;
+    });
+    const rows = Object.entries(counts)
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(([k, v]) => ({ label: 'Floor ' + k, val: v }));
+    _barChart('floorChart', rows, 'var(--accent4)');
+    _tickLoad();
+  }
+
+  /* ── Deaths by floor ────────────────────── */
+  async function loadDeathChart() {
+    let q = _sb.from('arcade_events').select('event_data').eq('event_type', 'player_died');
+    if (_since()) q = q.gte('created_at', _since());
+    const { data } = await q;
+    const counts = {};
+    (data || []).forEach(r => {
+      const f = (r.event_data && r.event_data.floor) ? r.event_data.floor : '?';
+      counts[f] = (counts[f] || 0) + 1;
+    });
+    const rows = Object.entries(counts)
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(([k, v]) => ({ label: 'Floor ' + k, val: v }));
+    _barChart('deathChart', rows, 'var(--red)');
+    _tickLoad();
+  }
+
+  /* ── Top events ─────────────────────────── */
+  async function loadEventsChart() {
+    let q = _sb.from('arcade_events').select('event_type');
+    if (_since()) q = q.gte('created_at', _since());
+    const { data } = await q;
+    const counts = {};
+    (data || []).forEach(r => { counts[r.event_type] = (counts[r.event_type] || 0) + 1; });
+    const rows = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1]).slice(0, 10)
+      .map(([k, v]) => ({ label: k.replace(/_/g, ' '), val: v }));
+    _barChart('eventsChart', rows, 'var(--accent3)');
+    _tickLoad();
+  }
+
+  /* ── Recent game sessions ───────────────── */
+  async function loadGameSessions() {
+    let q = _sb.from('arcade_game_sessions')
+      .select('started_at, ended_at, max_floor, max_level, duration_seconds, end_reason, session_id')
+      .order('started_at', { ascending: false })
+      .limit(20);
+    if (_since()) q = q.gte('started_at', _since());
+    const { data } = await q;
+
+    // join source from sessions
+    const ids  = [...new Set((data || []).map(r => r.session_id))];
+    let srcMap = {};
+    if (ids.length) {
+      const { data: sd } = await _sb.from('arcade_sessions').select('session_id, source').in('session_id', ids);
+      (sd || []).forEach(s => { srcMap[s.session_id] = s.source; });
+    }
+
+    const tbody = document.getElementById('gsBody');
+    document.getElementById('gsCount').textContent = (data || []).length + ' rows';
+    if (!data || !data.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No game sessions yet</td></tr>';
+      return;
+    }
+
+    const REASON_CLASS = { death: 'badge-red', quit: 'badge-orange', unknown: '' };
+    const SOURCE_CLASS = { linkedin: 'badge-blue', direct: 'badge-green', github_pages: 'badge-purple' };
+
+    tbody.innerHTML = data.map(r => {
+      const src    = srcMap[r.session_id] || 'unknown';
+      const srcLbl = SOURCE_LABELS[src] || src;
+      const sc     = SOURCE_CLASS[src] || '';
+      const rc     = r.end_reason === 'death' ? 'badge-orange' : '';
+      return `<tr>
+        <td><span class="badge ${sc}">${srcLbl}</span></td>
+        <td>${r.max_floor || 1}</td>
+        <td>${r.max_level || 1}</td>
+        <td>${_fmtDur(r.duration_seconds)}</td>
+        <td><span class="badge ${rc}">${r.end_reason || '—'}</span></td>
+        <td style="color:var(--muted)">${_timeAgo(r.started_at)}</td>
+      </tr>`;
+    }).join('');
+    _tickLoad();
+  }
+
+  /* ── Event feed ─────────────────────────── */
+  async function loadEventFeed() {
+    let q = _sb.from('arcade_events')
+      .select('event_type, event_data, created_at, game_id')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (_since()) q = q.gte('created_at', _since());
+    const { data } = await q;
+
+    const el = document.getElementById('eventFeed');
+    if (!data || !data.length) { el.innerHTML = '<div class="empty">No events yet</div>'; return; }
+
+    const ICONS = {
+      game_started:      { dot: '', text: 'Game started' },
+      game_loaded:       { dot: '', text: 'Game loaded' },
+      player_died:       { dot: 'feed-dot-orange', text: 'Player died' },
+      floor_reached:     { dot: 'feed-dot-green', text: 'Floor reached' },
+      boss_defeated:     { dot: 'feed-dot-green', text: 'Boss defeated' },
+      chest_opened:      { dot: '', text: 'Chest opened' },
+      upgrade_selected:  { dot: '', text: 'Upgrade selected' },
+      play_button_clicked:{ dot: 'feed-dot-green', text: 'Play clicked' },
+      homepage_loaded:   { dot: '', text: 'Homepage loaded' },
+    };
+
+    el.innerHTML = data.map(e => {
+      const info   = ICONS[e.event_type] || { dot: '', text: e.event_type.replace(/_/g, ' ') };
+      const detail = e.event_data && Object.keys(e.event_data).length
+        ? ' — ' + Object.entries(e.event_data).map(([k, v]) => k + ': ' + v).join(', ')
+        : '';
+      return `<div class="feed-item">
+        <div class="feed-dot ${info.dot}"></div>
+        <span class="feed-text">${info.text}${detail}</span>
+        <span class="feed-time">${_timeAgo(e.created_at)}</span>
+      </div>`;
+    }).join('');
+    _tickLoad();
+  }
+
+  /* ── Page views ─────────────────────────── */
+  async function loadPageViews() {
+    let q = _sb.from('arcade_page_views').select('page, source');
+    if (_since()) q = q.gte('created_at', _since());
+    const { data } = await q;
+
+    const pages = {};
+    (data || []).forEach(r => {
+      const p = r.page || '/';
+      if (!pages[p]) pages[p] = { total: 0, sources: {} };
+      pages[p].total++;
+      const src = r.source || 'other';
+      pages[p].sources[src] = (pages[p].sources[src] || 0) + 1;
+    });
+
+    const rows = Object.entries(pages).sort((a, b) => b[1].total - a[1].total).slice(0, 15);
+    const tbody = document.getElementById('pagesBody');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="3" class="empty">No page views yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(([page, d]) => {
+      const topSrc = Object.entries(d.sources).sort((a, b) => b[1] - a[1]).slice(0, 3)
+        .map(([k]) => `<span class="badge">${SOURCE_LABELS[k] || k}</span>`).join(' ');
+      return `<tr><td style="font-family:monospace;font-size:12px">${page}</td><td>${_fmt(d.total)}</td><td>${topSrc}</td></tr>`;
+    }).join('');
+    _tickLoad();
+  }
+
+  /* ── Init ───────────────────────────────── */
+  (async function init() {
+    // Restore existing session (Supabase persists to localStorage automatically)
+    const { data: { session } } = await _sb.auth.getSession();
+    if (session && session.user?.app_metadata?.role === 'admin') {
+      showDashboard();
+      return;
+    }
+
+    document.getElementById('emailInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('passInput').focus();
+    });
+    document.getElementById('passInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') login();
+    });
+  })();
+
+  return { login, signOut, reload };
+})();
+</script>
+
+</body>
+</html>

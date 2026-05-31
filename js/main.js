@@ -6,7 +6,22 @@ document.addEventListener('DOMContentLoaded', function () {
     setFooterYear();
     renderFeaturedGame();
     renderGameGrid();
+    wireAnalytics();
 });
+
+function wireAnalytics() {
+    if (typeof window.AgeeAnalytics === 'undefined') return;
+    window.AgeeAnalytics.trackEvent('homepage_loaded');
+
+    // Track clicks on any game card or play button
+    document.addEventListener('click', function (e) {
+        var link = e.target.closest('a.game-card-link, a.btn-primary');
+        if (!link) return;
+        var card = link.querySelector('[data-id]') || link.closest('[data-id]');
+        var gameId = card ? card.getAttribute('data-id') : 'unknown';
+        window.AgeeAnalytics.trackEvent('play_button_clicked', { game_id: gameId });
+    });
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
