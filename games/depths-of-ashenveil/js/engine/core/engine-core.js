@@ -30,9 +30,10 @@ window.EngineCore = (() => {
   let bolts          = [];
   let activeLanternTimer = 0;
   let _lastWallTorchCount = 0;
-  let _scratchIdx   = new Int16Array(256);
-  let _scratchDist  = new Float32Array(256);
-  let _scratchCount = 0;
+  let _scratchIdx        = new Int16Array(256);
+  let _scratchDist       = new Float32Array(256);
+  let _scratchCount      = 0;
+  let _scratchActiveFlags = new Uint8Array(256); // reused; resized if needed
   let _lastTorchFingerprint = 0;
   let _tileRoomId   = null;
   let _tileRoomCols = 0;
@@ -317,7 +318,8 @@ window.EngineCore = (() => {
     light.userData.flame         = torchRecord.flame;
     light.userData.torch         = torchRecord;
     light.position.set(torchRecord.x, torchRecord.torch.position.y + TORCH_FLAME_OFFSET.y, torchRecord.z);
-    light.visible = false;
+    light.visible = true;   // always visible — intensity=0 silences it without shader recompile
+    light.intensity = 0;
     scene.add(light);
     torchRecord.light = light;
     lanternLights.push(light);
@@ -336,12 +338,12 @@ window.EngineCore = (() => {
 
   function activateWallTorchLight(torchRecord) {
     if (!torchRecord.light) return;
-    torchRecord.light.visible = true;
+    torchRecord.light.intensity = torchRecord.light.userData.baseIntensity;
   }
 
   function deactivateWallTorchLight(torchRecord) {
     if (!torchRecord.light || torchRecord === carriedTorch) return;
-    torchRecord.light.visible = false;
+    torchRecord.light.intensity = 0;
   }
 
   function countDungeonTileInstances(dungeon, doorTx, doorTy) {
@@ -2446,14 +2448,14 @@ function updateChests(dt) {
 
     for (const l of lanternLights) {
       const isCarried = l.userData.torch === carriedTorch;
-      if (!l.visible && !isCarried) continue;
+      if (l.intensity === 0 && !isCarried) continue;  // silenced — skip entirely
       if (doIntensity) {
         const f = Math.sin(t * 3.5 + l.userData.flameOffset) * 0.12 +
                   Math.sin(t * 6.2 + l.userData.flameOffset) * 0.06;
         const boost = isCarried ? 1.5 : 1.0;
         l.intensity = Math.max(1.0, (l.userData.baseIntensity + f * 1.4) * boost);
       }
-      if (doFlame && (l.visible || isCarried)) {
+      if (doFlame) {
         animateFlame(l.userData.flame, t, l.userData.flameOffset);
       }
     }
@@ -2543,15 +2545,18 @@ function updateChests(dt) {
     _lastTorchFingerprint = fp;
     _lastWallTorchCount = wallTorches.length;
 
-    // Build active flags keyed by wallTorches index
-    const activeFlags = new Uint8Array(wallTorches.length);
-    for (let i = 0; i < _scratchCount; i++) activeFlags[_scratchIdx[i]] = 1;
+    // Build active flags keyed by wallTorches index — reuse scratch buffer
+    if (_scratchActiveFlags.length < wallTorches.length) {
+      _scratchActiveFlags = new Uint8Array(wallTorches.length * 2);
+    }
+    _scratchActiveFlags.fill(0, 0, wallTorches.length);
+    for (let i = 0; i < _scratchCount; i++) _scratchActiveFlags[_scratchIdx[i]] = 1;
 
     for (let i = 0; i < wallTorches.length; i++) {
       const t = wallTorches[i];
       if (t === carriedTorch) continue;
-      if (activeFlags[i]) activateWallTorchLight(t);
-      else                deactivateWallTorchLight(t);
+      if (_scratchActiveFlags[i]) activateWallTorchLight(t);
+      else                        deactivateWallTorchLight(t);
     }
   }
 
