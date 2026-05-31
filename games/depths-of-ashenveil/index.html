@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Depths of Ashenveil — A 3D browser dungeon crawler by Agee Gaming LLC. Play free, no download required." />
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' 'unsafe-inline'
+                https://cdnjs.cloudflare.com
+                https://cdn.jsdelivr.net
+                https://pagead2.googlesyndication.com;
+    style-src   'self' 'unsafe-inline'
+                https://fonts.googleapis.com;
+    font-src    'self'
+                https://fonts.gstatic.com;
+    connect-src 'self'
+                https://xdvrgeaivfqpcsmuqeyi.supabase.co
+                wss://xdvrgeaivfqpcsmuqeyi.supabase.co;
+    img-src     'self' data: blob:;
+    frame-src   'none';
+    object-src  'none';
+    base-uri    'self';
+    form-action 'self';
+  ">
+  <title>Depths of Ashenveil — Agee Arcade</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="./css/layout.css" />
+  <link rel="stylesheet" href="./css/ui.css" />
+</head>
+<body>
+
+  <!-- ── PAGE SHELL ─────────────────────────────────── -->
+  <div id="pageShell">
+
+    <!-- TOP BAR / BRAND -->
+    <header id="topBar">
+      <span id="brandName">⚔ DEPTHS OF ASHENVEIL</span>
+      <span id="topTagline">A Dungeon of No Return</span>
+    </header>
+
+    <!-- MAIN ROW: game + right ad -->
+    <div id="mainRow">
+
+      <!-- GAME COLUMN -->
+      <div id="gameColumn">
+
+        <!-- HUD TOP -->
+        <div id="hud">
+          <div class="hud-left">
+            <div class="bar-group">
+              <span class="bar-label">HP</span>
+              <div class="bar" id="hpBar"><div class="bar-fill" id="hpFill"></div></div>
+              <span class="bar-val" id="hpText">100/100</span>
+            </div>
+            <div class="bar-group">
+              <span class="bar-label">XP</span>
+              <div class="bar" id="xpBar"><div class="bar-fill" id="xpFill" style="background:linear-gradient(90deg,#004488,#0088ff)"></div></div>
+              <span class="bar-val" id="xpText">0/100</span>
+            </div>
+          </div>
+          <div class="hud-center">
+            <span class="hud-stat" id="hudLevel">LVL 1</span>
+            <span class="hud-stat" id="hudFloor">FLOOR 1</span>
+          </div>
+          <div class="hud-right">
+            <span class="hud-stat">ATK <b id="hudAtk">10</b></span>
+            <span class="hud-stat">DEF <b id="hudDef">2</b></span>
+            <span class="hud-stat">SPD <b id="hudSpd">3</b></span>
+            <span class="hud-btn" onclick="UI.togglePanel('inv')">⚔ INV [I]</span>
+            <span class="hud-btn" onclick="UI.togglePanel('skills')">✦ SKL [K]</span>
+          </div>
+        </div>
+
+        <!-- THREE.JS CANVAS MOUNT -->
+        <div id="canvasMount"></div>
+
+        <!-- BOTTOM HUD -->
+        <div id="bottomHud">
+          <div id="equip">
+            <span class="equip-slot">🗡 <span id="eqWeapon">Rusty Sword</span></span>
+            <span class="equip-slot">🛡 <span id="eqArmor">Tattered Cloth</span></span>
+            <span id="skillPts"></span>
+          </div>
+          <div id="msgLog"></div>
+          <div id="controls">WASD·Move &nbsp; Mouse·Aim &nbsp; LClick·Attack &nbsp; E·Interact &nbsp; I·Inv &nbsp; K·Skills</div>
+        </div>
+        <div id="stairOverlay"></div>
+        <div id="floorAnnounce">
+          <div id="floorAnnounceNum">FLOOR 1</div>
+          <div id="floorAnnounceTag">Descending...</div>
+        </div>
+<div id="chestPrompt">Press E to open chest</div>
+<div id="torchPrompt">Press E to take torch</div>
+<div id="doorPrompt">Press E to open door</div>
+<div id="stairPrompt">Press E to enter portal</div>
+      </div><!-- /gameColumn -->
+
+      <!-- RIGHT SIDEBAR — Arcade link -->
+      <aside id="adSidebar">
+        <a class="arcade-sidebar" href="../../" rel="noopener">
+          <div class="arcade-sidebar-glyph">⚔</div>
+          <div class="arcade-sidebar-title">MORE GAMES</div>
+          <div class="arcade-sidebar-divider"></div>
+          <div class="arcade-sidebar-body">Dozens of free games live in the Arcade. Dungeon crawlers, strategy, puzzles &amp; more.</div>
+          <div class="arcade-sidebar-cta">ENTER THE ARCADE →</div>
+        </a>
+      </aside>
+
+    </div><!-- /mainRow -->
+
+    <!-- BOTTOM BANNER — Arcade link -->
+    <div id="adBanner">
+      <a class="arcade-banner" href="../../" rel="noopener">
+        <span class="arcade-banner-icon">⚔</span>
+        <span class="arcade-banner-text">LOOKING FOR MORE GAMES?</span>
+        <span class="arcade-banner-divider">|</span>
+        <span class="arcade-banner-sub">Visit the Arcade — free to play, no sign-up needed</span>
+        <span class="arcade-banner-cta">PLAY NOW →</span>
+      </a>
+    </div>
+
+  </div><!-- /pageShell -->
+
+  <!-- ── ENTRY CINEMATIC (shown when player clicks Enter) ── -->
+  <div id="entryCinematic">
+    <div class="ec-inner">
+      <div class="ec-subtitle">WELCOME TO THE DEPTHS OF</div>
+      <div class="ec-title">ASHENVEIL</div>
+      <div class="ec-divider"></div>
+      <div class="ec-warning">⚠ &nbsp; WARNING &nbsp; ⚠</div>
+      <div class="ec-line">None who entered have ever returned.</div>
+      <div class="ec-line ec-line2">Can you survive what lies below?</div>
+      <div class="ec-floor">FLOOR I — YOUR DESCENT BEGINS</div>
+    </div>
+  </div>
+
+  <!-- ── OVERLAY PANELS (inventory, skills, death, title) ── -->
+  <div id="overlayLayer">
+
+    <!-- TITLE SCREEN -->
+    <div id="titleScreen" class="screen active">
+      <div class="game-screen-ad">
+        <!-- ADSENSE SLOT: gameTitleBanner — replace with <ins> tag when ready -->
+        <span class="game-ad-placeholder">Advertisement</span>
+      </div>
+      <div class="title-inner">
+        <h1 id="titleText">DEPTHS OF ASHENVEIL</h1>
+        <p class="title-sub">— Descend. Survive. Conquer. —</p>
+        <div id="save-meta-row" class="save-meta-row">
+          Best Floor: <span id="meta-best-floor">1</span>
+          &middot; Best Level: <span id="meta-best-level">1</span>
+          &middot; Runs: <span id="meta-total-runs">0</span>
+        </div>
+        <p id="titleLoading" class="title-loading">Generating dungeon<span id="titleLoadDots"></span></p>
+        <button class="big-btn" id="titleStartBtn" disabled onclick="Game.startOrResume()">START NEW RUN</button>
+        <button class="big-btn secondary" id="titleRestartBtn" hidden onclick="Game.restartRun()">START NEW RUN</button>
+        <a class="big-btn secondary title-link-btn" href="./leaderboard/">VIEW LEADERBOARD</a>
+        <div class="key-hints">
+          WASD · Move &nbsp;|&nbsp; Mouse · Aim &nbsp;|&nbsp; Left Click · Attack<br/>
+          I · Inventory &nbsp;|&nbsp; K · Skills &nbsp;|&nbsp; E · Interact / Descend
+        </div>
+      </div>
+    </div>
+
+    <!-- DEATH SCREEN -->
+    <div id="deathScreen" class="screen">
+      <div class="game-screen-ad">
+        <!-- ADSENSE SLOT: gameDeathBanner — replace with <ins> tag when ready -->
+        <span class="game-ad-placeholder">Advertisement</span>
+      </div>
+      <div class="title-inner">
+        <h1 style="color:#cc2200;">YOU PERISHED</h1>
+        <p class="title-sub" id="deathMsg">The darkness claims another soul...</p>
+        <div id="leaderboardPrompt" class="leaderboard-prompt" hidden>
+          <div class="leaderboard-prompt-title">Leaderboard Run</div>
+          <label for="leaderboardNickname">Nickname</label>
+          <div class="leaderboard-prompt-row">
+            <input id="leaderboardNickname" type="text" maxlength="16" autocomplete="off" />
+            <button class="mini-btn" onclick="UI.submitLeaderboardNickname()">Save</button>
+          </div>
+          <p id="leaderboardPromptError" class="leaderboard-prompt-error"></p>
+        </div>
+        <a class="big-btn secondary title-link-btn" href="./leaderboard/">VIEW LEADERBOARD</a>
+        <button class="big-btn" onclick="Game.start()">DESCEND AGAIN</button>
+        <button class="big-btn secondary" onclick="Game.goToTitle()">TITLE SCREEN</button>
+      </div>
+    </div>
+
+    <!-- INVENTORY PANEL -->
+    <div id="invPanel" class="side-panel">
+      <div class="panel-header">
+        <span>⚔ INVENTORY</span>
+        <button class="close-btn" onclick="UI.closePanel()">✕</button>
+      </div>
+      <div id="invList" class="panel-body"></div>
+    </div>
+
+    <!-- SKILLS PANEL -->
+    <div id="skillsPanel" class="side-panel">
+      <div class="panel-header">
+        <span>✦ SKILL TREE</span>
+        <button class="close-btn" onclick="UI.closePanel()">✕</button>
+      </div>
+      <div id="skillList" class="panel-body"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Supabase SDK (auth persists from Arcade login) ── -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- ── THREE.JS CDN ───────────────────────────────── -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- ── GAME MODULES (order matters) ─────────────────
+       dungeon → loot → enemies → managers → player → engine → ui → game
+  ─────────────────────────────────────────────────── -->
+<script src="./js/core/dungeon.js"></script>
+<script src="./js/core/loot.js"></script>
+<script src="./js/systems/enemies.js"></script>
+<script src="./js/systems/enemy-soa.js"></script>
+<!-- ── Managers (SOA, require dungeon + enemies) ── -->
+<script src="./js/systems/dungeon-manager.js"></script>
+<script src="./js/systems/floor-manager.js"></script>
+<script src="./js/systems/light-manager.js"></script>
+<script src="./js/systems/static-item-manager.js"></script>
+<script src="./js/systems/monster-manager.js"></script>
+<script src="./js/systems/spatial-grid.js"></script>
+<script src="./js/systems/mesh-manager.js"></script>
+<script src="./js/core/player.js"></script>
+<script src="./js/config/supabase-config.js"></script>
+<script src="./js/systems/save.js"></script>
+<script src="./js/engine/core/engine-state.js"></script>
+<script src="./js/engine/core/engine-core.js"></script>
+<script src="./js/engine/dungeon/engine-dungeon-renderer.js"></script>
+<script src="./js/engine/entities/engine-entities-renderer.js"></script>
+<script src="./js/engine/interactables/engine-interactables.js"></script>
+<script src="./js/engine/effects/engine-effects.js"></script>
+<script src="./js/engine/lighting/engine-lighting.js"></script>
+<script src="./js/engine/sound/engine-sound.js"></script>
+<script src="./js/engine/engine.js"></script>
+<script src="./js/pages/ui.js"></script>
+<script src="./js/pages/game.js"></script>
+  <script src="./js/pages/auth-ui.js"></script>
+  <script src="./js/systems/mobile-controls.js"></script>
+  <script src="../../ads/adsense.js"></script>
+
+</body>
+</html>

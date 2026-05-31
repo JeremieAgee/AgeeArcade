@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" class="leaderboard-document">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Depths of Ashenveil leaderboard. See the highest levels reached before entering the dungeon." />
+  <title>Depths of Ashenveil Leaderboard - Agee Arcade</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/layout.css" />
+  <link rel="stylesheet" href="../css/ui.css" />
+</head>
+<body class="leaderboard-page">
+  <main class="leaderboard-shell">
+    <section class="leaderboard-panel">
+      <div class="leaderboard-kicker">Depths of Ashenveil</div>
+      <h1>Leaderboard</h1>
+      <p class="leaderboard-subtitle">Highest player levels reached in this browser.</p>
+
+      <div class="leaderboard-actions">
+        <a class="big-btn leaderboard-play" href="../">Start New Run</a>
+        <a class="big-btn secondary leaderboard-arcade" href="../../../">Arcade</a>
+      </div>
+
+      <div class="leaderboard-table-wrap">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Nickname</th>
+              <th>Highest Level</th>
+              <th>Floor</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardRows"></tbody>
+        </table>
+        <p id="leaderboardEmpty" class="leaderboard-empty">No scores yet. Survive a run to claim the first spot.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="../js/config/supabase-config.js"></script>
+  <script src="../js/systems/save.js"></script>
+  <script src="../js/pages/leaderboard-page.js"></script>
+</body>
+</html>

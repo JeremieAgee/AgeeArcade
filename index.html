@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Agee Arcade - Free browser games created by Jeremie Agee. Play now, no download required.">
+    <!-- ── Content Security Policy ─────────────────────────────────────────
+         Restricts what the browser will load / connect to.
+         Tighten script-src by removing 'unsafe-inline' once onclick=""
+         handlers are replaced with addEventListener calls.
+    ──────────────────────────────────────────────────────────────────── -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src  'self' 'unsafe-inline'
+                  https://cdnjs.cloudflare.com
+                  https://cdn.jsdelivr.net
+                  https://pagead2.googlesyndication.com;
+      style-src   'self' 'unsafe-inline'
+                  https://fonts.googleapis.com;
+      font-src    'self'
+                  https://fonts.gstatic.com;
+      connect-src 'self'
+                  https://xdvrgeaivfqpcsmuqeyi.supabase.co
+                  wss://xdvrgeaivfqpcsmuqeyi.supabase.co;
+      img-src     'self' data: blob:
+                  https://www.googletagmanager.com;
+      frame-src   'none';
+      object-src  'none';
+      base-uri    'self';
+      form-action 'self';
+    ">
+    <title>Agee Arcade — Free Browser Games</title>
+
+    <!-- Google Fonts preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link rel="stylesheet" href="./css/main.css">
+</head>
+<body>
+
+    <!-- SHARED: site-header — update about/index.html and game pages when changing -->
+    <header class="site-header">
+        <a class="logo" href="./">AGEE ARCADE</a>
+        <nav class="site-nav">
+            <span>Created By Jeremie Agee</span>
+            <a href="./leaderboards/">Leaderboards</a>
+            <a href="./about/">About</a>
+        </nav>
+    </header>
+
+    <!-- AdSense: Leaderboard — top of home page -->
+    <div class="ad-leaderboard">
+        <div class="container" style="width:100%;display:flex;align-items:center;justify-content:center;min-height:90px;">
+            <!-- ADSENSE SLOT: homeLeaderboard — replace with <ins> tag when ready -->
+            <span class="ad-placeholder">Advertisement</span>
+        </div>
+    </div>
+
+    <main>
+        <!-- Hero -->
+        <section class="hero">
+            <p class="hero__eyebrow">Welcome to</p>
+            <h1 class="hero__title">Agee Arcade</h1>
+            <p class="hero__subtitle">Free browser games created by Jeremie Agee - no download required.</p>
+        </section>
+
+        <!-- Featured Game — populated by main.js renderFeaturedGame() -->
+        <section class="featured-section container">
+            <h2 class="section-title">Featured Game</h2>
+            <div id="featured-game">
+                <!-- JS-populated -->
+            </div>
+        </section>
+
+        <!-- Game Grid — populated by main.js renderGameGrid() -->
+        <section class="games-section container">
+            <h2 class="section-title">All Games</h2>
+            <div id="game-grid" class="game-grid">
+                <!-- JS-populated -->
+            </div>
+        </section>
+
+        <!-- AdSense: Below game grid -->
+        <div class="ad-leaderboard" style="margin-top:1rem;">
+            <div class="container" style="width:100%;display:flex;align-items:center;justify-content:center;min-height:90px;">
+                <!-- ADSENSE SLOT: homeSidebar — replace with <ins> tag when ready -->
+                <span class="ad-placeholder">Advertisement</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- SHARED: site-footer — update all pages when changing -->
+    <footer class="site-footer">
+        <p>&copy; <span id="footer-year"></span> Created By Jeremie Agee. All rights reserved.</p>
+    </footer>
+
+    <!-- Data layer must load before main.js -->
+    <!-- Fixed bottom ad banner -->
+    <div class="ad-bottom-strip">
+        <!-- ADSENSE SLOT: arcadeBottomBanner — replace with <ins> tag when ready -->
+        <span class="ad-placeholder">Advertisement</span>
+    </div>
+
+    <script src="./js/games.js"></script>
+    <script src="./js/main.js"></script>
+    <!-- Supabase SDK + Arcade-wide auth -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="./js/arcade-auth.js"></script>
+    <script src="./ads/adsense.js"></script>
+
+</body>
+</html>

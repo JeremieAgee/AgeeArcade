@@ -1,0 +1,47 @@
+Starting up http-server, serving ./
+
+http-server version: 14.1.1
+
+http-server settings: 
+CORS: disabled
+Cache: -1 seconds
+Connection Timeout: 120 seconds
+Directory Listings: visible
+AutoIndex: visible
+Serve GZIP Files: false
+Serve Brotli Files: false
+Default File Extension: none
+
+Available on:
+  http://192.168.1.64:8080
+  http://127.0.0.1:8080
+Hit CTRL-C to stop the server
+
+[2026-05-29T23:30:22.163Z]  "GET /games/3dBuilder/" "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.8521"
+[2026-05-29T23:30:55.601Z]  "GET /games/3dBuilder/" "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.8521"
+[2026-05-29T23:36:16.462Z]  "GET /games/3dBuilder/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+[2026-05-29T23:36:16.468Z]  "GET /games/3dBuilder/main.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+[2026-05-29T23:36:16.472Z]  "GET /games/3dBuilder/src/engine/scene.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+[2026-05-29T23:36:16.475Z]  "GET /games/3dBuilder/src/entities/quadruped_creature.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+[2026-05-29T23:36:16.480Z]  "GET /games/3dBuilder/src/procedural/quadruped_builder.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+[2026-05-29T23:36:16.483Z]  "GET /games/3dBuilder/src/animation/ground_ik.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+[2026-05-29T23:36:16.485Z]  "GET /games/3dBuilder/src/animation/gait_scheduler.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+[2026-05-29T23:36:16.487Z]  "GET /games/3dBuilder/src/animation/wander_behavior.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+[2026-05-29T23:36:16.489Z]  "GET /games/3dBuilder/src/animation/body_stabilizer.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+[2026-05-29T23:36:16.491Z]  "GET /games/3dBuilder/src/animation/joint_constraints.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+[2026-05-29T23:36:16.494Z]  "GET /games/3dBuilder/src/procedural/procedural_rig.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+[2026-05-29T23:36:16.854Z]  "GET /favicon.ico" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+[2026-05-29T23:36:16.862Z]  "GET /favicon.ico" Error (404): "Not found"
+[2026-05-29T23:37:36.583Z]  "GET /" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.122.0 Chrome/142.0.7444.265 Electron/39.8.8 Safari/537.36"
+[2026-05-29T23:37:36.756Z]  "GET /css/main.css" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.122.0 Chrome/142.0.7444.265 Electron/39.8.8 Safari/537.36"
+[2026-05-29T23:37:36.758Z]  "GET /js/games.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.122.0 Chrome/142.0.7444.265 Electron/39.8.8 Safari/537.36"
+[2026-05-29T23:37:36.759Z]  "GET /js/main.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.122.0 Chrome/142.0.7444.265 Electron/39.8.8 Safari/537.36"
+[2026-05-29T23:37:36.759Z]  "GET /ads/adsense.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.122.0 Chrome/142.0.7444.265 Electron/39.8.8 Safari/537.36"
+[2026-05-29T23:37:36.918Z]  "GET /games/depths-of-ashenveil/thumb.jpg" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.122.0 Chrome/142.0.7444.265 Electron/39.8.8 Safari/537.36"
+[2026-05-29T23:41:08.578Z]  "GET /js/core/dungeon.js" "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.8521"
+[2026-05-29T23:41:08.579Z]  "GET /js/core/dungeon.js" Error (404): "Not found"
+[2026-05-29T23:41:08.691Z]  "GET /" "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.8521"
+[2026-05-29T23:41:08.703Z]  "GET /js/engine/engine.js" "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.8521"
+[2026-05-29T23:41:08.706Z]  "GET /js/engine/engine.js" Error (404): "Not found"
+[2026-05-29T23:41:13.831Z]  "GET /js/pages/game.js" "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.8521"
+[2026-05-29T23:41:13.850Z]  "GET /js/pages/game.js" Error (404): "Not found"

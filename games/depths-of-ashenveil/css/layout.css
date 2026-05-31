@@ -1,0 +1,347 @@
+/* ═══════════════════════════════════════════════════
+   layout.css  —  Page shell, ad positioning, responsive
+════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden; /* prevent page scroll */
+  background: #22170f;
+  color: #c8922a;
+  font-family: 'IM Fell English', serif;
+}
+
+/* ── TOP BRAND BAR ───────────────────────────────── */
+#topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 20px;
+  background: linear-gradient(180deg, #3a2615, #241407);
+  border-bottom: 2px solid #7a4a18;
+  height: 38px;
+}
+#brandName {
+  font-family: 'Cinzel', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #c8922a;
+  letter-spacing: 3px;
+  text-shadow: 0 0 20px #ff660088;
+}
+#topTagline {
+  font-size: 12px;
+  color: #b99452;
+  font-style: italic;
+}
+
+/* ── MAIN ROW: game + sidebar ────────────────────── */
+#pageShell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#mainRow {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 10px 0 10px;
+  width: 100%;
+  max-width: 1260px;
+  flex: 1;
+  min-height: 0; /* critical — lets flex children shrink below content size */
+  overflow: hidden;
+}
+
+/* ── GAME COLUMN ─────────────────────────────────── */
+#gameColumn {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+/* Canvas mount: Three.js injects its canvas here */
+#canvasMount {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  background: #000;
+  position: relative;
+  overflow: hidden;
+}
+#canvasMount canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ── RIGHT SIDEBAR ───────────────────────────────── */
+#adSidebar {
+  flex: 0 0 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding-top: 4px;
+}
+
+/* ── BOTTOM BANNER ───────────────────────────────── */
+#adBanner {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 10px 0;
+  width: 100%;
+}
+
+/* ── ARCADE SIDEBAR LINK ─────────────────────────── */
+.arcade-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 14px;
+  height: 100%;
+  background: linear-gradient(160deg, #3a2615 60%, #241407);
+  border: 1px solid #7a4a18;
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.arcade-sidebar:hover {
+  background: linear-gradient(160deg, #493018 60%, #2d1808);
+  border-color: #c8922a;
+}
+.arcade-sidebar-glyph {
+  font-size: 32px;
+  color: #c8922a;
+  text-shadow: 0 0 18px #ff660066;
+}
+.arcade-sidebar-title {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #c8922a;
+  letter-spacing: 4px;
+  text-align: center;
+}
+.arcade-sidebar-divider {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #5a3a10, transparent);
+}
+.arcade-sidebar-body {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 11px;
+  color: #b99452;
+  text-align: center;
+  line-height: 1.6;
+}
+.arcade-sidebar-cta {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #7a5a20;
+  margin-top: 4px;
+  transition: color 0.2s;
+}
+.arcade-sidebar:hover .arcade-sidebar-cta { color: #c8922a; }
+
+/* ── ARCADE BANNER LINK ──────────────────────────── */
+.arcade-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 24px;
+  background: linear-gradient(90deg, #3a2615, #241407, #3a2615);
+  border: 1px solid #3a1a00;
+  text-decoration: none;
+  max-width: 728px;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+.arcade-banner:hover { border-color: #c8922a; }
+.arcade-banner-icon {
+  font-size: 20px;
+  color: #c8922a;
+  flex-shrink: 0;
+}
+.arcade-banner-text {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #c8922a;
+  white-space: nowrap;
+}
+.arcade-banner-divider {
+  color: #3a1a00;
+  font-size: 18px;
+}
+.arcade-banner-sub {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 12px;
+  color: #b99452;
+  flex: 1;
+}
+.arcade-banner-cta {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #7a5a20;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+.arcade-banner:hover .arcade-banner-cta { color: #c8922a; }
+
+/* ── OVERLAY LAYER (full-screen panels) ──────────── */
+#overlayLayer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+#overlayLayer > * {
+  pointer-events: all;
+}
+
+/* ── RESPONSIVE: collapse sidebar below 1000px ───── */
+@media (max-width: 1000px) {
+  #adSidebar { display: none; }
+  .arcade-banner { max-width: 100%; }
+  #mainRow { padding: 6px; gap: 0; }
+}
+@media (max-width: 760px) {
+  #adBanner { display: none; }
+  #topTagline { display: none; }
+}
+/* ── Title screen loading state ─────────────────── */
+.title-loading {
+  font-family: 'IM Fell English', serif;
+  font-size: 13px;
+  color: #b99452;
+  letter-spacing: 2px;
+  min-height: 20px;
+  margin-bottom: 10px;
+  transition: opacity 0.4s;
+}
+#titleStartBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Entry cinematic ─────────────────────────────── */
+#entryCinematic {
+  display: none;
+  position: fixed; inset: 0; z-index: 400;
+  background: #000;
+  align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity 0.8s;
+}
+#entryCinematic.ec-visible { opacity: 1; }
+
+.ec-inner {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0; text-align: center;
+  animation: ec-drift 4s ease-out forwards;
+}
+@keyframes ec-drift {
+  from { transform: translateY(18px); }
+  to   { transform: translateY(0);    }
+}
+.ec-subtitle {
+  font-family: 'Cinzel', serif;
+  font-size: 13px; letter-spacing: 10px;
+  color: #7a5a20; margin-bottom: 6px;
+  animation: ec-fadein 1.4s 0.3s both;
+}
+.ec-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(42px, 7vw, 80px);
+  font-weight: 700; letter-spacing: 12px;
+  color: #c8922a;
+  text-shadow: 0 0 40px #ff660066, 0 0 80px #ff440033;
+  animation: ec-fadein 1.2s 0.1s both;
+}
+.ec-divider {
+  width: 180px; height: 1px;
+  background: linear-gradient(90deg, transparent, #7a5a20, transparent);
+  margin: 22px 0 20px;
+  animation: ec-fadein 1s 0.8s both;
+}
+.ec-warning {
+  font-family: 'Cinzel', serif;
+  font-size: 13px; letter-spacing: 8px;
+  color: #cc3300;
+  text-shadow: 0 0 14px #ff220066;
+  margin-bottom: 10px;
+  animation: ec-fadein 0.8s 0.9s both;
+}
+.ec-line {
+  font-family: 'IM Fell English', serif;
+  font-style: italic; font-size: 15px;
+  color: #5a4010; letter-spacing: 1px;
+  animation: ec-fadein 1s 1.1s both;
+}
+.ec-line2 { animation-delay: 1.6s; }
+.ec-floor {
+  font-family: 'Cinzel', serif;
+  font-size: 11px; letter-spacing: 6px;
+  color: #3a2808; margin-top: 28px;
+  animation: ec-fadein 1s 2.0s both;
+}
+@keyframes ec-fadein {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* ── Stair overlay + floor announce ─────────────── */
+#stairOverlay {
+  position: fixed; inset: 0; background: #000;
+  opacity: 0; pointer-events: none; z-index: 50;
+  transition: opacity 1.2s;
+}
+#floorAnnounce {
+  position: fixed; inset: 0; z-index: 51;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; pointer-events: none;
+  opacity: 0; transition: opacity 0.5s;
+}
+#floorAnnounce.visible { opacity: 1; }
+#floorAnnounceNum {
+  font-family: 'Cinzel', serif;
+  font-size: 42px; font-weight: 700;
+  color: #c8922a;
+  letter-spacing: 8px;
+  text-shadow: 0 0 30px #ff660088, 0 0 60px #ff440044;
+}
+#floorAnnounceTag {
+  font-family: 'IM Fell English', serif;
+  font-style: italic; font-size: 15px;
+  color: #7a5a20; letter-spacing: 3px;
+}
+
+     #chestPrompt, #torchPrompt, #doorPrompt, #stairPrompt {
+       position:fixed; bottom:22%; left:50%;
+       transform:translateX(-50%);
+       background:rgba(0,0,0,0.72); color:#e8d090;
+       font-family:serif; font-size:1.1rem;
+       padding:8px 20px; border-radius:4px;
+       border:1px solid #7a5a20;
+       opacity:0; pointer-events:none; z-index:40;
+       transition: opacity 0.25s;
+     }
+     #torchPrompt { color:#ffaa44; border-color:#aa5a12; }
+     #doorPrompt  { color:#ff6644; border-color:#991100; }
+     #stairPrompt { color:#b888ff; border-color:#7744cc; }
