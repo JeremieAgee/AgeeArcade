@@ -28,8 +28,14 @@ window.EngineCore = (() => {
   let _dungeonBounds = null;
   let _cameraDungeon = null;
   let bolts          = [];
-  let activeLanternIds = '';
   let activeLanternTimer = 0;
+  let _lastWallTorchCount = 0;
+  let _scratchIdx   = new Int16Array(256);
+  let _scratchDist  = new Float32Array(256);
+  let _scratchCount = 0;
+  let _lastTorchFingerprint = 0;
+  let _tileRoomId   = null;
+  let _tileRoomCols = 0;
   let torchInteractAnim = null;
   let chestInteractAnim = null;
 
@@ -278,7 +284,6 @@ window.EngineCore = (() => {
   }
 
   function resetLanternLighting() {
-    // Remove all torch lights directly from scene and clear refs
     wallTorches.forEach(t => {
       if (t.light && t.light.parent) t.light.parent.remove(t.light);
       t.light = null;
@@ -287,8 +292,9 @@ window.EngineCore = (() => {
     lanternLights = [];
     lanternLightGrid = new Map();
     wallTorches = [];
-    activeLanternIds = '';
     activeLanternTimer = 0;
+    _lastWallTorchCount = 0;
+    _lastTorchFingerprint = 0;
   }
 
   function lanternGridKey(gridX, gridY) {
@@ -301,6 +307,20 @@ window.EngineCore = (() => {
     const bucket = lanternLightGrid.get(key);
     if (bucket) bucket.push(torchRecord);
     else lanternLightGrid.set(key, [torchRecord]);
+
+    // Pre-create the PointLight upfront so no shader recompilation happens during gameplay
+    const light = new THREE.PointLight(LANTERN_COLOR, LANTERN_INTENSITY, LANTERN_RADIUS);
+    light.decay = 1;
+    light.castShadow = false;
+    light.userData.baseIntensity = LANTERN_INTENSITY;
+    light.userData.flameOffset   = Math.random() * Math.PI * 2;
+    light.userData.flame         = torchRecord.flame;
+    light.userData.torch         = torchRecord;
+    light.position.set(torchRecord.x, torchRecord.torch.position.y + TORCH_FLAME_OFFSET.y, torchRecord.z);
+    light.visible = false;
+    scene.add(light);
+    torchRecord.light = light;
+    lanternLights.push(light);
   }
 
   function queryWallTorchesInGridBox(centerX, centerY, rangeX, rangeY) {
@@ -314,35 +334,14 @@ window.EngineCore = (() => {
     return torches;
   }
 
-  function ensureWallTorchLight(torchRecord) {
-    if (torchRecord.light) return torchRecord.light;
-    const light = new THREE.PointLight(LANTERN_COLOR, LANTERN_INTENSITY, LANTERN_RADIUS);
-    light.decay = 1;
-    light.castShadow = false;
-    light.userData.baseIntensity = LANTERN_INTENSITY;
-    light.userData.flameOffset   = Math.random() * Math.PI * 2;
-    light.userData.flame         = torchRecord.flame;
-    light.userData.torch         = torchRecord;
-    // World-space position: torchPiece sits in dungeonGroup (at origin), so local == world
-    light.position.set(torchRecord.x, torchRecord.torch.position.y + TORCH_FLAME_OFFSET.y, torchRecord.z);
-    light.visible = false;
-    scene.add(light);   // goes directly into scene, just like the door light
-    torchRecord.light = light;
-    return light;
-  }
-
   function activateWallTorchLight(torchRecord) {
-    const light = ensureWallTorchLight(torchRecord);
-    light.visible = true;
-    if (!lanternLights.includes(light)) lanternLights.push(light);
-    return light;
+    if (!torchRecord.light) return;
+    torchRecord.light.visible = true;
   }
 
   function deactivateWallTorchLight(torchRecord) {
-    const light = torchRecord.light;
-    if (!light || torchRecord === carriedTorch) return;
-    light.visible = false;
-    lanternLights = lanternLights.filter(l => l !== light);
+    if (!torchRecord.light || torchRecord === carriedTorch) return;
+    torchRecord.light.visible = false;
   }
 
   function countDungeonTileInstances(dungeon, doorTx, doorTy) {
@@ -425,6 +424,8 @@ window.EngineCore = (() => {
     dungeonGroup = new THREE.Group();
     const { TILE, WALL_H, grid, COLS, ROWS } = dungeon;
     _cameraDungeon = dungeon;
+    if (typeof RoomManager !== 'undefined') RoomManager.init(dungeon);
+    _buildTileRoomIndex(dungeon);
     const T = Dungeon.T;
 
     // Store door tile position so we can skip rendering a wall there
@@ -522,7 +523,7 @@ window.EngineCore = (() => {
       const torchPiece = buildTorchPiece(lx, WALL_H*0.46, lz, rotationY, flame, lanternMat);
       dungeonGroup.add(torchPiece);
 
-      const torchRecord = { x: lx, z: lz, gridX: gx, gridY: gy, roomIndex: lan.roomIndex ?? -1, holder: sconce, torch: torchPiece, flame, light: null, hasTorch: true };
+      const torchRecord = { x: lx, z: lz, gridX: gx, gridY: gy, roomId: (typeof RoomManager !== 'undefined' ? RoomManager.getRoomIdAtGrid(gx, gy) : null) ?? `room_${lan.roomIndex ?? -1}`, holder: sconce, torch: torchPiece, flame, light: null, hasTorch: true };
       registerWallTorch(torchRecord);
     }
 
@@ -552,6 +553,8 @@ window.EngineCore = (() => {
 
     const { TILE, WALL_H, grid, COLS, ROWS } = dungeon;
     _cameraDungeon = dungeon;
+    if (typeof RoomManager !== 'undefined') RoomManager.init(dungeon);
+    _buildTileRoomIndex(dungeon);
     const T = Dungeon.T;
 
     const doorTx = dungeon.bossEntrance ? dungeon.bossEntrance.wallTx : -1;
@@ -639,6 +642,7 @@ window.EngineCore = (() => {
     }
 
     function buildLanterns() {
+      _buildTileRoomIndex(dungeon);
       const lanternMat = new THREE.MeshStandardMaterial({ color: 0x241004, roughness: 0.72, metalness: 0.35 });
       const bracketMat = new THREE.MeshLambertMaterial({ color: 0x4a3a2a });
       const LO = TILE / 2 + 0.1;
@@ -659,7 +663,7 @@ window.EngineCore = (() => {
         const flame = makeFlameCluster(0.13);
         const torchPiece = buildTorchPiece(lx, WALL_H*0.46, lz, ry, flame, lanternMat);
         dungeonGroup.add(torchPiece);
-        const torchRecord = { x: lx, z: lz, gridX: gx, gridY: gy, roomIndex: lan.roomIndex ?? -1, holder: sconce, torch: torchPiece, flame, light: null, hasTorch: true };
+        const torchRecord = { x: lx, z: lz, gridX: gx, gridY: gy, roomId: (typeof RoomManager !== 'undefined' ? RoomManager.getRoomIdAtGrid(gx, gy) : null) ?? `room_${lan.roomIndex ?? -1}`, holder: sconce, torch: torchPiece, flame, light: null, hasTorch: true };
         registerWallTorch(torchRecord);
       }
 
@@ -1043,8 +1047,8 @@ function updateChests(dt) {
       t.hasTorch = true;
       t.torch.visible = true;
       startTorchInteractionAnim(t, 'place', player);
-      activeLanternIds = '';
       activeLanternTimer = 0;
+      _lastTorchFingerprint = 0;
       return 'placed';
     }
 
@@ -1054,8 +1058,8 @@ function updateChests(dt) {
     t.hasTorch = false;
     startTorchInteractionAnim(t, 'pick', player);
     activateWallTorchLight(t);
-    activeLanternIds = '';
     activeLanternTimer = 0;
+    _lastTorchFingerprint = 0;
     return 'picked';
   }
 
@@ -2442,6 +2446,7 @@ function updateChests(dt) {
 
     for (const l of lanternLights) {
       const isCarried = l.userData.torch === carriedTorch;
+      if (!l.visible && !isCarried) continue;
       if (doIntensity) {
         const f = Math.sin(t * 3.5 + l.userData.flameOffset) * 0.12 +
                   Math.sin(t * 6.2 + l.userData.flameOffset) * 0.06;
@@ -2454,6 +2459,34 @@ function updateChests(dt) {
     }
   }
 
+  /* ── Tile → room index (O(1) lookup) ────────── */
+  function _buildTileRoomIndex(dungeon) {
+    const { COLS, ROWS } = dungeon;
+    _tileRoomCols = COLS;
+    _tileRoomId   = new Array(COLS * ROWS).fill(null);
+    if (typeof RoomManager === 'undefined') return;
+    const rm = RoomManager.arrays();
+    for (let ri = 0; ri < rm.count; ri++) {
+      const ox = rm.originX[ri], oz = rm.originZ[ri];
+      const w  = rm.width[ri],   h  = rm.length[ri];
+      const id = rm.ids[ri];
+      for (let rz = oz; rz < oz + h; rz++) {
+        for (let rx = ox; rx < ox + w; rx++) {
+          _tileRoomId[rz * COLS + rx] = id;
+        }
+      }
+    }
+  }
+
+  function _getTileRoomId(worldX, worldZ, tile) {
+    if (!_tileRoomId) return null;
+    const gx = Math.floor(worldX / tile);
+    const gz = Math.floor(worldZ / tile);
+    const idx = gz * _tileRoomCols + gx;
+    if (idx < 0 || idx >= _tileRoomId.length) return null;
+    return _tileRoomId[idx];
+  }
+
   /* ── Camera ──────────────────────────────────── */
   function updateActiveLanternLights(player, dt) {
     if (!player) return;
@@ -2462,67 +2495,67 @@ function updateChests(dt) {
     activeLanternTimer = LANTERN_LIGHT_UPDATE_SECONDS;
 
     const tile = _cameraDungeon ? _cameraDungeon.TILE : 4;
-    const playerGridX = Math.floor(player.x / tile);
-    const playerGridY = Math.floor(player.z / tile);
-    const currentRoomIndex = getRoomIndexAt(playerGridX, playerGridY);
-    const nearby = queryWallTorchesInGridBox(
-      playerGridX,
-      playerGridY,
-      LANTERN_ACTIVE_TILES_X,
-      LANTERN_ACTIVE_TILES_Y
-    )
-      .filter(torch => torch !== carriedTorch && torch.hasTorch)
-      .map(torch => {
-        const dxTiles = torch.gridX - playerGridX;
-        const dyTiles = torch.gridY - playerGridY;
-        return { torch, dTiles: dxTiles * dxTiles + dyTiles * dyTiles };
-      })
-      .sort((a, b) => a.dTiles - b.dTiles);
+    const px = player.x, pz = player.z;
+    const pgx = Math.floor(px / tile);
+    const pgz = Math.floor(pz / tile);
 
-    let candidates;
-    if (currentRoomIndex !== -1) {
-      const roomTorches = wallTorches
-        .filter(torch => torch.roomIndex === currentRoomIndex && torch !== carriedTorch && torch.hasTorch)
-        .map(torch => {
-          const dxTiles = torch.gridX - playerGridX;
-          const dyTiles = torch.gridY - playerGridY;
-          return { torch, dTiles: dxTiles * dxTiles + dyTiles * dyTiles };
-        })
-        .sort((a, b) => a.dTiles - b.dTiles);
-      candidates = roomTorches;
-    } else {
-      candidates = nearby.slice(0, MAX_ACTIVE_LANTERN_LIGHTS);
+    const currentRoomId = _getTileRoomId(px, pz, tile);
+    const inRoom = currentRoomId !== null;
+
+    _scratchCount = 0;
+    for (let i = 0; i < wallTorches.length; i++) {
+      const t = wallTorches[i];
+      if (!t.hasTorch || t === carriedTorch) continue;
+      const dx = t.gridX - pgx;
+      const dz = t.gridY - pgz;
+      const d2 = dx * dx + dz * dz;
+      const inRange = d2 <= LANTERN_ACTIVE_TILES_X * LANTERN_ACTIVE_TILES_X;
+      const inCurrentRoom = inRoom && t.roomId === currentRoomId;
+      if (inCurrentRoom || (!inRoom && inRange)) {
+        _scratchIdx[_scratchCount]  = i;
+        _scratchDist[_scratchCount] = d2;
+        _scratchCount++;
+      }
     }
 
-    const activeTorches = new Set(candidates.map(x => x.torch));
-    const nextActiveIds = candidates.map(x => lanternGridKey(x.torch.gridX, x.torch.gridY)).join('|');
-    if (nextActiveIds === activeLanternIds) return;
-    activeLanternIds = nextActiveIds;
+    // Cap non-room fallback to MAX_ACTIVE_LANTERN_LIGHTS (insertion-select top N)
+    if (!inRoom && _scratchCount > MAX_ACTIVE_LANTERN_LIGHTS) {
+      for (let a = 0; a < MAX_ACTIVE_LANTERN_LIGHTS && a < _scratchCount; a++) {
+        let minI = a;
+        for (let b = a + 1; b < _scratchCount; b++) {
+          if (_scratchDist[b] < _scratchDist[minI]) minI = b;
+        }
+        if (minI !== a) {
+          const ti = _scratchIdx[a];  _scratchIdx[a]  = _scratchIdx[minI];  _scratchIdx[minI]  = ti;
+          const td = _scratchDist[a]; _scratchDist[a] = _scratchDist[minI]; _scratchDist[minI] = td;
+        }
+      }
+      _scratchCount = MAX_ACTIVE_LANTERN_LIGHTS;
+    }
 
-    for (const torch of wallTorches) {
-      if (torch === carriedTorch) continue;
-      if (activeTorches.has(torch)) activateWallTorchLight(torch);
-      else deactivateWallTorchLight(torch);
+    // FNV-1a integer fingerprint — avoids string allocation
+    let fp = 2166136261;
+    for (let i = 0; i < _scratchCount; i++) {
+      fp ^= _scratchIdx[i];
+      fp  = Math.imul(fp, 16777619) >>> 0;
+    }
+    if (fp === _lastTorchFingerprint && wallTorches.length === _lastWallTorchCount) return;
+    _lastTorchFingerprint = fp;
+    _lastWallTorchCount = wallTorches.length;
+
+    // Build active flags keyed by wallTorches index
+    const activeFlags = new Uint8Array(wallTorches.length);
+    for (let i = 0; i < _scratchCount; i++) activeFlags[_scratchIdx[i]] = 1;
+
+    for (let i = 0; i < wallTorches.length; i++) {
+      const t = wallTorches[i];
+      if (t === carriedTorch) continue;
+      if (activeFlags[i]) activateWallTorchLight(t);
+      else                deactivateWallTorchLight(t);
     }
   }
 
-  function getRoomIndexAt(gridX, gridY) {
-    if (!_cameraDungeon) return -1;
-    const rooms = _cameraDungeon.rooms || [];
-    for (let i = 0; i < rooms.length; i++) {
-      const r = rooms[i];
-      if (gridX >= r.x && gridX < r.x + r.w && gridY >= r.y && gridY < r.y + r.h) return i;
-    }
-    const bossRoom = _cameraDungeon.bossRoom;
-    if (bossRoom &&
-        gridX >= bossRoom.x && gridX < bossRoom.x + bossRoom.w &&
-        gridY >= bossRoom.y && gridY < bossRoom.y + bossRoom.h) {
-      return rooms.length;
-    }
-    return -1;
-  }
-
-  function updateTorchInteractionAnimations(dt) {
+function updateTorchInteractionAnimations(dt) {
     const step = dt || 0.016;
     if (torchInteractAnim) {
       torchInteractAnim.t += step;
@@ -2562,7 +2595,8 @@ function updateChests(dt) {
 
   function updateCarriedTorch(player) {
     if (!carriedTorch || !player) return;
-    const carriedLight = ensureWallTorchLight(carriedTorch);
+    const carriedLight = carriedTorch.light;
+    if (!carriedLight) return;
 
     // Compute target hand position (forearm tip via localToWorld)
     let hx, hy, hz;
@@ -2602,7 +2636,6 @@ function updateChests(dt) {
       const flamePos = torchFlameWorldPosition(x, y, z, torchRotation);
       carriedLight.position.set(flamePos.x, flamePos.y, flamePos.z);
       carriedLight.visible = true;
-      if (carriedLight.parent !== scene) scene.add(carriedLight); // already in scene — no-op
       return;
     }
 
@@ -2615,7 +2648,6 @@ function updateChests(dt) {
     const flamePos = torchFlameWorldPosition(tx, ty, tz, torchRotation);
     carriedLight.position.set(flamePos.x, flamePos.y, flamePos.z);
     carriedLight.visible = true;
-    if (carriedLight.parent !== scene) scene.add(carriedLight);
   }
 
   function startChestOpenAnimation(chestX, chestZ, playerX, playerZ) {

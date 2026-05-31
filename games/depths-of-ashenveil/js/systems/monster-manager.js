@@ -36,6 +36,7 @@ window.MonsterManager = (() => {
     let atkTime  = new Float32Array(0);
     let hitFlash = new Float32Array(0);
     let meshSlot = new Int16Array(0);
+    let roomId   = [];              // string room ID from RoomManager
 
     /* ── capacity ──────────────────────────────── */
     function _nextCap(size) {
@@ -83,40 +84,66 @@ window.MonsterManager = (() => {
       animTime[i] += 1;
       atkTime[i]  = e.atkAnim  || 0;
       hitFlash[i] = e.hitFlash || 0;
+      roomId[i]   = e.roomId   || null;
     }
 
-    /* ── sync from shared enemies[] ───────────── */
+    /* ── full rebuild from enemies[] (floor load only) ── */
     function sync(allEnemies) {
       const mine = Array.isArray(allEnemies)
         ? allEnemies.filter(e => _keys.has(e.typeKey) && !e.dead)
         : [];
-
-      const needRebuild = mine.length !== count
-        || mine.some((e, i) => ids[i] !== e.id);
-
-      if (needRebuild) {
-        count     = mine.length;
-        _ensureCap(count);
-        ids       = new Array(count);
-        indexById = new Map();
-        meshSlot.fill(-1, 0, count);
-      }
-
+      count     = mine.length;
+      _ensureCap(count);
+      ids       = new Array(count);
+      indexById = new Map();
+      roomId    = new Array(count).fill(null);
+      meshSlot.fill(-1, 0, count);
       for (let i = 0; i < mine.length; i++) _write(i, mine[i]);
       return count;
     }
 
+    /* ── swap-delete removal — O(1) ───────────── */
+    // Swaps slot i with the last slot and decrements count.
+    // All arrays stay index-aligned. Callers must re-lookup
+    // the moved entity (previously at 'last') by id after removal.
+    function removeAt(i) {
+      if (i < 0 || i >= count) return;
+      const last   = count - 1;
+      const deadId = ids[i];
+      if (i !== last) {
+        ids[i]      = ids[last];
+        posX[i]     = posX[last];
+        posZ[i]     = posZ[last];
+        rotY[i]     = rotY[last];
+        state[i]    = state[last];
+        hp[i]       = hp[last];
+        maxHp[i]    = maxHp[last];
+        animTime[i] = animTime[last];
+        atkTime[i]  = atkTime[last];
+        hitFlash[i] = hitFlash[last];
+        meshSlot[i] = meshSlot[last];
+        roomId[i]   = roomId[last];
+        indexById.set(ids[i], i);
+      }
+      indexById.delete(deadId);
+      ids.length    = last;
+      roomId.length = last;
+      count = last;
+    }
+
     /* ── per-slot API ──────────────────────────── */
-    function getPos(i)        { return [posX[i], posZ[i]]; }
-    function setPos(i, pos)   { posX[i] = pos[0]; posZ[i] = pos[1]; }
-    function indexOf(id)      { return indexById.get(id) ?? -1; }
-    function owns(typeKey)    { return _keys.has(typeKey); }
+    function getPos(i)          { return [posX[i], posZ[i]]; }
+    function setPos(i, pos)     { posX[i] = pos[0]; posZ[i] = pos[1]; }
+    function getRoomId(i)       { return roomId[i]; }
+    function setRoomId(i, id)   { roomId[i] = id; }
+    function indexOf(id)        { return indexById.get(id) ?? -1; }
+    function owns(typeKey)      { return _keys.has(typeKey); }
 
     /* ── bulk read ─────────────────────────────── */
     function arrays() {
       return {
         typeKeys: [..._keys],
-        count, capacity, ids,
+        count, capacity, ids, roomId,
         posX, posZ, rotY,
         state, hp, maxHp,
         animTime, atkTime, hitFlash,
@@ -124,7 +151,7 @@ window.MonsterManager = (() => {
       };
     }
 
-    return { typeKeys: [..._keys], sync, getPos, setPos, indexOf, owns, arrays, count: () => count };
+    return { typeKeys: [..._keys], sync, removeAt, getPos, setPos, getRoomId, setRoomId, indexOf, owns, arrays, count: () => count };
   }
 
   /* ── syncAll helper ──────────────────────────── */

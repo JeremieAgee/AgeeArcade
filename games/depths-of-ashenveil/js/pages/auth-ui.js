@@ -22,7 +22,7 @@ const AuthUI = (() => {
           <p class="auth-error" id="authError"></p>
           <p class="auth-info"  id="authInfo"></p>
           <input class="auth-input" id="authEmail"    type="email"    placeholder="Email address"  autocomplete="email" />
-          <input class="auth-input" id="authPassword" type="password" placeholder="Password (min 6 chars)" autocomplete="current-password" id="authMode-password" />
+          <input class="auth-input" id="authPassword" type="password" placeholder="Password (min 6 chars)" autocomplete="current-password" />
           <button class="auth-btn-primary" id="authSubmit">SIGN IN</button>
           <div class="auth-divider"><span>or</span></div>
           <button class="auth-btn-ghost" id="authGuest">PLAY AS GUEST</button>

@@ -1,12 +1,18 @@
 /* ═══════════════════════════════════════════════════
-   floor-manager.js  —  Floor-level state flags
+   floor-manager.js  —  Floor-level state & coordinator
    Exports: FloorManager (window global)
 
-   Tracks which events have fired on the current floor
-   (boss spawned, door opened, exit revealed, etc.).
-   game.js owns the authoritative booleans today;
-   FloorManager mirrors them so managers & systems
-   can read floor state without coupling to game.js.
+   Owns floor flags (boss spawned, door opened, etc.)
+   and coordinates the per-floor init/clear of all
+   room-aware managers:
+     RoomManager   — room SOA (IDs, bounds, centers)
+     LightManager  — torch SOA (roomId links to RoomManager)
+     MonsterManager — monster SOA (roomId links to RoomManager)
+
+   Call FloorManager.init(dungeon, floorNum) once per
+   floor immediately after dungeon generation. It will
+   init RoomManager first (so LightManager can resolve
+   roomIds), then LightManager, then clear MonsterManager.
 ════════════════════════════════════════════════════ */
 window.FloorManager = (() => {
 
@@ -21,14 +27,25 @@ window.FloorManager = (() => {
   };
 
   /* ── lifecycle ───────────────────────────────── */
-  function init(floorNum) {
+  function init(dungeon, floorNum) {
     _floor = floorNum;
     for (const k in _flags) _flags[k] = false;
+
+    // RoomManager must init first — LightManager reads from it
+    if (typeof RoomManager !== 'undefined') RoomManager.init(dungeon);
+
+    // LightManager resolves roomIds via RoomManager
+    if (typeof LightManager !== 'undefined') LightManager.init(dungeon);
+
+    // MonsterManager SOA is rebuilt each sync — just clear roomId state
+    if (typeof MonsterManager !== 'undefined') MonsterManager.syncAll([]);
   }
 
   function clear() {
     _floor = 0;
     for (const k in _flags) _flags[k] = false;
+    if (typeof RoomManager    !== 'undefined') RoomManager.clear();
+    if (typeof LightManager   !== 'undefined') LightManager.clear();
   }
 
   /* ── flags ───────────────────────────────────── */
@@ -40,7 +57,7 @@ window.FloorManager = (() => {
     return _flags[name] ?? false;
   }
 
-  /* ── snapshot / restore (for save system) ────── */
+  /* ── snapshot / restore (save system) ───────── */
   function snapshot() {
     return { floor: _floor, flags: { ..._flags } };
   }
