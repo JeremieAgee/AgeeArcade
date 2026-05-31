@@ -51,7 +51,7 @@ window.EngineCore = (() => {
 
   const LANTERN_COLOR = 0xff6414;
   const LANTERN_RADIUS = 34;
-  const LANTERN_INTENSITY = 9.0;
+  const LANTERN_INTENSITY = 6.2;
   const MAX_ACTIVE_LANTERN_LIGHTS = 8;
   const LANTERN_ACTIVE_TILES_X = 10;
   const LANTERN_ACTIVE_TILES_Y = 10;
