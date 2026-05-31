@@ -401,10 +401,10 @@ window.EngineCore = (() => {
   function createDungeonInstanceBatches(dungeon, wallGeo, floorGeo, wallMat, floorMat, corridorMat, bossFloorMat, doorTx, doorTy) {
     const counts = countDungeonTileInstances(dungeon, doorTx, doorTy);
     return {
-      wall: createInstanceBatch(wallGeo, wallMat, counts.wall, true, false),
-      floor: createInstanceBatch(floorGeo, floorMat, counts.floor, false, false),
-      corridor: createInstanceBatch(floorGeo, corridorMat, counts.corridor, false, false),
-      bossFloor: createInstanceBatch(floorGeo, bossFloorMat, counts.bossFloor, false, false),
+      wall: createInstanceBatch(wallGeo, wallMat, counts.wall, true, true),
+      floor: createInstanceBatch(floorGeo, floorMat, counts.floor, false, true),
+      corridor: createInstanceBatch(floorGeo, corridorMat, counts.corridor, false, true),
+      bossFloor: createInstanceBatch(floorGeo, bossFloorMat, counts.bossFloor, false, true),
     };
   }
 

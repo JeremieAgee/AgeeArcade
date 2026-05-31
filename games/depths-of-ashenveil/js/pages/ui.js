@@ -463,11 +463,13 @@ function openPauseMenu() {
   buildPauseMenu();
   document.getElementById('pauseMenu').style.display = 'flex';
   pauseTab(pauseActiveTab);
+  _setAdBanner(true);
 }
 
 function closePauseMenu() {
   const m = document.getElementById('pauseMenu');
   if (m) m.style.display = 'none';
+  _setAdBanner(false);
 }
 
 function resumeGame() {
