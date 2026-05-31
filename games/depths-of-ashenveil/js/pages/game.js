@@ -42,6 +42,13 @@ const Game = (() => {
   let exitOpen     = false;
   let stairActive  = false;
 
+  // Per-run analytics counters
+  let _runStartTime       = 0;
+  let _runDeaths          = 0;
+  let _runBossesDefeated  = 0;
+  let _runChestsOpened    = 0;
+  let _runEnemiesKilled   = 0;
+
   const keys = {};
   let rafId  = null;
   let aimAngleVal = 0;
@@ -363,6 +370,17 @@ const Game = (() => {
     _nextFloorNum = 0;
     _nextFloorGenerating = false;
 
+    _runStartTime      = Date.now();
+    _runDeaths         = 0;
+    _runBossesDefeated = 0;
+    _runChestsOpened   = 0;
+    _runEnemiesKilled  = 0;
+    if (window.AgeeAnalytics) {
+      window.AgeeAnalytics.startGameSession('depths_of_ashenveil').then(function () {
+        window.AgeeAnalytics.trackEvent('game_started', { floor: 1 });
+      });
+    }
+
     const snap = _prebuilt;
 
     if (snap) {
@@ -522,6 +540,7 @@ const Game = (() => {
     try { Engine.render(player, 0, 0.016); } catch (_) {}
 
     showFloorAnnounce(floor);
+    if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('floor_reached', { floor: floor });
     // Fade the black overlay out quickly so the player can be seen descending
     // through the arrival portal. The 1.2s CSS transition does the smooth fade.
     setTimeout(() => {
@@ -777,6 +796,7 @@ const Game = (() => {
 
       if (killed) {
         enemy.dead = true;
+        _runEnemiesKilled++;
         Engine.spawnParticles(enemy.x, 1.0, enemy.z, enemy.color, 20, 4, 1.0);
         player.xp += enemy.xp;
         UI.addMsg(`${enemy.name} slain! +${enemy.xp} XP`, 'combat');
@@ -791,6 +811,8 @@ const Game = (() => {
 
         if (enemy.isBoss) {
           bossDefeated = true;
+          _runBossesDefeated++;
+          if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('boss_defeated', { floor: floor });
           refreshSaveMeta(Save.recordBossDefeated());
           UI.hideBossBar();
           UI.addMsg('Boss defeated! Step into the portal to continue...', 'level');
@@ -911,6 +933,9 @@ const Game = (() => {
         grp.userData.lidOpenT     = 0;
         Engine.startChestOpenAnimation(grp.position.x, grp.position.z, player.x, player.z);
 
+        _runChestsOpened++;
+        if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('chest_opened', { floor: floor });
+
         const item = Loot.genItem(floor);
         player.inventory.push(item);
         UI.addMsg(`Chest opened! Found: ${item.name} [${item.rarity}]`, 'loot');
@@ -924,11 +949,25 @@ const Game = (() => {
   /* ── Death ───────────────────────────────────── */
   function die() {
     running = false;
+    _runDeaths++;
     updateTitleStartLabel();
     if (Save.clearActiveRun) Save.clearActiveRun();
     refreshSaveMeta(Save.recordDeath(floor, player.level));
     UI.hideBossBar();
     UI.showDeath(floor, player.level);
+    if (window.AgeeAnalytics) {
+      window.AgeeAnalytics.trackEvent('player_died', { floor: floor, level: player.level });
+      window.AgeeAnalytics.endGameSession({
+        duration_seconds: Math.round((Date.now() - _runStartTime) / 1000),
+        max_floor:        floor,
+        max_level:        player.level,
+        deaths:           _runDeaths,
+        bosses_defeated:  _runBossesDefeated,
+        chests_opened:    _runChestsOpened,
+        enemies_killed:   _runEnemiesKilled,
+        end_reason:       'death',
+      });
+    }
     if (Save.qualifiesForLeaderboard(player.level, floor)) {
       UI.showLeaderboardPrompt(floor, player.level);
     }
@@ -937,16 +976,17 @@ const Game = (() => {
 
   function getPlayer() { return player; }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      wireInput();
-      document.addEventListener('depths-save-change', updateTitleStartLabel);
-      preload();
-    });
-  } else {
+  function _init() {
     wireInput();
     document.addEventListener('depths-save-change', updateTitleStartLabel);
     preload();
+    if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('game_loaded', { game_id: 'depths_of_ashenveil' });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _init);
+  } else {
+    _init();
   }
 
   function goToTitle() {

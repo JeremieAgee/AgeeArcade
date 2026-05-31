@@ -549,6 +549,7 @@ function buyUpgrade(id) {
   p.skillPoints -= u.cost;
   u.apply(p);
   addMsg(`Upgraded: ${id}`, 'level');
+  if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('upgrade_selected', { upgrade_id: id });
   pauseTab('upgrades'); // re-render with new values
   refresh(p);
 }
