@@ -117,11 +117,11 @@ window.EngineCore = (() => {
     if (camera)   { camera.aspect = w / h; camera.updateProjectionMatrix(); }
   }
 
-  function makeFlameCluster(radius = 0.12) {
+  function makeFlameCluster(radius = 0.12, coreColor = 0xff7a18, emberColor = 0xffc45a) {
     const group = new THREE.Group();
     const core = new THREE.Mesh(
       new THREE.ConeGeometry(radius * 0.45, radius * 1.8, 7),
-      new THREE.MeshBasicMaterial({ color: 0xff7a18 })
+      new THREE.MeshBasicMaterial({ color: coreColor })
     );
     core.position.y = radius * 0.45;
     core.userData.baseScale = core.scale.clone();
@@ -130,7 +130,7 @@ window.EngineCore = (() => {
 
     const ember = new THREE.Mesh(
       new THREE.ConeGeometry(radius * 0.28, radius * 1.1, 6),
-      new THREE.MeshBasicMaterial({ color: 0xffc45a })
+      new THREE.MeshBasicMaterial({ color: emberColor })
     );
     ember.position.y = radius * 0.36;
     ember.userData.baseScale = ember.scale.clone();
@@ -312,11 +312,16 @@ window.EngineCore = (() => {
     if (bucket) bucket.push(torchRecord);
     else lanternLightGrid.set(key, [torchRecord]);
 
+    // Boss room gets red low-intensity torches; all others get standard warm orange
+    const isBoss      = torchRecord.roomId === 'room_boss';
+    const lightColor  = isBoss ? 0xff2200 : LANTERN_COLOR;
+    const lightBase   = isBoss ? 4.5      : LANTERN_INTENSITY;
+
     // Pre-create the PointLight upfront so no shader recompilation happens during gameplay
-    const light = new THREE.PointLight(LANTERN_COLOR, LANTERN_INTENSITY, LANTERN_RADIUS);
+    const light = new THREE.PointLight(lightColor, lightBase, LANTERN_RADIUS);
     light.decay = 1;
     light.castShadow = false;
-    light.userData.baseIntensity = LANTERN_INTENSITY;
+    light.userData.baseIntensity = lightBase;
     light.userData.flameOffset   = Math.random() * Math.PI * 2;
     light.userData.flame         = torchRecord.flame;
     light.userData.torch         = torchRecord;
@@ -343,7 +348,7 @@ window.EngineCore = (() => {
 
   function activateWallTorchLight(torchRecord) {
     if (!torchRecord.light) return;
-    torchRecord.light.userData.targetBase = LANTERN_INTENSITY;
+    torchRecord.light.userData.targetBase = torchRecord.light.userData.baseIntensity;
   }
 
   function deactivateWallTorchLight(torchRecord) {
@@ -526,11 +531,13 @@ window.EngineCore = (() => {
       const sconce = buildWallSconce(lx, WALL_H*0.44, lz, rotationY, bracketMat, lanternMat);
       dungeonGroup.add(sconce);
 
-      const flame = makeFlameCluster(0.13);
+      const _rid   = (typeof RoomManager !== 'undefined' ? RoomManager.getRoomIdAtGrid(gx, gy) : null) ?? `room_${lan.roomIndex ?? -1}`;
+      const _boss  = _rid === 'room_boss';
+      const flame  = makeFlameCluster(0.13, _boss ? 0xcc1100 : 0xff7a18, _boss ? 0xff4422 : 0xffc45a);
       const torchPiece = buildTorchPiece(lx, WALL_H*0.46, lz, rotationY, flame, lanternMat);
       dungeonGroup.add(torchPiece);
 
-      const torchRecord = { x: lx, z: lz, gridX: gx, gridY: gy, roomId: (typeof RoomManager !== 'undefined' ? RoomManager.getRoomIdAtGrid(gx, gy) : null) ?? `room_${lan.roomIndex ?? -1}`, holder: sconce, torch: torchPiece, flame, light: null, hasTorch: true };
+      const torchRecord = { x: lx, z: lz, gridX: gx, gridY: gy, roomId: _rid, holder: sconce, torch: torchPiece, flame, light: null, hasTorch: true };
       registerWallTorch(torchRecord);
     }
 
@@ -667,10 +674,12 @@ window.EngineCore = (() => {
         const lx = wx + ox, lz = wz + oz;
         const sconce = buildWallSconce(lx, WALL_H*0.44, lz, ry, bracketMat, lanternMat);
         dungeonGroup.add(sconce);
-        const flame = makeFlameCluster(0.13);
+        const _rid   = (typeof RoomManager !== 'undefined' ? RoomManager.getRoomIdAtGrid(gx, gy) : null) ?? `room_${lan.roomIndex ?? -1}`;
+      const _boss  = _rid === 'room_boss';
+      const flame  = makeFlameCluster(0.13, _boss ? 0xcc1100 : 0xff7a18, _boss ? 0xff4422 : 0xffc45a);
         const torchPiece = buildTorchPiece(lx, WALL_H*0.46, lz, ry, flame, lanternMat);
         dungeonGroup.add(torchPiece);
-        const torchRecord = { x: lx, z: lz, gridX: gx, gridY: gy, roomId: (typeof RoomManager !== 'undefined' ? RoomManager.getRoomIdAtGrid(gx, gy) : null) ?? `room_${lan.roomIndex ?? -1}`, holder: sconce, torch: torchPiece, flame, light: null, hasTorch: true };
+        const torchRecord = { x: lx, z: lz, gridX: gx, gridY: gy, roomId: _rid, holder: sconce, torch: torchPiece, flame, light: null, hasTorch: true };
         registerWallTorch(torchRecord);
       }
 
