@@ -198,7 +198,9 @@ const Game = (() => {
     const now = Date.now();
     if (!force && now - _lastPersistMs < 1200) return;
     _lastPersistMs = now;
-    Save.saveActiveRun(makeActiveRunSnapshot());
+    // Snapshot is expensive (full dungeon serialize + JSON clone) — only build after throttle passes
+    const snap = makeActiveRunSnapshot();
+    if (snap) Save.saveActiveRun(snap);
   }
 
   function loadSavedRun() {
@@ -674,11 +676,16 @@ const Game = (() => {
       if (e.isBoss && bossSpawned) UI.updateBossBar(e);
     });
 
-    enemies = enemies.filter(e => {
-      if (e.dead) { if (e.mesh) Engine.removeEnemyMesh(e.id); return false; }
-      return true;
-    });
-    syncEnemySoa();
+    let _hadDeath = false;
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      if (enemies[i].dead) {
+        if (enemies[i].mesh) Engine.removeEnemyMesh(enemies[i].id);
+        enemies[i] = enemies[enemies.length - 1];
+        enemies.length--;
+        _hadDeath = true;
+      }
+    }
+    if (_hadDeath) rebuildEnemySoa();
 
     // ── Push enemies apart from each other ──
     for (let i = 0; i < enemies.length; i++) {
@@ -719,7 +726,6 @@ const Game = (() => {
     }
 
     Engine.updateEnemyAnimations(enemies, dt);
-    syncEnemySoa();
     const boltDmg = Engine.updateBolts(dt, player);
     if (boltDmg > 0) {
       const dmg = Player.takeDamage(player, boltDmg);
@@ -739,8 +745,8 @@ const Game = (() => {
     if (Math.round(t * 60) % 20 === 0) {
       UI.refresh(player);
       Engine.updatePlayerEquipment(player);
-      persistActiveRun();
     }
+    persistActiveRun();
   }
 
   /* ── Boss entry ──────────────────────────────── */

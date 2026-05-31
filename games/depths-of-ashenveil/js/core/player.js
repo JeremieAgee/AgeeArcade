@@ -119,10 +119,13 @@ const Player = (() => {
   if (p.blinkCD  > 0) p.blinkCD   -= dt * 60;
 
   // Buff timers
-  p.buffs = p.buffs.filter(b => {
-    b.remaining -= dt * 60;
-    return b.remaining > 0;
-  });
+  for (let _bi = p.buffs.length - 1; _bi >= 0; _bi--) {
+    p.buffs[_bi].remaining -= dt * 60;
+    if (p.buffs[_bi].remaining <= 0) {
+      p.buffs[_bi] = p.buffs[p.buffs.length - 1];
+      p.buffs.length--;
+    }
+  }
 
   // Regen
   if (p.hasRegen && p.hp < p.maxHp) {
