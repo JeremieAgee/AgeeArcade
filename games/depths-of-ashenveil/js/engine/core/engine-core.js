@@ -102,7 +102,12 @@ window.EngineCore = (() => {
     if (!torchLight) {
       torchLight = new THREE.PointLight(0xff8833, 4.0, 18);
       torchLight.decay = 1;
-      torchLight.castShadow = false;
+      torchLight.castShadow = true;
+      torchLight.shadow.mapSize.set(512, 512);
+      torchLight.shadow.camera.near = 0.2;
+      torchLight.shadow.camera.far = 18;
+      torchLight.shadow.bias = -0.004;
+      torchLight.shadow.radius = 2;
       scene.add(torchLight);
     }
 
@@ -2563,20 +2568,19 @@ function updateChests(dt) {
       if (!t.hasTorch || t === carriedTorch) continue;
       // O(1) Set lookup — skip torches not in any nearby room
       if (!_scanRoomIds.has(t.roomId)) continue;
-      const dx = t.gridX - pgx;
-      const dz = t.gridY - pgz;
-      const d2 = dx * dx + dz * dz;
-      const inRange = d2 <= LANTERN_ACTIVE_TILES_X * LANTERN_ACTIVE_TILES_X;
-      const inCurrentRoom = inRoom && t.roomId === currentRoomId;
-      if (inCurrentRoom || (!inRoom && inRange)) {
+      // Activate based on world-unit distance, matching the same radius used for dimming
+      const dx_w = (t.gridX - pgx) * tile;
+      const dz_w = (t.gridY - pgz) * tile;
+      const d2_w = dx_w * dx_w + dz_w * dz_w;
+      if (d2_w <= LANTERN_RADIUS * LANTERN_RADIUS) {
         _scratchIdx[_scratchCount]  = i;
-        _scratchDist[_scratchCount] = d2;
+        _scratchDist[_scratchCount] = d2_w;
         _scratchCount++;
       }
     }
 
-    // Cap non-room fallback to MAX_ACTIVE_LANTERN_LIGHTS (insertion-select top N)
-    if (!inRoom && _scratchCount > MAX_ACTIVE_LANTERN_LIGHTS) {
+    // Cap to nearest MAX_ACTIVE_LANTERN_LIGHTS by distance
+    if (_scratchCount > MAX_ACTIVE_LANTERN_LIGHTS) {
       for (let a = 0; a < MAX_ACTIVE_LANTERN_LIGHTS && a < _scratchCount; a++) {
         let minI = a;
         for (let b = a + 1; b < _scratchCount; b++) {

@@ -201,13 +201,20 @@ const UI = (() => {
   }
 
   /* ── Screen transitions ──────────────────────── */
+  function _setAdBanner(visible) {
+    const b = document.getElementById('adBanner');
+    if (b) b.style.display = visible ? '' : 'none';
+  }
+
   function showTitle() {
     document.getElementById('titleScreen').classList.add('active');
     document.getElementById('deathScreen').classList.remove('active');
+    _setAdBanner(true);
   }
 
   function showDeath(floor, level) {
     document.getElementById('deathScreen').classList.add('active');
+    _setAdBanner(true);
     document.getElementById('deathMsg').textContent =
       `Fell on Floor ${floor} at Level ${level}. The dungeon claims another soul...`;
   }
@@ -257,6 +264,7 @@ const UI = (() => {
     document.getElementById('titleScreen').classList.remove('active');
     document.getElementById('deathScreen').classList.remove('active');
     hideLeaderboardPrompt();
+    _setAdBanner(false);
   }
   /* ── Pause Menu ──────────────────────────────── */
 function buildPauseMenu() {
