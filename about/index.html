@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="About Agee Arcade - A collection of free 3D web-based games by solo developer Jeremie Agee.">
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src  'self' 'unsafe-inline'
+                  https://cdnjs.cloudflare.com
+                  https://cdn.jsdelivr.net
+                  https://pagead2.googlesyndication.com;
+      style-src   'self' 'unsafe-inline'
+                  https://fonts.googleapis.com;
+      font-src    'self'
+                  https://fonts.gstatic.com;
+      connect-src 'self'
+                  https://xdvrgeaivfqpcsmuqeyi.supabase.co
+                  wss://xdvrgeaivfqpcsmuqeyi.supabase.co;
+      img-src     'self' data: blob:
+                  https://www.googletagmanager.com;
+      frame-src   'none';
+      object-src  'none';
+      base-uri    'self';
+      form-action 'self';
+    ">
+    <title>About — Agee Arcade</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+
+    <!-- SHARED: site-header — update about/index.html and game pages when changing -->
+    <header class="site-header">
+        <a class="logo" href="../">AGEE ARCADE</a>
+        <nav class="site-nav">
+            <span>Created By Jeremie Agee</span>
+            <a href="../leaderboards/">Leaderboards</a>
+            <a href="../about/">About</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <p class="hero__eyebrow">The Developer</p>
+            <h1 class="hero__title">About Agee Arcade</h1>
+        </section>
+
+        <section class="container" style="max-width:680px; padding-top:2rem; padding-bottom:4rem;">
+            <p style="color:var(--text-secondary); font-size:1.05rem; line-height:1.8; margin-bottom:1.5rem;">
+                Agee Arcade is designed and built entirely by <strong style="color:var(--text-primary);">Jeremie Agee</strong> — a solo developer who has always had a deep love for games and coding. That combination is what drives this project: a genuine passion for the craft and a desire to create experiences people can enjoy.
+            </p>
+
+            <p style="color:var(--text-secondary); font-size:1.05rem; line-height:1.8; margin-bottom:1.5rem;">
+                The arcade is dedicated to <strong style="color:var(--text-primary);">3D web-based games</strong> — free to play, right in your browser, no downloads required. New games are actively in development and will continue to be added over time.
+            </p>
+
+            <h2 style="color:var(--text-primary); font-family:'Orbitron',sans-serif; font-size:1rem; letter-spacing:0.05em; margin-bottom:1rem; margin-top:2rem;">Skills &amp; Technologies</h2>
+            <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:2rem;">
+                <span style="background:var(--surface-2); border:1px solid var(--border-2); color:var(--text-secondary); padding:0.3rem 0.75rem; border-radius:4px; font-size:0.875rem;">Rust</span>
+                <span style="background:var(--surface-2); border:1px solid var(--border-2); color:var(--text-secondary); padding:0.3rem 0.75rem; border-radius:4px; font-size:0.875rem;">Java</span>
+                <span style="background:var(--surface-2); border:1px solid var(--border-2); color:var(--text-secondary); padding:0.3rem 0.75rem; border-radius:4px; font-size:0.875rem;">JavaScript</span>
+                <span style="background:var(--surface-2); border:1px solid var(--border-2); color:var(--text-secondary); padding:0.3rem 0.75rem; border-radius:4px; font-size:0.875rem;">TypeScript</span>
+                <span style="background:var(--surface-2); border:1px solid var(--border-2); color:var(--text-secondary); padding:0.3rem 0.75rem; border-radius:4px; font-size:0.875rem;">HTML &amp; CSS</span>
+                <span style="background:var(--surface-2); border:1px solid var(--border-2); color:var(--text-secondary); padding:0.3rem 0.75rem; border-radius:4px; font-size:0.875rem;">React</span>
+                <span style="background:var(--surface-2); border:1px solid var(--border-2); color:var(--text-secondary); padding:0.3rem 0.75rem; border-radius:4px; font-size:0.875rem;">Node.js</span>
+                <span style="background:var(--surface-2); border:1px solid var(--border-2); color:var(--text-secondary); padding:0.3rem 0.75rem; border-radius:4px; font-size:0.875rem;">SQL</span>
+                <span style="background:var(--surface-2); border:1px solid var(--border-2); color:var(--text-secondary); padding:0.3rem 0.75rem; border-radius:4px; font-size:0.875rem;">Firebase</span>
+                <span style="background:var(--surface-2); border:1px solid var(--border-2); color:var(--text-secondary); padding:0.3rem 0.75rem; border-radius:4px; font-size:0.875rem;">Supabase</span>
+            </div>
+
+            <h2 style="color:var(--text-primary); font-family:'Orbitron',sans-serif; font-size:1rem; letter-spacing:0.05em; margin-bottom:0.75rem;">Inquiries &amp; Hiring</h2>
+            <p style="color:var(--text-secondary); font-size:1.05rem; line-height:1.8;">
+                Available for freelance work and open to new opportunities. For project inquiries or to discuss a specific role, reach out directly at
+                <a href="mailto:Jeremie.w.agee@gmail.com" style="color:var(--accent);">Jeremie.w.agee@gmail.com</a>.
+            </p>
+        </section>
+    </main>
+
+    <!-- SHARED: site-footer — update all pages when changing -->
+    <footer class="site-footer">
+        <p>&copy; <span id="footer-year"></span> Created By Jeremie Agee. All rights reserved.</p>
+    </footer>
+
+    <div class="ad-bottom-strip">
+        <span class="ad-placeholder">Advertisement</span>
+    </div>
+
+    <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
+    <script src="../ads/adsense.js"></script>
+
+</body>
+</html>
