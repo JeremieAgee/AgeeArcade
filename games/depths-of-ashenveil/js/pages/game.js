@@ -765,6 +765,7 @@ const Game = (() => {
     if (gx < 0 || gz < 0 || gx >= dungeon.COLS || gz >= dungeon.ROWS) return;
     if (dungeon.grid[gz][gx] !== 4) return;
     bossSpawned = true;
+    if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('boss_reached', { floor });
 
     const boss = preBoss || Enemies.createBoss(dungeon.bossRoom, floor, dungeon);
     preBoss = null;
@@ -948,6 +949,7 @@ const Game = (() => {
 
   /* ── Death ───────────────────────────────────── */
   function die() {
+    if (!running) return;
     running = false;
     _runDeaths++;
     updateTitleStartLabel();
@@ -981,6 +983,20 @@ const Game = (() => {
     document.addEventListener('depths-save-change', updateTitleStartLabel);
     preload();
     if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('game_loaded', { game_id: 'depths_of_ashenveil' });
+
+    window.addEventListener('pagehide', function () {
+      if (!window.AgeeAnalytics || !window.AGEE_CURRENT_GAME_SESSION_ID) return;
+      window.AgeeAnalytics.endGameSessionUnload({
+        duration_seconds: Math.round((Date.now() - _runStartTime) / 1000),
+        max_floor:        floor,
+        max_level:        player ? player.level : 1,
+        deaths:           _runDeaths,
+        bosses_defeated:  _runBossesDefeated,
+        chests_opened:    _runChestsOpened,
+        enemies_killed:   _runEnemiesKilled,
+        end_reason:       'abandoned',
+      });
+    });
   }
 
   if (document.readyState === 'loading') {
@@ -990,7 +1006,21 @@ const Game = (() => {
   }
 
   function goToTitle() {
-    preload();          // reset dungeon + re-enable Enter button
+    running = false;
+    if (window.AgeeAnalytics && window.AGEE_CURRENT_GAME_SESSION_ID) {
+      window.AgeeAnalytics.trackEvent('game_quit', { floor, level: player ? player.level : 1 });
+      window.AgeeAnalytics.endGameSession({
+        duration_seconds: Math.round((Date.now() - _runStartTime) / 1000),
+        max_floor:        floor,
+        max_level:        player ? player.level : 1,
+        deaths:           _runDeaths,
+        bosses_defeated:  _runBossesDefeated,
+        chests_opened:    _runChestsOpened,
+        enemies_killed:   _runEnemiesKilled,
+        end_reason:       'quit',
+      });
+    }
+    preload();
     refreshSaveMeta();
     updateTitleStartLabel();
     UI.showTitle();

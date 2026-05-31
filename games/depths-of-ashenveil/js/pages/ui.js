@@ -313,74 +313,8 @@ function buildPauseMenu() {
 
   document.body.appendChild(menu);
 
-  // Styles
   const style = document.createElement('style');
   style.textContent = `
-  .pmenu-tab {
-    background:none;border:none;color:#aaaaaa;
-    font-family:'Cinzel',serif;font-size:13px;letter-spacing:1px;
-    padding:0.8rem 1.5rem;text-align:left;cursor:pointer;
-    border-left:3px solid transparent;transition:all 0.15s;
-    width:100%;
-  }
-  .pmenu-tab:hover  { color:#ffffff;background:rgba(255,255,255,0.08); }
-  .pmenu-tab.active { color:#f0c060;border-left-color:#f0c060;background:rgba(240,192,96,0.1); }
-  .pmenu-exit {
-    background:none;border:none;color:#888;
-    font-family:'Cinzel',serif;font-size:12px;letter-spacing:1px;
-    padding:0.6rem 1.5rem;text-align:left;cursor:pointer;
-    transition:color 0.15s;width:100%;
-  }
-  .pmenu-exit:hover { color:#ffffff; }
-  .pmenu-exit.danger:hover { color:#ff4444; }
-  #pauseContent h2 {
-    color:#f0c060;font-size:14px;letter-spacing:2px;
-    margin:0 0 1rem;border-bottom:1px solid #444;padding-bottom:0.6rem;
-  }
-  .pm-item {
-    display:flex;justify-content:space-between;align-items:center;
-    padding:0.7rem 0.9rem;margin-bottom:5px;
-    background:#3a2615;border:1px solid #7a4a18;cursor:pointer;
-    transition:border-color 0.15s;border-radius:3px;
-  }
-  .pm-item:hover    { border-color:#f0c060;background:#4a321b; }
-  .pm-item.equipped { border-color:#66bb66;background:#314323; }
-  .pm-item .iname   { font-size:13px;color:#e8e8e8; }
-  .pm-item .istat   { font-size:11px;color:#aaaaaa;margin-top:2px; }
-  .pm-item .irarity { font-size:10px;letter-spacing:1px; }
-  .rarity-common    { color:#aaaaaa; }
-  .rarity-uncommon  { color:#66dd66; }
-  .rarity-rare      { color:#6699ff; }
-  .rarity-epic      { color:#cc66ff; }
-  .rarity-legendary { color:#ffaa33; }
-  .pm-skill {
-    display:flex;gap:1rem;padding:0.8rem;margin-bottom:6px;
-    background:#3a2615;border:1px solid #7a4a18;border-radius:3px;cursor:pointer;
-    transition:border-color 0.15s;
-  }
-  .pm-skill:hover:not(.locked) { border-color:#f0c060; }
-  .pm-skill.unlocked { border-color:#66bb66;background:#314323; }
-  .pm-skill.locked   { opacity:0.4;cursor:not-allowed; }
-  .pm-skill .sicon   { font-size:24px;line-height:1;min-width:28px; }
-  .pm-skill .sname   { font-size:13px;color:#e8e8e8;margin-bottom:3px; }
-  .pm-skill .sdesc   { font-size:11px;color:#aaaaaa; }
-  .pm-skill .scost   { font-size:11px;color:#f0c060;margin-top:4px; }
-  .pm-upgrade {
-    display:flex;justify-content:space-between;align-items:center;
-    padding:0.8rem;margin-bottom:6px;
-    background:#3a2615;border:1px solid #7a4a18;border-radius:3px;
-  }
-  .pm-upgrade .uinfo { font-size:13px;color:#e8e8e8; }
-  .pm-upgrade .udesc { font-size:11px;color:#aaaaaa;margin-top:3px; }
-  .pm-upgrade button {
-    background:#4a321b;border:1px solid #f0c060;color:#f0c060;
-    font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px;
-    padding:6px 14px;cursor:pointer;white-space:nowrap;
-    transition:all 0.15s;border-radius:2px;
-  }
-  .pm-upgrade button:hover    { background:#f0c060;color:#000; }
-  .pm-upgrade button:disabled { border-color:#555;color:#555;cursor:default;background:none; }
-`;style.textContent = `
   .pmenu-resume {
     background:#c8922a;border:none;color:#0a0500;
     font-family:'Cinzel',serif;font-size:13px;font-weight:700;letter-spacing:2px;
