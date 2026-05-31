@@ -28,15 +28,18 @@ window.EngineCore = (() => {
   let _dungeonBounds = null;
   let _cameraDungeon = null;
   let bolts          = [];
-  let activeLanternTimer = 0;
   let _lastWallTorchCount = 0;
   let _scratchIdx        = new Int16Array(256);
   let _scratchDist       = new Float32Array(256);
   let _scratchCount      = 0;
   let _scratchActiveFlags = new Uint8Array(256); // reused; resized if needed
   let _lastTorchFingerprint = 0;
-  let _tileRoomId   = null;
-  let _tileRoomCols = 0;
+  let _tileRoomId      = null;
+  let _tileRoomCols    = 0;
+  let _playerX         = 0;
+  let _playerZ         = 0;
+  let _cachedRoomId    = undefined;   // last room ID the player was in
+  let _scanRoomIds     = new Set();   // rooms in scan range — rebuilt on room change
   let torchInteractAnim = null;
   let chestInteractAnim = null;
 
@@ -51,11 +54,10 @@ window.EngineCore = (() => {
 
   const LANTERN_COLOR = 0xff6414;
   const LANTERN_RADIUS = 34;
-  const LANTERN_INTENSITY = 6.2;
+  const LANTERN_INTENSITY = 5.75;
   const MAX_ACTIVE_LANTERN_LIGHTS = 8;
   const LANTERN_ACTIVE_TILES_X = 10;
   const LANTERN_ACTIVE_TILES_Y = 10;
-  const LANTERN_LIGHT_UPDATE_SECONDS = 0.35;
   const TORCH_FLAME_OFFSET = new THREE.Vector3(0, 0.18, 0);
   const AMBIENT_INT   = 0.08;
 
@@ -293,9 +295,10 @@ window.EngineCore = (() => {
     lanternLights = [];
     lanternLightGrid = new Map();
     wallTorches = [];
-    activeLanternTimer = 0;
-    _lastWallTorchCount = 0;
+    _lastWallTorchCount   = 0;
     _lastTorchFingerprint = 0;
+    _cachedRoomId         = undefined;
+    _scanRoomIds.clear();
   }
 
   function lanternGridKey(gridX, gridY) {
@@ -320,6 +323,8 @@ window.EngineCore = (() => {
     light.position.set(torchRecord.x, torchRecord.torch.position.y + TORCH_FLAME_OFFSET.y, torchRecord.z);
     light.visible = true;   // always visible — intensity=0 silences it without shader recompile
     light.intensity = 0;
+    light.userData.targetBase  = 0;
+    light.userData.currentBase = 0;
     scene.add(light);
     torchRecord.light = light;
     lanternLights.push(light);
@@ -338,12 +343,12 @@ window.EngineCore = (() => {
 
   function activateWallTorchLight(torchRecord) {
     if (!torchRecord.light) return;
-    torchRecord.light.intensity = torchRecord.light.userData.baseIntensity;
+    torchRecord.light.userData.targetBase = LANTERN_INTENSITY;
   }
 
   function deactivateWallTorchLight(torchRecord) {
     if (!torchRecord.light || torchRecord === carriedTorch) return;
-    torchRecord.light.intensity = 0;
+    torchRecord.light.userData.targetBase = 0;
   }
 
   function countDungeonTileInstances(dungeon, doorTx, doorTy) {
@@ -1049,8 +1054,7 @@ function updateChests(dt) {
       t.hasTorch = true;
       t.torch.visible = true;
       startTorchInteractionAnim(t, 'place', player);
-      activeLanternTimer = 0;
-      _lastTorchFingerprint = 0;
+        _lastTorchFingerprint = 0;
       return 'placed';
     }
 
@@ -1060,7 +1064,6 @@ function updateChests(dt) {
     t.hasTorch = false;
     startTorchInteractionAnim(t, 'pick', player);
     activateWallTorchLight(t);
-    activeLanternTimer = 0;
     _lastTorchFingerprint = 0;
     return 'picked';
   }
@@ -2441,23 +2444,39 @@ function updateChests(dt) {
   let _flickerFrame = 0;
   function updateTorchFlicker(t) {
     _flickerFrame++;
-    // Only update intensity every 3rd frame — imperceptible but cuts uniform uploads
-    const doIntensity = (_flickerFrame % 3) === 0;
-    // Only animate flames every 2nd frame
     const doFlame = (_flickerFrame % 2) === 0;
 
     for (const l of lanternLights) {
-      const isCarried = l.userData.torch === carriedTorch;
-      if (l.intensity === 0 && !isCarried) continue;  // silenced — skip entirely
-      if (doIntensity) {
-        const f = Math.sin(t * 3.5 + l.userData.flameOffset) * 0.12 +
-                  Math.sin(t * 6.2 + l.userData.flameOffset) * 0.06;
-        const boost = isCarried ? 1.5 : 1.0;
-        l.intensity = Math.max(1.0, (l.userData.baseIntensity + f * 1.4) * boost);
+      const ud        = l.userData;
+      const isCarried = ud.torch === carriedTorch;
+      const target    = ud.targetBase ?? 0;
+
+      // Lerp currentBase toward target — smooth room transitions and distance fade
+      let cur = ud.currentBase ?? 0;
+      cur += (target - cur) * 0.1;
+      if (Math.abs(cur - target) < 0.01) cur = target;
+      ud.currentBase = cur;
+
+      // Skip completely inactive lights (not fading, not carried)
+      if (cur === 0 && !isCarried) { l.intensity = 0; continue; }
+
+      // Distance-based scale — updates every frame as player moves
+      let distScale = 1.0;
+      if (!isCarried && cur > 0) {
+        const dx   = l.position.x - _playerX;
+        const dz   = l.position.z - _playerZ;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        distScale  = Math.max(0.15, 1.0 - (dist / LANTERN_RADIUS) * 0.85);
       }
-      if (doFlame) {
-        animateFlame(l.userData.flame, t, l.userData.flameOffset);
-      }
+
+      const base = isCarried ? LANTERN_INTENSITY * 1.5 : cur * distScale;
+
+      // Flicker on top of distance-scaled base
+      const f = Math.sin(t * 3.5 + ud.flameOffset) * 0.12 +
+                Math.sin(t * 6.2 + ud.flameOffset) * 0.06;
+      l.intensity = Math.max(0, base + f * 1.4);
+
+      if (doFlame) animateFlame(ud.flame, t, ud.flameOffset);
     }
   }
 
@@ -2489,12 +2508,30 @@ function updateChests(dt) {
     return _tileRoomId[idx];
   }
 
-  /* ── Camera ──────────────────────────────────── */
+  // Rebuild the set of room IDs whose torches should be considered.
+  // Called only when the player moves into a new room or tile zone.
+  // Includes the current room + any room whose bounds touch the player's range box.
+  function _rebuildScanRooms(pgx, pgz, currentRoomId) {
+    _scanRoomIds.clear();
+    if (currentRoomId !== null) _scanRoomIds.add(currentRoomId);
+    if (typeof RoomManager === 'undefined') return;
+    const rm = RoomManager.arrays();
+    const R  = LANTERN_ACTIVE_TILES_X;
+    for (let i = 0; i < rm.count; i++) {
+      const id = rm.ids[i];
+      if (_scanRoomIds.has(id)) continue;
+      // AABB overlap between player range box and room bounds
+      const ox = rm.originX[i], oz = rm.originZ[i];
+      const ex = ox + rm.width[i], ez = oz + rm.length[i];
+      if (pgx + R >= ox && pgx - R < ex && pgz + R >= oz && pgz - R < ez) {
+        _scanRoomIds.add(id);
+      }
+    }
+  }
+
+  /* ── Lantern activation ──────────────────────── */
   function updateActiveLanternLights(player, dt) {
     if (!player) return;
-    activeLanternTimer -= dt || 0.016;
-    if (activeLanternTimer > 0) return;
-    activeLanternTimer = LANTERN_LIGHT_UPDATE_SECONDS;
 
     const tile = _cameraDungeon ? _cameraDungeon.TILE : 4;
     const px = player.x, pz = player.z;
@@ -2502,12 +2539,21 @@ function updateChests(dt) {
     const pgz = Math.floor(pz / tile);
 
     const currentRoomId = _getTileRoomId(px, pz, tile);
+
+    // Rebuild scan room set only when the player's room changes
+    if (currentRoomId !== _cachedRoomId) {
+      _cachedRoomId = currentRoomId;
+      _rebuildScanRooms(pgx, pgz, currentRoomId);
+    }
+
     const inRoom = currentRoomId !== null;
 
     _scratchCount = 0;
     for (let i = 0; i < wallTorches.length; i++) {
       const t = wallTorches[i];
       if (!t.hasTorch || t === carriedTorch) continue;
+      // O(1) Set lookup — skip torches not in any nearby room
+      if (!_scanRoomIds.has(t.roomId)) continue;
       const dx = t.gridX - pgx;
       const dz = t.gridY - pgz;
       const d2 = dx * dx + dz * dz;
@@ -2724,6 +2770,7 @@ function updateTorchInteractionAnimations(dt) {
 
   /* ── Main render ─────────────────────────────── */
   function render(player, t, dt) {
+    if (player) { _playerX = player.x; _playerZ = player.z; }
     updateTorchInteractionAnimations(dt || 0.016);
     updateActiveLanternLights(player, dt || 0.016);
 
