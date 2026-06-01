@@ -443,47 +443,10 @@ window.EngineCore = (() => {
     const floorGeo      = new THREE.BoxGeometry(TILE, 0.25,     TILE);
     _dungeonBounds = { minX: TILE, maxX: (COLS - 1) * TILE, minZ: TILE, maxZ: (ROWS - 1) * TILE };
     addPerimeterWalls(dungeonGroup, TILE, COLS, ROWS, BORDER_H, wallMat);
-    // Count tiles per room for per-room instanced batches
-    const _roomTileCounts = new Map(); // roomId → {wall,floor,corridor,bossFloor}
-    const _getRoomCounts = id => {
-      if (!_roomTileCounts.has(id)) _roomTileCounts.set(id, { wall: 0, floor: 0, corridor: 0, bossFloor: 0 });
-      return _roomTileCounts.get(id);
-    };
-    for (let row = 1; row < ROWS - 1; row++) {
-      for (let col = 1; col < COLS - 1; col++) {
-        const tile = grid[row][col];
-        const rid  = (_tileRoomId ? _tileRoomId[row * COLS + col] : null) ?? null;
-        const c    = _getRoomCounts(rid);
-        if      (tile === T.WALL && (col !== doorTx || row !== doorTy)) c.wall++;
-        else if (tile === T.WALL)      c.corridor++;
-        else if (tile === T.FLOOR)     c.floor++;
-        else if (tile === T.CORRIDOR)  c.corridor++;
-        else if (tile === T.BOSS_FLOOR) c.bossFloor++;
-      }
-    }
+    const tileInstances = createDungeonInstanceBatches(
+      dungeon, wallGeo, floorGeo, wallMat, floorMat, corridorMat, bossFloorMat, doorTx, doorTy
+    );
 
-    // Build per-room batches (castShadow starts false; enabled at runtime for nearby rooms)
-    const _roomBatches = new Map();
-    _roomTileCounts.forEach((counts, rid) => {
-      const b = {
-        wall:      createInstanceBatch(wallGeo,  wallMat,      counts.wall,      false, true),
-        floor:     createInstanceBatch(floorGeo, floorMat,     counts.floor,     false, true),
-        corridor:  createInstanceBatch(floorGeo, corridorMat,  counts.corridor,  false, true),
-        bossFloor: createInstanceBatch(floorGeo, bossFloorMat, counts.bossFloor, false, true),
-      };
-      _roomBatches.set(rid, b);
-      if (typeof RoomManager !== 'undefined') {
-        RoomManager.registerRoomMeshes(
-          rid,
-          b.wall      ? b.wall.mesh      : null,
-          b.floor     ? b.floor.mesh     : null,
-          b.corridor  ? b.corridor.mesh  : null,
-          b.bossFloor ? b.bossFloor.mesh : null,
-        );
-      }
-    });
-
-    // Place tiles into their room's batch
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
         const wx   = col * TILE + TILE / 2;
@@ -491,23 +454,17 @@ window.EngineCore = (() => {
         const tile = grid[row][col];
         if (row === 0 || row === ROWS - 1 || col === 0 || col === COLS - 1) continue;
 
-        const rid     = (_tileRoomId ? _tileRoomId[row * COLS + col] : null) ?? null;
-        const batches = _roomBatches.get(rid);
-        if (!batches) continue;
-
         if (tile === T.WALL && col === doorTx && row === doorTy) {
-          addInstance(batches.corridor, wx, -0.1, wz);
+          addInstance(tileInstances.corridor, wx, -0.1, wz);
           continue;
         }
-        if      (tile === T.WALL)       addInstance(batches.wall,      wx, WALL_H / 2, wz);
-        else if (tile === T.FLOOR)      addInstance(batches.floor,     wx, -0.1,       wz);
-        else if (tile === T.CORRIDOR)   addInstance(batches.corridor,  wx, -0.1,       wz);
-        else if (tile === T.BOSS_FLOOR) addInstance(batches.bossFloor, wx, -0.1,       wz);
+        if      (tile === T.WALL)       addInstance(tileInstances.wall,      wx, WALL_H / 2, wz);
+        else if (tile === T.FLOOR)      addInstance(tileInstances.floor,     wx, -0.1,       wz);
+        else if (tile === T.CORRIDOR)   addInstance(tileInstances.corridor,  wx, -0.1,       wz);
+        else if (tile === T.BOSS_FLOOR) addInstance(tileInstances.bossFloor, wx, -0.1,       wz);
       }
     }
-
-    // Add all room batches to the scene group
-    _roomBatches.forEach(batches => addDungeonInstanceBatches(dungeonGroup, batches));
+    addDungeonInstanceBatches(dungeonGroup, tileInstances);
 
     scene.add(dungeonGroup);
 
