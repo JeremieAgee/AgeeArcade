@@ -36,6 +36,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <link rel="stylesheet" href="./css/main.css">
+    <link rel="stylesheet" href="./css/cabinet-3d.css">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9709866738532619"
          crossorigin="anonymous"></script>
 </head>
@@ -43,7 +44,52 @@
 
     <!-- SHARED: site-header — update about/index.html and game pages when changing -->
     <header class="site-header">
-        <a class="logo" href="./">AGEE ARCADE</a>
+        <div class="logo-group">
+            <!-- Pure CSS 3D arcade cabinet — rocks ±30° on Y axis -->
+            <div class="cab-scene">
+                <div class="cab">
+                    <!-- Front face: screen + controls -->
+                    <div class="cab-face cab-front">
+                        <div class="cab-front-top-strip"></div>
+                        <div class="cab-bezel">
+                            <div class="cab-screen">
+                                <div class="doa-title">DEPTHS OF<br>ASHENVEIL</div>
+                                <div class="doa-tag">— Descend. Survive. Conquer. —</div>
+                                <div class="doa-btn">RESUME RUN</div>
+                                <div class="doa-btn doa-btn-ghost">START NEW RUN</div>
+                                <div class="doa-btn doa-btn-ghost">VIEW LEADERBOARD</div>
+                            </div>
+                        </div>
+                        <div class="cab-ctrl">
+                            <div class="cab-stick"></div>
+                            <div class="cab-btns">
+                                <span class="cab-btn cab-btn-r"></span>
+                                <span class="cab-btn cab-btn-g"></span>
+                                <span class="cab-btn cab-btn-b"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Back face -->
+                    <div class="cab-face cab-back"></div>
+                    <!-- Left side -->
+                    <div class="cab-face cab-left"></div>
+                    <!-- Right side -->
+                    <div class="cab-face cab-right"></div>
+                    <!-- Top face: marquee with AGEE ARCADE -->
+                    <div class="cab-face cab-top">
+                        <div class="cab-marquee-title">AGEE ARCADE</div>
+                        <div class="cab-marquee-sub">
+                            <span class="cab-marquee-stars">★</span>
+                            EST. 2026
+                            <span class="cab-marquee-stars">★</span>
+                        </div>
+                    </div>
+                    <!-- Bottom face -->
+                    <div class="cab-face cab-bottom"></div>
+                </div>
+            </div>
+            <a class="logo" href="./">AGEE ARCADE</a>
+        </div>
         <nav class="site-nav">
             <span>Created By Jeremie Agee</span>
             <a href="./leaderboards/">Leaderboards</a>

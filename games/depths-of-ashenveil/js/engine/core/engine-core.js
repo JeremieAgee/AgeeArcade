@@ -8,6 +8,7 @@ window.EngineCore = (() => {
   /* ── Internal state ──────────────────────────── */
   let renderer, scene, camera;
   let playerMesh, torchLight, ambientLight, hemiLight;
+  let _blobMat = null;
   let enemyMeshes   = {};
   let particles     = [];
   let chestMeshes   = [];
@@ -1289,6 +1290,23 @@ function updateChests(dt) {
     });
   }
 
+  /* ── Blob shadow ─────────────────────────────── */
+  function makeBlobShadow(radius) {
+    if (!_blobMat) {
+      _blobMat = new THREE.MeshBasicMaterial({
+        color: 0x000000, transparent: true, opacity: 0.38,
+        depthWrite: false, side: THREE.FrontSide,
+      });
+    }
+    const geo  = new THREE.CircleGeometry(radius, 16);
+    const mesh = new THREE.Mesh(geo, _blobMat);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.y = 0.02;   // just above floor
+    mesh.renderOrder = 1;
+    mesh.userData.isBlob = true;
+    return mesh;
+  }
+
   /* ── Player mesh ─────────────────────────────── */
   function buildPlayerMesh(player) {
     if (playerMesh) scene.remove(playerMesh);
@@ -1397,9 +1415,10 @@ function updateChests(dt) {
     playerMesh.traverse(child => {
       if (child.isMesh) {
         child.castShadow = true;
-        child.receiveShadow = false;  // player casts shadows on floor/walls but doesn't self-shadow
+        child.receiveShadow = false;
       }
     });
+    group.add(makeBlobShadow(0.38));
     scene.add(playerMesh);
 
     if (torchLight) scene.remove(torchLight);
@@ -1484,6 +1503,7 @@ function updateChests(dt) {
     hpSprite.position.y = enemy.height + 0.4;
     hpSprite.userData  = { isHpBar: true, hpTex, canvas, ctx: ctx2, enemy };
     group.add(hpSprite);
+    group.add(makeBlobShadow((enemy.radius || 0.35) * 1.4));
     group.position.set(enemy.x, 0, enemy.z);
     scene.add(group);
     enemyMeshes[enemy.id] = group;

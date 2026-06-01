@@ -172,6 +172,37 @@
     window.AGEE_CURRENT_GAME_SESSION_ID = null;
   }
 
+  /* ── Unload-safe session end (fetch keepalive) ── */
+  function endGameSessionUnload(stats) {
+    var id = window.AGEE_CURRENT_GAME_SESSION_ID;
+    if (!id) return;
+    window.AGEE_CURRENT_GAME_SESSION_ID = null;
+    var s = stats || {};
+    try {
+      fetch(SUPABASE_URL + '/rest/v1/arcade_game_sessions?id=eq.' + id, {
+        method: 'PATCH',
+        headers: {
+          'apikey':        SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Content-Type':  'application/json',
+          'Prefer':        'return=minimal',
+        },
+        body: JSON.stringify({
+          ended_at:         new Date().toISOString(),
+          duration_seconds: s.duration_seconds || 0,
+          max_floor:        s.max_floor        || 1,
+          max_level:        s.max_level        || 1,
+          deaths:           s.deaths           || 0,
+          bosses_defeated:  s.bosses_defeated  || 0,
+          chests_opened:    s.chests_opened    || 0,
+          enemies_killed:   s.enemies_killed   || 0,
+          end_reason:       s.end_reason       || 'unknown',
+        }),
+        keepalive: true,
+      });
+    } catch (_) {}
+  }
+
   /* ── Heartbeat ────────────────────────────────── */
   setInterval(async function () {
     var sb = getClient();
@@ -186,12 +217,13 @@
 
   /* ── Expose ───────────────────────────────────── */
   window.AgeeAnalytics = {
-    trackEvent:       trackEvent,
-    trackPageView:    _trackPageView,
-    startGameSession: startGameSession,
-    endGameSession:   endGameSession,
-    sessionId:        sessionId,
-    visitorId:        visitorId,
+    trackEvent:             trackEvent,
+    trackPageView:          _trackPageView,
+    startGameSession:       startGameSession,
+    endGameSession:         endGameSession,
+    endGameSessionUnload:   endGameSessionUnload,
+    sessionId:              sessionId,
+    visitorId:              visitorId,
   };
 
   if (document.readyState === 'loading') {
