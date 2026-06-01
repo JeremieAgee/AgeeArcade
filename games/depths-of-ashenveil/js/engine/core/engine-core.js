@@ -47,14 +47,14 @@ window.EngineCore = (() => {
   let stairDescentOrigin   = { x: 0, z: 0 };
   let stairDescentTarget   = { x: 0, z: 0 };
 
-  const LANTERN_COLOR = 0xff6414;
-  const LANTERN_RADIUS = 34;
-  const LANTERN_INTENSITY = 8.5;
+  const LANTERN_COLOR = 0xff7a28;
+  const LANTERN_RADIUS = 38;
+  const LANTERN_INTENSITY = 6.5;
   const MAX_ACTIVE_LANTERN_LIGHTS = 8;
   const LANTERN_ACTIVE_TILES_X = 10;
   const LANTERN_ACTIVE_TILES_Y = 10;
   const TORCH_FLAME_OFFSET = new THREE.Vector3(0, 0.18, 0);
-  const AMBIENT_INT   = 0.32;
+  const AMBIENT_INT   = 0.55;
 
   /* ── Init ────────────────────────────────────── */
   function init() {
@@ -84,7 +84,7 @@ window.EngineCore = (() => {
     }
 
     if (!ambientLight) {
-      ambientLight = new THREE.AmbientLight(0x1a120c, AMBIENT_INT);
+      ambientLight = new THREE.AmbientLight(0x4a3828, AMBIENT_INT);
       scene.add(ambientLight);
     } else {
       ambientLight.intensity = AMBIENT_INT;
@@ -94,7 +94,7 @@ window.EngineCore = (() => {
     // One shadow-casting player light — gives real floor/wall shadows
     // without hitting the InstancedMesh shadow-map limit
     if (!torchLight) {
-      torchLight = new THREE.PointLight(0xff9944, 5.5, 22);
+      torchLight = new THREE.PointLight(0xffaa55, 4.5, 20);
       torchLight.decay = 1;
       torchLight.castShadow = false;
       scene.add(torchLight);
