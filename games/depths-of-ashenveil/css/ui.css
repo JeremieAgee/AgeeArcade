@@ -103,6 +103,45 @@
 }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
+/* ── BUFF BAR ─────────────────────────────────────── */
+#buffBar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.buff-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(20,10,5,0.75);
+  border: 1px solid #7a4a18;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-family: 'Cinzel', serif;
+  color: #f0c060;
+  position: relative;
+  overflow: hidden;
+  min-width: 80px;
+}
+.buff-icon  { font-size: 11px; }
+.buff-name  { color: #d4b87a; font-size: 9px; letter-spacing: 0.5px; }
+.buff-timer { color: #ffdd88; font-weight: 700; margin-left: 2px; min-width: 22px; text-align: right; }
+.buff-track {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: rgba(255,255,255,0.1);
+}
+.buff-fill {
+  display: block;
+  height: 100%;
+  background: #f0c060;
+  transition: width 0.25s linear;
+}
+
 #msgLog {
   flex: 1;
   overflow: hidden;

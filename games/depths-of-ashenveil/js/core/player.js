@@ -16,7 +16,7 @@ const Player = (() => {
       maxHp:       100,
       atk:         10,
       def:         2,
-      speed:       12,
+      speed:       7.5,
       // Progression
       level:       1,
       xp:          0,
@@ -53,16 +53,19 @@ const Player = (() => {
   function totalAtk(p) {
     const w = equippedWeapon(p);
     let base = p.atk + (w ? w.atk : 0);
-    const b = p.buffs.find(b => b.stat === 'atk');
-    if (b) base += b.value;
+    p.buffs.forEach(b => { if (b.stat === 'atk') base += b.value; });
     return base;
   }
   function totalDef(p) {
     const a = equippedArmor(p);
     let base = p.def + (a ? a.def : 0);
-    const b = p.buffs.find(b => b.stat === 'def');
-    if (b) base += b.value;
+    p.buffs.forEach(b => { if (b.stat === 'def') base += b.value; });
     return base;
+  }
+  function totalSpeed(p) {
+    let spd = p.speed;
+    p.buffs.forEach(b => { if (b.stat === 'speed') spd += b.value; });
+    return spd;
   }
   function atkRange(p) {
     const w = equippedWeapon(p);
@@ -87,8 +90,8 @@ const Player = (() => {
       p.hp = Math.min(p.maxHp, p.hp + item.value);
       UI.addMsg(`Used ${item.name}: +${item.value} HP`, 'loot');
     } else if (item.effect === 'buff') {
-      p.buffs.push({ stat: item.stat, value: item.value, remaining: item.duration });
-      UI.addMsg(`${item.name} active!`, 'level');
+      p.buffs.push({ stat: item.stat, value: item.value, remaining: item.duration, duration: item.duration, icon: item.icon || '✦', name: item.name });
+      UI.addMsg(`${item.name} active! (${item.duration}s)`, 'level');
     }
     UI.refresh(p);
   }
@@ -118,9 +121,9 @@ const Player = (() => {
   if (p.iframes  > 0) p.iframes   -= dt * 60;
   if (p.blinkCD  > 0) p.blinkCD   -= dt * 60;
 
-  // Buff timers
+  // Buff timers (remaining is in seconds)
   for (let _bi = p.buffs.length - 1; _bi >= 0; _bi--) {
-    p.buffs[_bi].remaining -= dt * 60;
+    p.buffs[_bi].remaining -= dt;
     if (p.buffs[_bi].remaining <= 0) {
       p.buffs[_bi] = p.buffs[p.buffs.length - 1];
       p.buffs.length--;
@@ -170,7 +173,7 @@ if (wPressed || sPressed || dPressed || aPressed) {
   const normDx = moveLength > 0 ? worldDx / moveLength : 0;
   const normDz = moveLength > 0 ? worldDz / moveLength : 0;
 
-  const spd  = p.speed * dt;
+  const spd  = totalSpeed(p) * dt;
   const TILE = dungeon.TILE;
   const r    = 0.35;
 
@@ -277,6 +280,7 @@ function blink(p, aimAngle, dungeon) {
     equip,
     totalAtk,
     totalDef,
+    totalSpeed,
     atkRange,
     equippedWeapon,
     equippedArmor,

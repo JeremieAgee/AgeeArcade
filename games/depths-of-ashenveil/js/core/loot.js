@@ -31,11 +31,21 @@ const Loot = (() => {
   ];
 
   /* ── Consumable table ────────────────────────── */
+  // duration is in seconds
   const CONSUMABLES = [
     { name: 'Health Potion',   effect: 'heal',  value: 40 },
     { name: 'Greater Potion',  effect: 'heal',  value: 80 },
-    { name: 'Rage Elixir',     effect: 'buff',  stat: 'atk',  value: 8,  duration: 600 },
-    { name: 'Stone Skin',      effect: 'buff',  stat: 'def',  value: 6,  duration: 600 },
+    // ATK buffs
+    { name: 'Rage Elixir',     effect: 'buff', icon: '⚔', stat: 'atk',   value: 10, duration: 15 },
+    { name: 'War Brew',        effect: 'buff', icon: '⚔', stat: 'atk',   value: 18, duration:  8 },
+    { name: 'Berserker Draught',effect:'buff', icon: '⚔', stat: 'atk',   value: 28, duration:  5 },
+    // DEF buffs
+    { name: 'Stone Skin',      effect: 'buff', icon: '🛡', stat: 'def',   value:  7, duration: 15 },
+    { name: 'Iron Will',       effect: 'buff', icon: '🛡', stat: 'def',   value: 12, duration:  8 },
+    { name: 'Fortress Tonic',  effect: 'buff', icon: '🛡', stat: 'def',   value: 20, duration:  5 },
+    // Speed buffs
+    { name: 'Swift Tonic',     effect: 'buff', icon: '💨', stat: 'speed', value: 2.0, duration: 12 },
+    { name: 'Phantom Rush',    effect: 'buff', icon: '💨', stat: 'speed', value: 3.5, duration:  6 },
   ];
 
   /* ── Rarity definitions ──────────────────────── */
@@ -58,27 +68,27 @@ const Loot = (() => {
     const mult   = RARITY_MULT[rarity];
     const roll   = Math.random();
 
-    if (roll < 0.5) {
+    if (roll < 0.45) {
       // Weapon
       const base = WEAPONS[Math.floor(Math.random() * WEAPONS.length)];
       return {
         type:     'weapon',
         name:     base.name,
         rarity,
-        atk:      Math.round(base.atk * mult + floor * 1.8),
+        atk:      Math.round(base.atk * mult + floor * 1.0),
         spd:      base.spd,
         range:    base.range,
         equipped: false,
         id:       uid(),
       };
-    } else if (roll < 0.85) {
+    } else if (roll < 0.75) {
       // Armor
       const base = ARMORS[Math.floor(Math.random() * ARMORS.length)];
       return {
         type:     'armor',
         name:     base.name,
         rarity,
-        def:      Math.round(base.def * mult + floor * 1.2),
+        def:      Math.round(base.def * mult + floor * 0.7),
         equipped: false,
         id:       uid(),
       };

@@ -54,12 +54,12 @@ window.EngineCore = (() => {
 
   const LANTERN_COLOR = 0xff6414;
   const LANTERN_RADIUS = 34;
-  const LANTERN_INTENSITY = 5.75;
+  const LANTERN_INTENSITY = 8.5;
   const MAX_ACTIVE_LANTERN_LIGHTS = 8;
   const LANTERN_ACTIVE_TILES_X = 10;
   const LANTERN_ACTIVE_TILES_Y = 10;
   const TORCH_FLAME_OFFSET = new THREE.Vector3(0, 0.18, 0);
-  const AMBIENT_INT   = 0.08;
+  const AMBIENT_INT   = 0.22;
 
   /* ── Init ────────────────────────────────────── */
   function init() {
@@ -82,7 +82,7 @@ window.EngineCore = (() => {
 
     if (!scene) {
       scene = new THREE.Scene();
-      scene.fog = new THREE.FogExp2(0x090604, 0.0045);
+      scene.fog = new THREE.FogExp2(0x040200, 0.085);
     }
 
     if (!camera) {
@@ -100,7 +100,7 @@ window.EngineCore = (() => {
     // One shadow-casting player light — gives real floor/wall shadows
     // without hitting the InstancedMesh shadow-map limit
     if (!torchLight) {
-      torchLight = new THREE.PointLight(0xff8833, 4.0, 18);
+      torchLight = new THREE.PointLight(0xff9944, 5.5, 22);
       torchLight.decay = 1;
       torchLight.castShadow = true;
       torchLight.shadow.mapSize.set(512, 512);
@@ -247,7 +247,6 @@ window.EngineCore = (() => {
 
   function addPerimeterWalls(group, TILE, COLS, ROWS, height, wallMat) {
     const borderMat = wallMat.clone();
-    borderMat.fog = false;
     const geo = new THREE.BoxGeometry(TILE, height, TILE);
     const seen = new Set();
 
@@ -258,7 +257,7 @@ window.EngineCore = (() => {
 
       const wall = new THREE.Mesh(geo, borderMat);
       wall.position.set(col * TILE + TILE / 2, height / 2, row * TILE + TILE / 2);
-      wall.castShadow = true;
+      wall.castShadow = false;
       wall.receiveShadow = true;
       wall.frustumCulled = false;
       group.add(wall);
@@ -401,7 +400,7 @@ window.EngineCore = (() => {
   function createDungeonInstanceBatches(dungeon, wallGeo, floorGeo, wallMat, floorMat, corridorMat, bossFloorMat, doorTx, doorTy) {
     const counts = countDungeonTileInstances(dungeon, doorTx, doorTy);
     return {
-      wall: createInstanceBatch(wallGeo, wallMat, counts.wall, true, true),
+      wall: createInstanceBatch(wallGeo, wallMat, counts.wall, false, true),
       floor: createInstanceBatch(floorGeo, floorMat, counts.floor, false, true),
       corridor: createInstanceBatch(floorGeo, corridorMat, counts.corridor, false, true),
       bossFloor: createInstanceBatch(floorGeo, bossFloorMat, counts.bossFloor, false, true),

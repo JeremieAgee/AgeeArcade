@@ -37,7 +37,26 @@ const UI = (() => {
     document.getElementById('hudLevel').textContent = `LVL ${p.level}`;
     document.getElementById('hudAtk').textContent   = Player.totalAtk(p);
     document.getElementById('hudDef').textContent   = Player.totalDef(p);
-    document.getElementById('hudSpd').textContent   = p.speed.toFixed(1);
+    document.getElementById('hudSpd').textContent   = Player.totalSpeed(p).toFixed(1);
+
+    // Active buff pills
+    const buffBar = document.getElementById('buffBar');
+    if (buffBar) {
+      if (p.buffs.length === 0) {
+        buffBar.innerHTML = '';
+      } else {
+        buffBar.innerHTML = p.buffs.map(b => {
+          const secs = Math.ceil(b.remaining);
+          const pct  = Math.max(0, b.remaining / b.duration * 100);
+          return `<span class="buff-pill">
+            <span class="buff-icon">${b.icon || '✦'}</span>
+            <span class="buff-name">${b.name}</span>
+            <span class="buff-timer">${secs}s</span>
+            <span class="buff-track"><span class="buff-fill" style="width:${pct}%"></span></span>
+          </span>`;
+        }).join('');
+      }
+    }
 
     // Equipped gear names
     const w = Player.equippedWeapon(p);
