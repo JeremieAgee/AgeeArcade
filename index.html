@@ -44,52 +44,7 @@
 
     <!-- SHARED: site-header — update about/index.html and game pages when changing -->
     <header class="site-header">
-        <div class="logo-group">
-            <!-- Pure CSS 3D arcade cabinet — rocks ±30° on Y axis -->
-            <div class="cab-scene">
-                <div class="cab">
-                    <!-- Front face: screen + controls -->
-                    <div class="cab-face cab-front">
-                        <div class="cab-front-top-strip"></div>
-                        <div class="cab-bezel">
-                            <div class="cab-screen">
-                                <div class="doa-title">DEPTHS OF<br>ASHENVEIL</div>
-                                <div class="doa-tag">— Descend. Survive. Conquer. —</div>
-                                <div class="doa-btn">RESUME RUN</div>
-                                <div class="doa-btn doa-btn-ghost">START NEW RUN</div>
-                                <div class="doa-btn doa-btn-ghost">VIEW LEADERBOARD</div>
-                            </div>
-                        </div>
-                        <div class="cab-ctrl">
-                            <div class="cab-stick"></div>
-                            <div class="cab-btns">
-                                <span class="cab-btn cab-btn-r"></span>
-                                <span class="cab-btn cab-btn-g"></span>
-                                <span class="cab-btn cab-btn-b"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Back face -->
-                    <div class="cab-face cab-back"></div>
-                    <!-- Left side -->
-                    <div class="cab-face cab-left"></div>
-                    <!-- Right side -->
-                    <div class="cab-face cab-right"></div>
-                    <!-- Top face: marquee with AGEE ARCADE -->
-                    <div class="cab-face cab-top">
-                        <div class="cab-marquee-title">AGEE ARCADE</div>
-                        <div class="cab-marquee-sub">
-                            <span class="cab-marquee-stars">★</span>
-                            EST. 2026
-                            <span class="cab-marquee-stars">★</span>
-                        </div>
-                    </div>
-                    <!-- Bottom face -->
-                    <div class="cab-face cab-bottom"></div>
-                </div>
-            </div>
-            <a class="logo" href="./">AGEE ARCADE</a>
-        </div>
+        <a class="logo" href="./">AGEE ARCADE</a>
         <nav class="site-nav">
             <span>Created By Jeremie Agee</span>
             <a href="./leaderboards/">Leaderboards</a>
@@ -111,9 +66,81 @@
 
         <!-- Hero -->
         <section class="hero">
-            <p class="hero__eyebrow">Welcome to</p>
-            <h1 class="hero__title">Agee Arcade</h1>
-            <p class="hero__subtitle">Free browser games created by Jeremie Agee - no download required.</p>
+            <!-- Pure CSS 3D arcade cabinet — rocks ±30° on Y axis -->
+            <div class="cab-scene" aria-hidden="true">
+                <div class="cab">
+
+                    <!-- ── Section A: Marquee ── -->
+                    <div class="cab-face cab-marquee-front">
+                        <span class="cab-marquee-line1">AGEE ARCADE</span>
+                        <span class="cab-marquee-line2">★&nbsp;&nbsp;EST. 2026&nbsp;&nbsp;★</span>
+                    </div>
+
+                    <!-- ── Section B: Monitor ── -->
+                    <div class="cab-face cab-monitor-front">
+                        <div class="cab-bezel">
+                            <div class="cab-screen">
+                                <div class="doa-title">DEPTHS OF<br>ASHENVEIL</div>
+                                <div class="doa-tag">— Descend. Survive. Conquer. —</div>
+                                <div class="doa-stat">Best Floor: 1 &middot; Best Level: 1 &middot; Runs: 5</div>
+                                <div class="doa-btn">RESUME RUN</div>
+                                <div class="doa-btn doa-btn-ghost">START NEW RUN</div>
+                                <div class="doa-btn doa-btn-ghost">VIEW LEADERBOARD</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Section C: Control panel ── -->
+                    <div class="cab-face cab-ctrl-front">
+                        <div class="cab-stick">
+                            <div class="cab-stick-ball"></div>
+                            <div class="cab-stick-shaft"></div>
+                            <div class="cab-stick-base"></div>
+                        </div>
+                        <div class="cab-btns">
+                            <div class="cab-btn-row">
+                                <span class="cab-btn cab-btn-r"></span>
+                                <span class="cab-btn cab-btn-g"></span>
+                                <span class="cab-btn cab-btn-b"></span>
+                            </div>
+                            <div class="cab-btn-row">
+                                <span class="cab-btn cab-btn-y"></span>
+                                <span class="cab-btn cab-btn-p"></span>
+                                <span class="cab-btn cab-btn-w"></span>
+                            </div>
+                        </div>
+                        <div class="cab-ctrl-labels">WASD · MOVE &nbsp;|&nbsp; MOUSE · AIM &nbsp;|&nbsp; CLICK · ATTACK</div>
+                    </div>
+
+                    <!-- ── Section D: Base / coin door ── -->
+                    <div class="cab-face cab-base-front">
+                        <span class="cab-coin-slot">25¢</span>
+                        <div class="cab-insert-group">
+                            <div class="cab-insert-slot"></div>
+                            <span class="cab-insert-txt">INSERT COIN</span>
+                        </div>
+                    </div>
+
+                    <!-- ── Full-height side panels ── -->
+                    <div class="cab-face cab-side-left">
+                        <span class="cab-side-txt">AGEE ARCADE</span>
+                    </div>
+                    <div class="cab-face cab-side-right">
+                        <span class="cab-side-txt">AGEE ARCADE</span>
+                    </div>
+
+                    <!-- ── Top + bottom caps ── -->
+                    <div class="cab-face cab-top"></div>
+                    <div class="cab-face cab-bottom"></div>
+
+                </div>
+            </div>
+
+            <div class="hero__text">
+                <p class="hero__eyebrow">Welcome to</p>
+                <h1 class="hero__title">Agee Arcade</h1>
+                <p class="hero__subtitle">Free browser games created by Jeremie Agee - no download required.</p>
+            </div>
         </section>
 
         <!-- Featured Game — populated by main.js renderFeaturedGame() -->
