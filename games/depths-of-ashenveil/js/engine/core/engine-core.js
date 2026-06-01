@@ -54,7 +54,7 @@ window.EngineCore = (() => {
   const LANTERN_ACTIVE_TILES_X = 10;
   const LANTERN_ACTIVE_TILES_Y = 10;
   const TORCH_FLAME_OFFSET = new THREE.Vector3(0, 0.18, 0);
-  const AMBIENT_INT   = 0.22;
+  const AMBIENT_INT   = 0.32;
 
   /* ── Init ────────────────────────────────────── */
   function init() {
@@ -100,9 +100,10 @@ window.EngineCore = (() => {
       torchLight.castShadow = true;
       torchLight.shadow.mapSize.set(512, 512);
       torchLight.shadow.camera.near = 0.2;
-      torchLight.shadow.camera.far = 18;
-      torchLight.shadow.bias = -0.004;
-      torchLight.shadow.radius = 2;
+      torchLight.shadow.camera.far  = 22;
+      torchLight.shadow.bias        = -0.0005;
+      torchLight.shadow.normalBias  =  0.02;
+      torchLight.shadow.radius      = 1.5;
       scene.add(torchLight);
     }
 

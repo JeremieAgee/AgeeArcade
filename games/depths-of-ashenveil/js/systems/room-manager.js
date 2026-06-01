@@ -32,12 +32,10 @@ window.RoomManager = (() => {
   // and the player is always close. Room walls never cast shadows — too large/distant.
   function updateShadows(scanRoomIds) {
     _meshes.forEach((m, roomId) => {
-      const near       = roomId !== null ? scanRoomIds.has(roomId) : true;
-      const isCorridor = roomId === null;
-      if (m.wall)      m.wall.castShadow      = isCorridor && near;
-      if (m.floor)     m.floor.castShadow     = near;
-      if (m.corridor)  m.corridor.castShadow  = near;
-      if (m.bossFloor) m.bossFloor.castShadow = near;
+      if (m.wall)      m.wall.castShadow      = false;
+      if (m.floor)     m.floor.castShadow     = false;
+      if (m.corridor)  m.corridor.castShadow  = false;
+      if (m.bossFloor) m.bossFloor.castShadow = false;
     });
   }
 
