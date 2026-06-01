@@ -66,72 +66,84 @@
 
         <!-- Hero -->
         <section class="hero">
-            <!-- Pure CSS 3D arcade cabinet — rocks ±30° on Y axis -->
+            <!-- Pure CSS 3D arcade cabinet — separate box sections, rocks ±30° -->
             <div class="cab-scene" aria-hidden="true">
                 <div class="cab">
 
-                    <!-- ── Section A: Marquee ── -->
-                    <div class="cab-face cab-marquee-front">
-                        <span class="cab-marquee-line1">AGEE ARCADE</span>
-                        <span class="cab-marquee-line2">★&nbsp;&nbsp;EST. 2026&nbsp;&nbsp;★</span>
+                    <!-- A: Marquee box (wider than body, overhangs 19px each side) -->
+                    <div class="cab-sect s-mq">
+                        <div class="csf csf-front mq-front">
+                            <span class="cab-marquee-line1">AGEE ARCADE</span>
+                            <span class="cab-marquee-line2">★&nbsp;&nbsp;EST. 2026&nbsp;&nbsp;★</span>
+                        </div>
+                        <div class="csf csf-left  mq-left"></div>
+                        <div class="csf csf-right mq-right"></div>
+                        <div class="csf csf-top   mq-top"></div>
                     </div>
 
-                    <!-- ── Section B: Monitor ── -->
-                    <div class="cab-face cab-monitor-front">
-                        <div class="cab-bezel">
-                            <div class="cab-screen">
-                                <div class="doa-title">DEPTHS OF<br>ASHENVEIL</div>
-                                <div class="doa-tag">— Descend. Survive. Conquer. —</div>
-                                <div class="doa-stat">Best Floor: 1 &middot; Best Level: 1 &middot; Runs: 5</div>
-                                <div class="doa-btn">RESUME RUN</div>
-                                <div class="doa-btn doa-btn-ghost">START NEW RUN</div>
-                                <div class="doa-btn doa-btn-ghost">VIEW LEADERBOARD</div>
+                    <!-- B: Monitor box -->
+                    <div class="cab-sect s-mon">
+                        <div class="csf csf-front mon-front">
+                            <div class="cab-bezel">
+                                <div class="cab-screen">
+                                    <div class="doa-title">DEPTHS OF<br>ASHENVEIL</div>
+                                    <div class="doa-tag">— Descend. Survive. Conquer. —</div>
+                                    <div class="doa-stat">Best Floor: 1 &middot; Best Level: 1 &middot; Runs: 5</div>
+                                    <div class="doa-btn">RESUME RUN</div>
+                                    <div class="doa-btn doa-btn-ghost">START NEW RUN</div>
+                                    <div class="doa-btn doa-btn-ghost">VIEW LEADERBOARD</div>
+                                </div>
                             </div>
                         </div>
+                        <div class="csf csf-left  mon-left">
+                            <span class="cab-side-txt">AGEE<br>ARCADE</span>
+                        </div>
+                        <div class="csf csf-right mon-right">
+                            <span class="cab-side-txt">AGEE<br>ARCADE</span>
+                        </div>
                     </div>
 
-                    <!-- ── Section C: Control panel ── -->
-                    <div class="cab-face cab-ctrl-front">
-                        <div class="cab-stick">
-                            <div class="cab-stick-ball"></div>
-                            <div class="cab-stick-shaft"></div>
-                            <div class="cab-stick-base"></div>
-                        </div>
-                        <div class="cab-btns">
-                            <div class="cab-btn-row">
-                                <span class="cab-btn cab-btn-r"></span>
-                                <span class="cab-btn cab-btn-g"></span>
-                                <span class="cab-btn cab-btn-b"></span>
+                    <!-- C: Control panel — 3D object, children have translateZ -->
+                    <div class="cab-sect s-ctrl">
+                        <div class="csf csf-front ctrl-front">
+                            <div class="cab-stick">
+                                <div class="cab-stick-ball"></div>
+                                <div class="cab-stick-shaft"></div>
+                                <div class="cab-stick-base"></div>
                             </div>
-                            <div class="cab-btn-row">
-                                <span class="cab-btn cab-btn-y"></span>
-                                <span class="cab-btn cab-btn-p"></span>
-                                <span class="cab-btn cab-btn-w"></span>
+                            <div class="cab-btns">
+                                <div class="cab-btn-row">
+                                    <span class="cab-btn cab-btn-r"></span>
+                                    <span class="cab-btn cab-btn-g"></span>
+                                    <span class="cab-btn cab-btn-b"></span>
+                                </div>
+                                <div class="cab-btn-row">
+                                    <span class="cab-btn cab-btn-y"></span>
+                                    <span class="cab-btn cab-btn-p"></span>
+                                    <span class="cab-btn cab-btn-w"></span>
+                                </div>
                             </div>
                         </div>
-                        <div class="cab-ctrl-labels">WASD · MOVE &nbsp;|&nbsp; MOUSE · AIM &nbsp;|&nbsp; CLICK · ATTACK</div>
+                        <div class="csf csf-left  ctrl-left"></div>
+                        <div class="csf csf-right ctrl-right"></div>
+                        <div class="csf ctrl-apron"></div>
                     </div>
 
-                    <!-- ── Section D: Base / coin door ── -->
-                    <div class="cab-face cab-base-front">
-                        <span class="cab-coin-slot">25¢</span>
-                        <div class="cab-insert-group">
-                            <div class="cab-insert-slot"></div>
-                            <span class="cab-insert-txt">INSERT COIN</span>
+                    <!-- D: Base box -->
+                    <div class="cab-sect s-base">
+                        <div class="csf csf-front base-front">
+                            <div class="cab-coin-box">
+                                <span class="cab-coin-slot">25¢</span>
+                                <div class="cab-insert-group">
+                                    <div class="cab-insert-slot"></div>
+                                    <span class="cab-insert-txt">INSERT COIN</span>
+                                </div>
+                            </div>
                         </div>
+                        <div class="csf csf-left   base-left"></div>
+                        <div class="csf csf-right  base-right"></div>
+                        <div class="csf csf-bottom base-bottom"></div>
                     </div>
-
-                    <!-- ── Full-height side panels ── -->
-                    <div class="cab-face cab-side-left">
-                        <span class="cab-side-txt">AGEE ARCADE</span>
-                    </div>
-                    <div class="cab-face cab-side-right">
-                        <span class="cab-side-txt">AGEE ARCADE</span>
-                    </div>
-
-                    <!-- ── Top + bottom caps ── -->
-                    <div class="cab-face cab-top"></div>
-                    <div class="cab-face cab-bottom"></div>
 
                 </div>
             </div>

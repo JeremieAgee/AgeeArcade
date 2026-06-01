@@ -1,525 +1,567 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   Pure CSS 3D Arcade Cabinet — matches the Agee Arcade photo reference
+   Pure CSS 3D Arcade Cabinet
    ───────────────────────────────────────────────────────────────────────────
-   Structure (single-width side faces span full height):
+   Four nested 3D sections, each a real box with its own left/right/top faces:
 
-     ┌──────────────────────────────┐  ← Marquee front  (W=200, H=90)
-     │        AGEE ARCADE           │
-     │       ★ EST. 2026 ★          │
-     ├──────────────────────────────┤  ← Monitor front  (W=200, H=220)
-     │  ┌──────────────────────┐   │
-     │  │   DEPTHS OF          │   │
-     │  │   ASHENVEIL          │   │
-     │  │ ─ Descend. Survive ─ │   │
-     │  │  [RESUME RUN]        │   │
-     │  │  [START NEW RUN]     │   │
-     │  │  [VIEW LEADERBOARD]  │   │
-     │  └──────────────────────┘   │
-     ├──────────────────────────────┤  ← Ctrl panel front (W=200, H=90)
-     │  ◉  [●][●][●][●][●][●]      │
-     ├──────────────────────────────┤  ← Base front  (W=200, H=60)
-     │  25¢              INSERT COIN│
-     └──────────────────────────────┘
+     [A] Marquee   W=178  H=68   D=70  left=-19  (overhangs body 19px per side)
+     [B] Monitor   W=140  H=150  D=70  left=0
+     [C] Ctrl panel W=140 H=60   D=70  left=0   (front face rotateX angled)
+     [D] Base      W=140  H=42   D=70  left=0
 
-   LEFT / RIGHT: single 110×460 face each, with space artwork + "AGEE ARCADE"
-   TOP: 200×110 face (marquee top)
-   Cabinet depth D = 110px
-
-   Cabinet rocks ±30° on Y, so both sides cycle into view.
+   All share depth D=70.
+   Left/right faces are per-section so the marquee shoulder is visible.
+   Control panel front face is rotateX(22deg) — angled toward viewer.
 ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Hero layout ─────────────────────────────────────────────────── */
+/* ── Hero: flex row, cabinet left, title right ───────────────────── */
 .hero {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 2.5rem !important;
-  padding: 3rem 2rem 3rem !important;
+  padding: 2rem 2rem 2rem !important;
   text-align: left !important;
 }
-
-.hero__text {
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-}
-
-.hero__subtitle {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-}
+.hero__text { display: flex; flex-direction: column; text-align: left; }
+.hero__subtitle { margin-left: 0 !important; margin-right: 0 !important; }
 
 @media (max-width: 860px) {
-  .hero {
-    flex-direction: column !important;
-    align-items: center !important;
-    text-align: center !important;
-    gap: 2rem !important;
-  }
+  .hero { flex-direction: column !important; text-align: center !important; padding: 1.5rem 1rem !important; }
   .hero__text { text-align: center; }
   .hero__subtitle { margin-left: auto !important; margin-right: auto !important; }
 }
 
-/* ── Scene (perspective camera) ──────────────────────────────────── */
+/* ── Perspective scene ───────────────────────────────────────────── */
 .cab-scene {
-  perspective: 1200px;
-  perspective-origin: 50% 38%;
+  perspective: 900px;
+  perspective-origin: 50% 36%;
   flex-shrink: 0;
-  width: 340px;
-  height: 480px;
+  width: 380px;
+  height: 380px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: visible;
 }
 
-/* ── Cabinet root ────────────────────────────────────────────────── */
+/* ── Cabinet root: rocking animation ─────────────────────────────── */
 .cab {
   position: relative;
-  width: 200px;
-  height: 460px;
+  width: 145px;
+  height: 316px;
   transform-style: preserve-3d;
   animation: cab-rock 7s ease-in-out infinite;
 }
 
 @keyframes cab-rock {
-  0%   { transform: rotateX(6deg) rotateY(-30deg); }
-  50%  { transform: rotateX(6deg) rotateY(30deg);  }
-  100% { transform: rotateX(6deg) rotateY(-30deg); }
+  0%   { transform: rotateX(5deg) rotateY(-35deg); }
+  50%  { transform: rotateX(5deg) rotateY(35deg);  }
+  100% { transform: rotateX(5deg) rotateY(-35deg); }
 }
 
-.cab-face {
+/* ── Section container (each is its own 3D box) ──────────────────── */
+.cab-sect {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+/* Body W=145 — monitor dominates at 55% of total height */
+.s-mq   { top: 0;    left: -8px;  width: 161px; height: 44px;  transform: translateZ(12px); }
+.s-mon  { top: 44px; left: 0;     width: 145px; height: 110px; }
+.s-ctrl { top: 154px;left: 0;     width: 145px; height: 52px;  }
+.s-base { top: 206px;left: 0;     width: 145px; height: 110px; }
+
+/* ── Face base ───────────────────────────────────────────────────── */
+.csf {
   position: absolute;
   backface-visibility: hidden;
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   FULL-HEIGHT SIDE FACES  (D=110px depth, H=460px)
-   Left:  left=-110px, transform-origin:right, rotateY(-90deg)
-   Right: left=200px,  transform-origin:left,  rotateY(90deg)
-══════════════════════════════════════════════════════════════════ */
+/* Front: sits at z=0, full section size */
+.csf-front { top: 0; left: 0; width: 100%; height: 100%; }
 
-.cab-side-left,
-.cab-side-right {
-  width: 110px;
-  height: 460px;
-  top: 0;
-}
-
-.cab-side-left {
-  left: -110px;
+/* D = 115px for all faces */
+.csf-left {
+  width: 115px; height: 100%;
+  top: 0; left: -115px;
   transform-origin: right center;
   transform: rotateY(-90deg);
-  background:
-    radial-gradient(ellipse 60px 60px at 55px 280px, rgba(180,120,255,0.15) 0%, transparent 70%),
-    radial-gradient(circle 18px at 55px 300px, #2a1060 0%, #0e0430 100%),
-    linear-gradient(180deg, #0e0428 0%, #180840 40%, #0e0428 100%);
-  border-left:   1px solid #2a1468;
-  border-right:  2px solid #4a28a0;
-  overflow: hidden;
 }
 
-.cab-side-right {
-  left: 200px;
+.csf-right {
+  width: 115px; height: 100%;
+  top: 0; left: 100%;
   transform-origin: left center;
   transform: rotateY(90deg);
-  /* Space artwork: planet + ship + stars */
-  background:
-    /* stars */
-    radial-gradient(1px 1px at 20px 40px,  #fff 100%, transparent),
-    radial-gradient(1px 1px at 80px 90px,  #ccc 100%, transparent),
-    radial-gradient(1px 1px at 30px 180px, #fff 100%, transparent),
-    radial-gradient(1px 1px at 90px 220px, #ddd 100%, transparent),
-    radial-gradient(1px 1px at 15px 310px, #fff 100%, transparent),
-    radial-gradient(1px 1px at 70px 360px, #ccc 100%, transparent),
-    radial-gradient(1px 1px at 95px 130px, #fff 100%, transparent),
-    radial-gradient(1px 1px at 45px 410px, #ddd 100%, transparent),
-    /* planet glow */
-    radial-gradient(ellipse 50px 50px at 58px 300px, rgba(80,40,180,0.6) 0%, rgba(40,10,100,0.3) 60%, transparent 100%),
-    /* planet body */
-    radial-gradient(circle 32px at 58px 300px, #2a0e80 0%, #1a0860 60%, #0e0440 100%),
-    /* ship glow */
-    radial-gradient(ellipse 20px 8px at 40px 200px, rgba(120,200,255,0.3) 0%, transparent 100%),
-    /* base */
-    linear-gradient(180deg, #080220 0%, #120638 45%, #0a0228 100%);
-  border-left:  2px solid #4a28a0;
-  border-right: 1px solid #2a1468;
-  overflow: hidden;
 }
 
-/* "AGEE ARCADE" side text */
-.cab-side-right .cab-side-txt {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(90deg);
-  font-family: 'Orbitron', sans-serif;
-  font-size: 13px;
-  font-weight: 900;
-  color: #7050c0;
-  letter-spacing: 3px;
-  white-space: nowrap;
-  text-shadow: 0 0 8px rgba(120,80,220,0.5);
+.csf-top {
+  width: 100%; height: 115px;
+  top: -115px; left: 0;
+  transform-origin: bottom center;
+  transform: rotateX(90deg);
 }
 
-.cab-side-left .cab-side-txt {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(-90deg);
-  font-family: 'Orbitron', sans-serif;
-  font-size: 11px;
-  font-weight: 900;
-  color: #4a3488;
-  letter-spacing: 2px;
-  white-space: nowrap;
+.csf-bottom {
+  width: 100%; height: 115px;
+  top: 100%; left: 0;
+  transform-origin: top center;
+  transform: rotateX(-90deg);
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   SECTION A — MARQUEE FRONT   top=0, W=200, H=90
+   A — MARQUEE BOX
 ══════════════════════════════════════════════════════════════════ */
-.cab-marquee-front {
-  width: 200px;
-  height: 90px;
-  top: 0; left: 0;
-  background: linear-gradient(180deg, #0c0428 0%, #1a0848 55%, #0e0530 100%);
-  border-top:    2px solid #7050c0;
-  border-left:   2px solid #5030a0;
-  border-right:  2px solid #5030a0;
-  border-bottom: 1px solid #3a2078;
+.mq-front {
+  background: linear-gradient(180deg, #0c0428 0%, #1c0850 55%, #100538 100%);
+  border: 2px solid #6040c0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   overflow: hidden;
-  box-shadow: inset 0 0 30px rgba(100,50,200,0.2);
+  box-sizing: border-box;
+  padding: 0 8px;
 }
 
-/* Light sweep effect */
-.cab-marquee-front::before {
+.mq-front::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(110deg,
-    transparent 20%,
-    rgba(160,100,255,0.07) 50%,
-    transparent 80%);
-  animation: marquee-sweep 4s ease-in-out infinite alternate;
+  background: linear-gradient(105deg, transparent 25%, rgba(150,90,255,0.08) 50%, transparent 75%);
+  animation: mq-sweep 4s ease-in-out infinite alternate;
 }
 
-@keyframes marquee-sweep {
-  0%   { opacity: 0; transform: translateX(-20px); }
-  100% { opacity: 1; transform: translateX(20px); }
+@keyframes mq-sweep {
+  from { transform: translateX(-15px); }
+  to   { transform: translateX(15px); }
 }
 
 .cab-marquee-line1 {
   font-family: 'Orbitron', sans-serif;
-  font-size: 20px;
+  font-size: 11px;
   font-weight: 900;
-  /* gradient text to match photo: blue-left, purple-right */
-  background: linear-gradient(90deg, #60a0ff 0%, #c080ff 60%, #e0a0ff 100%);
+  white-space: nowrap;
+  background: linear-gradient(90deg, #60a0ff 0%, #c080ff 55%, #e0a0ff 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: 3px;
-  text-align: center;
-  filter: drop-shadow(0 0 8px rgba(160,100,255,0.8));
-  position: relative;
-  z-index: 1;
+  letter-spacing: 2px;
+  filter: drop-shadow(0 0 8px rgba(160,100,255,0.9));
+  position: relative; z-index: 1;
 }
 
 .cab-marquee-line2 {
   font-family: 'Orbitron', sans-serif;
-  font-size: 9px;
-  color: #8060b0;
-  letter-spacing: 3px;
-  text-align: center;
-  position: relative;
-  z-index: 1;
+  font-size: 7px;
+  color: #7050b8;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  position: relative; z-index: 1;
+}
+
+/* Marquee gets deeper faces (80px) so the top cap is prominent */
+.s-mq .csf-left  { width: 115px; left: -115px; }
+.s-mq .csf-right { width: 115px; }
+.s-mq .csf-top   { height: 135px; top: -135px; }
+
+.mq-left, .mq-right {
+  background: linear-gradient(180deg, #100438 0%, #1a0850 50%, #0e0438 100%);
+  border: 1px solid #4a2090;
+}
+
+.mq-top {
+  background: linear-gradient(180deg, #1e0858 0%, #140640 50%, #0e0430 100%);
+  border: 1px solid #5030a8;
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   SECTION B — MONITOR FRONT   top=90, W=200, H=220
+   B — MONITOR BOX
 ══════════════════════════════════════════════════════════════════ */
-.cab-monitor-front {
-  width: 200px;
-  height: 220px;
-  top: 90px; left: 0;
-  background: linear-gradient(180deg, #12063a 0%, #1c0a50 30%, #12063a 100%);
-  border-left:  2px solid #5030a0;
-  border-right: 2px solid #5030a0;
+.mon-front {
+  background: linear-gradient(180deg, #130540 0%, #1e0a52 50%, #130540 100%);
+  border-left:  2px solid #4830a0;
+  border-right: 2px solid #4830a0;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+  /* Bottom stays fixed, top recedes back under marquee */
+  transform-origin: bottom center;
+  transform: rotateX(12deg);
 }
 
 .cab-bezel {
-  width: 166px;
-  height: 196px;
-  background: #030008;
-  border: 5px solid #100840;
+  width: 124px;
+  height: 92px;
+  background: #020008;
+  border: 4px solid #0e0638;
   border-radius: 3px;
   overflow: hidden;
   position: relative;
-  box-shadow:
-    inset 0 0 20px rgba(0,0,0,0.9),
-    0 0 12px rgba(60,20,120,0.4);
+  box-shadow: inset 0 0 18px rgba(0,0,0,0.95), 0 0 8px rgba(60,20,140,0.5);
 }
 
-/* CRT curved-screen vignette */
+/* CRT vignette */
 .cab-bezel::before {
   content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 50% 50%,
-      transparent 55%,
-      rgba(0,0,0,0.6) 100%);
-  z-index: 20;
-  pointer-events: none;
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 50%, rgba(0,0,0,0.65) 100%);
+  z-index: 20; pointer-events: none;
 }
 
 /* Scanlines */
 .cab-bezel::after {
   content: '';
-  position: absolute;
-  inset: 0;
+  position: absolute; inset: 0;
   background: repeating-linear-gradient(
     to bottom,
-    transparent 0px,
-    transparent 2px,
-    rgba(0,0,0,0.18) 2px,
-    rgba(0,0,0,0.18) 4px
+    transparent 0px, transparent 2px,
+    rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px
   );
-  z-index: 21;
-  pointer-events: none;
+  z-index: 21; pointer-events: none;
 }
 
 .cab-screen {
-  width: 100%;
-  height: 100%;
-  background:
-    radial-gradient(ellipse at 50% 25%, #1e0900 0%, #0a0300 100%);
+  width: 100%; height: 100%;
+  background: radial-gradient(ellipse at 50% 25%, #1e0900 0%, #090300 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 6px 4px;
+  padding: 5px 3px;
   box-sizing: border-box;
-  gap: 4px;
+  gap: 3px;
 }
 
 .doa-title {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 16px;
+  font-family: Georgia, serif;
+  font-size: 14px;
   font-weight: 700;
   color: #d4880a;
   text-align: center;
   line-height: 1.2;
-  letter-spacing: 1px;
-  text-shadow:
-    0 0 8px #ff7700,
-    0 0 20px rgba(255,100,0,0.3);
+  letter-spacing: 0.8px;
+  text-shadow: 0 0 8px #ff7700, 0 0 20px rgba(255,100,0,0.3);
 }
 
-.doa-tag {
-  font-size: 8px;
-  color: #8a5c18;
-  font-style: italic;
-  text-align: center;
-}
-
-.doa-stat {
-  font-size: 7px;
-  color: #5a3e18;
-  text-align: center;
-}
+.doa-tag  { font-size: 7px;   color: #7a5015; font-style: italic; text-align: center; }
+.doa-stat { font-size: 6px;   color: #4e3510; text-align: center; }
 
 .doa-btn {
-  width: 84%;
-  padding: 3px 0;
+  width: 85%;
+  padding: 2.5px 0;
   background: linear-gradient(180deg, #7a4e00, #3e2800);
   border: 1px solid #b07000;
   color: #ffd060;
-  font-size: 7.5px;
+  font-size: 7px;
   font-weight: bold;
   text-align: center;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
   border-radius: 1px;
 }
 
 .doa-btn-ghost {
   background: rgba(0,0,0,0.2);
   border-color: #3a2200;
-  color: #6a4010;
+  color: #5e3a0a;
+}
+
+/* Monitor sides — space artwork */
+.mon-left, .mon-right {
+  background:
+    radial-gradient(1px 1px at 18px 30px,  rgba(255,255,255,0.7) 100%, transparent),
+    radial-gradient(1px 1px at 52px 70px,  rgba(255,255,255,0.5) 100%, transparent),
+    radial-gradient(1px 1px at 10px 110px, rgba(255,255,255,0.6) 100%, transparent),
+    radial-gradient(1px 1px at 60px 140px, rgba(255,255,255,0.5) 100%, transparent),
+    radial-gradient(1px 1px at 35px 95px,  rgba(255,255,255,0.7) 100%, transparent),
+    radial-gradient(circle 22px at 38px 95px, #2a1070 0%, #100438 60%, transparent 100%),
+    linear-gradient(180deg, #0a0220 0%, #140640 50%, #0a0220 100%);
+  border: 1px solid #2a1060;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cab-side-txt {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 900;
+  color: #5a3898;
+  letter-spacing: 2px;
+  text-align: center;
+  line-height: 1.6;
+  text-shadow: 0 0 6px rgba(100,60,180,0.4);
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   SECTION C — CONTROL PANEL   top=310, W=200, H=90
+   C — CONTROL PANEL  (front face is angled via rotateX)
 ══════════════════════════════════════════════════════════════════ */
-.cab-ctrl-front {
-  width: 200px;
-  height: 90px;
-  top: 310px; left: 0;
-  background: linear-gradient(170deg, #1e0a50 0%, #140838 60%, #0e0428 100%);
-  border-left:   2px solid #5030a0;
-  border-right:  2px solid #5030a0;
-  border-top:    1px solid #3a1880;
-  border-bottom: 2px solid #5030a0;
+.ctrl-front {
+  background: linear-gradient(165deg, #1a0848 0%, #120636 60%, #0c0428 100%);
+  border-left:   2px solid #4030a0;
+  border-right:  2px solid #4030a0;
+  border-bottom: 2px solid #4030a0;
+  transform-origin: top center;
+  transform: rotateX(56deg);
+  transform-style: preserve-3d;
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 18px;
-  padding: 0 18px;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 12px 8px;
+  box-sizing: border-box;
+  overflow: visible;
+  box-sizing: border-box;
 }
 
-/* Joystick */
+/* ── JOYSTICK: 3 real 3D pieces in panel preserve-3d space ────────── */
+/* Joystick and buttons: shading-based 3D — all sit on the panel surface,
+   sphere/cylinder shading creates the depth illusion without disconnection */
 .cab-stick {
   flex-shrink: 0;
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 0;
 }
 
+/* Ball: true sphere shading — tight specular + dark falloff to bottom-right */
+/* Sphere — offset highlight top-left, dark at bottom-right */
 .cab-stick-ball {
-  width: 18px;
-  height: 18px;
-  background: radial-gradient(circle at 38% 35%, #b090f0, #4020b0);
+  width: 22px; height: 22px;
+  flex-shrink: 0;
   border-radius: 50%;
-  border: 1.5px solid #d0b0ff;
-  box-shadow:
-    0 3px 0 #180870,
-    0 0 10px rgba(160,100,255,0.5);
+  background:
+    radial-gradient(circle 3px at 30% 27%, rgba(255,255,255,1) 0%, transparent 100%),
+    radial-gradient(ellipse at 36% 32%, #f0e0ff 0%, #b070ff 18%, #6028d0 38%, #280890 62%, #0e0438 82%, #040118 100%);
+  box-shadow: 2px 4px 10px rgba(0,0,0,0.9), 0 0 8px rgba(100,40,200,0.3);
 }
 
+/* Shaft: cylinder shading — bright stripe down center, dark at edges = round rod */
+/* Cylinder shaft — bright centre stripe, dark at edges = round rod */
 .cab-stick-shaft {
-  width: 6px;
-  height: 16px;
-  background: linear-gradient(180deg, #3020a0, #1a1060);
-  border-radius: 0 0 3px 3px;
-  margin-top: -2px;
-}
-
-.cab-stick-base {
-  width: 24px;
-  height: 6px;
-  background: radial-gradient(ellipse, #2a1870, #180a50);
-  border-radius: 3px;
-  border: 1px solid #4030a0;
+  width: 7px; height: 13px;
+  flex-shrink: 0;
   margin-top: -1px;
+  background: linear-gradient(90deg,
+    #030110 0%, #0e0850 14%, #3828a8 28%,
+    #9070e0 46%, #c8a8ff 50%,
+    #9070e0 54%, #3828a8 72%,
+    #0e0850 86%, #030110 100%);
+  border-radius: 3px;
+  box-shadow: 1px 2px 5px rgba(0,0,0,0.85);
 }
 
-/* Button cluster */
-.cab-btns {
+/* Base: flat disc on panel surface */
+/* Ellipse base disc */
+.cab-stick-base {
+  width: 26px; height: 8px;
+  flex-shrink: 0;
+  margin-top: -1px;
+  background: radial-gradient(ellipse at 38% 30%, #6858d0 0%, #1e1068 60%, #0a0428 100%);
+  border-radius: 50%;
+  border: 1px solid #5848b8;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.8);
+}
+
+/* ── BUTTONS: cap + barrel cylinder in 3D ────────────────────────── */
+.cab-btns { display: flex; flex-direction: column; gap: 6px; margin-left: auto; }
+.cab-btn-row { display: flex; gap: 7px; justify-content: flex-end; }
+
+/* Each button = sphere cap on top + cylinder barrel below, all connected */
+.cab-btn {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.cab-btn-row {
-  display: flex;
-  gap: 8px;
-}
-
-.cab-btn {
-  display: block;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  box-shadow: 0 3px 0 rgba(0,0,0,0.7);
+  align-items: center;
   flex-shrink: 0;
+  gap: 0;
 }
 
-.cab-btn-r { background: radial-gradient(circle at 35% 35%, #ff8080, #cc0000); border: 1px solid #ff9090; }
-.cab-btn-g { background: radial-gradient(circle at 35% 35%, #60f060, #008800); border: 1px solid #80ff80; }
-.cab-btn-b { background: radial-gradient(circle at 35% 35%, #7090ff, #0008cc); border: 1px solid #9090ff; }
-.cab-btn-y { background: radial-gradient(circle at 35% 35%, #ffe060, #aa8800); border: 1px solid #ffee88; }
-.cab-btn-p { background: radial-gradient(circle at 35% 35%, #e060e0, #880088); border: 1px solid #ee88ee; }
-.cab-btn-w { background: radial-gradient(circle at 35% 35%, #f0f0f0, #888888); border: 1px solid #ffffff; }
+/* Sphere cap */
+.cab-btn::before {
+  content: '';
+  display: block;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: var(--cap);
+  box-shadow: 1px 3px 7px rgba(0,0,0,0.85);
+}
 
-/* Control panel bottom label strip */
+/* Cylinder barrel — connects cap to panel */
+.cab-btn::after {
+  content: '';
+  display: block;
+  width: 9px; height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--barrel);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.7);
+}
+
+.cab-btn-r { --cap: radial-gradient(circle 2px at 30% 28%, #fff 0%, transparent 100%), radial-gradient(ellipse at 36% 32%, #ffb0b0, #ff2020 35%, #880000 70%, #330000 100%); --barrel: linear-gradient(90deg, #220000, #880000 45%, #660000 55%, #220000); }
+.cab-btn-g { --cap: radial-gradient(circle 2px at 30% 28%, #fff 0%, transparent 100%), radial-gradient(ellipse at 36% 32%, #b0ffb0, #20e020 35%, #006600 70%, #002200 100%); --barrel: linear-gradient(90deg, #001100, #006600 45%, #004400 55%, #001100); }
+.cab-btn-b { --cap: radial-gradient(circle 2px at 30% 28%, #fff 0%, transparent 100%), radial-gradient(ellipse at 36% 32%, #c0d0ff, #2050ff 35%, #000899 70%, #000233 100%); --barrel: linear-gradient(90deg, #000122, #000899 45%, #000666 55%, #000122); }
+.cab-btn-y { --cap: radial-gradient(circle 2px at 30% 28%, #fff 0%, transparent 100%), radial-gradient(ellipse at 36% 32%, #ffffa0, #ffcc00 35%, #886600 70%, #332200 100%); --barrel: linear-gradient(90deg, #221100, #886600 45%, #664400 55%, #221100); }
+.cab-btn-p { --cap: radial-gradient(circle 2px at 30% 28%, #fff 0%, transparent 100%), radial-gradient(ellipse at 36% 32%, #ffb0ff, #cc00cc 35%, #660066 70%, #220022 100%); --barrel: linear-gradient(90deg, #110011, #660066 45%, #440044 55%, #110011); }
+.cab-btn-w { --cap: radial-gradient(circle 2px at 30% 28%, #fff 0%, transparent 100%), radial-gradient(ellipse at 36% 32%, #ffffff, #cccccc 35%, #888888 70%, #444444 100%); --barrel: linear-gradient(90deg, #333333, #888888 45%, #666666 55%, #333333); }
+
 .cab-ctrl-labels {
   position: absolute;
-  bottom: 6px;
-  left: 0; right: 0;
+  bottom: 4px; left: 0; right: 0;
   text-align: center;
-  font-size: 5px;
-  color: #3a2060;
-  letter-spacing: 0.5px;
+  font-size: 4.5px;
+  color: #2e1850;
+  letter-spacing: 0.3px;
+}
+
+/* Vertical apron face — fills the void between angled panel and base */
+.ctrl-apron {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  background: linear-gradient(180deg, #160650 0%, #1a0858 50%, #10043a 100%);
+  border-left:  2px solid #3a1878;
+  border-right: 2px solid #3a1878;
+  border-bottom: 2px solid #3a1878;
+  transform-style: preserve-3d;
+}
+
+/* Left side of apron — extends forward in +Z to cover gap when rotated */
+.ctrl-apron::before {
+  content: '';
+  position: absolute;
+  left: -45px; top: 0;
+  width: 45px; height: 100%;
+  transform-origin: right center;
+  transform: rotateY(-90deg);
+  background: linear-gradient(180deg, #160650 0%, #1a0858 50%, #10043a 100%);
+  border: 1px solid #3a1878;
+}
+
+/* Right side of apron */
+.ctrl-apron::after {
+  content: '';
+  position: absolute;
+  left: 100%; top: 0;
+  width: 45px; height: 100%;
+  transform-origin: left center;
+  transform: rotateY(90deg);
+  background: linear-gradient(180deg, #160650 0%, #1a0858 50%, #10043a 100%);
+  border: 1px solid #3a1878;
+}
+
+/* Ctrl sides — match cabinet body purple */
+.ctrl-left, .ctrl-right {
+  background: linear-gradient(180deg, #120640 0%, #1a0a50 50%, #100438 100%);
+  border: 1px solid #3a1878;
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   SECTION D — BASE   top=400, W=200, H=60
+   D — BASE BOX
 ══════════════════════════════════════════════════════════════════ */
-.cab-base-front {
-  width: 200px;
-  height: 60px;
-  top: 400px; left: 0;
-  background: linear-gradient(180deg, #0e0430 0%, #080220 100%);
-  border-left:   2px solid #3a1870;
-  border-right:  2px solid #3a1870;
-  border-bottom: 2px solid #2a1060;
-  border-top:    1px solid #3a1870;
+.base-front {
+  background: linear-gradient(180deg, #0a0320 0%, #050110 100%);
+  border: 2px solid #2a1060;
+  border-top: 2px solid #3a1878;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10px 0 0 0;
+  box-sizing: border-box;
+}
+
+/* 3D coin box — front face with top + right pseudo-faces */
+.cab-coin-box {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  background: #050508;
+  border: 2px solid #1a1a2a;
+  border-radius: 2px;
+  padding: 5px 8px;
+  box-shadow:
+    inset 2px 2px 5px rgba(0,0,0,0.9),
+    inset -1px -1px 3px rgba(60,40,100,0.1);
+}
+/* top face */
+.cab-coin-box::before {
+  content: '';
+  position: absolute;
+  top: -7px; left: 4px;
+  right: -4px; height: 7px;
+  background: #0e0e18;
+  border: 1px solid #222230;
+  transform-origin: bottom left;
+  skew: none;
+  clip-path: polygon(0 100%, 100% 100%, 100% 0, 4px 0);
+}
+/* right side face */
+.cab-coin-box::after {
+  content: '';
+  position: absolute;
+  right: -5px; top: -5px;
+  width: 5px;
+  bottom: 0;
+  background: #080810;
+  border: 1px solid #1a1a28;
+  clip-path: polygon(0 7px, 100% 0, 100% 100%, 0 100%);
+}
+
+/* 25¢ — lit square box like the reference */
+.cab-coin-slot {
+  width: 28px; height: 22px;
+  background: #080218;
+  border: 1.5px solid #806030;
+  border-radius: 2px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-}
-
-.cab-coin-slot {
+  justify-content: center;
   font-family: 'Orbitron', sans-serif;
-  font-size: 14px;
+  font-size: 9px;
   font-weight: bold;
   color: #c09040;
-  text-shadow: 0 0 8px rgba(200,140,0,0.6), 0 0 16px rgba(200,140,0,0.3);
+  text-shadow: 0 0 6px rgba(200,140,0,0.9), 0 0 14px rgba(200,140,0,0.4);
+  box-shadow: inset 0 0 6px rgba(180,120,0,0.2), 0 0 4px rgba(180,120,0,0.3);
 }
 
+/* INSERT COIN — tall rectangle with slot + text */
 .cab-insert-group {
+  width: 34px; height: 22px;
+  background: #060114;
+  border: 1.5px solid #2a1850;
+  border-radius: 2px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
 }
 
 .cab-insert-slot {
-  width: 26px;
-  height: 4px;
-  background: #0a0018;
+  width: 20px; height: 2.5px;
+  background: #020008;
   border: 1px solid #3a2060;
-  border-radius: 2px;
+  border-radius: 1px;
 }
 
 .cab-insert-txt {
-  font-size: 6px;
-  color: #4a3858;
-  letter-spacing: 0.5px;
+  font-size: 4px;
+  color: #4a3060;
+  letter-spacing: 0.3px;
+  text-align: center;
+  line-height: 1.2;
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   TOP FACE   (marquee roof)   top=0, W=200, H=110 (depth)
-══════════════════════════════════════════════════════════════════ */
-.cab-top {
-  width: 200px;
-  height: 110px;
-  top: 0; left: 0;
-  transform-origin: top center;
-  transform: rotateX(-90deg);
-  background: linear-gradient(180deg, #1a0848 0%, #0e0428 100%);
-  border: 1px solid #4030a0;
+/* Base sides + bottom — consistent with body */
+.base-left, .base-right {
+  background: linear-gradient(180deg, #100438 0%, #0c0330 50%, #080220 100%);
+  border: 1px solid #2a1060;
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   BOTTOM FACE   top=460, W=200, H=110
-══════════════════════════════════════════════════════════════════ */
-.cab-bottom {
-  width: 200px;
-  height: 110px;
-  top: 460px; left: 0;
-  transform-origin: top center;
-  transform: rotateX(90deg);
-  background: #050112;
-  border: 1px solid #180840;
+.base-bottom {
+  background: linear-gradient(180deg, #0a0328 0%, #060218 100%);
+  border: 1px solid #1a0848;
 }
