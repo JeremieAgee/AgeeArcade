@@ -134,11 +134,6 @@ window.LightManager = (() => {
     }
 
     _cellIntensity = new Float32Array(0);
-
-    if (typeof SpatialManager !== 'undefined') {
-      SpatialManager.clear('lights');
-      for (let i = 0; i < count; i++) SpatialManager.insert('lights', i, [posX[i], posZ[i]]);
-    }
   }
 
   function clear() {
@@ -147,7 +142,6 @@ window.LightManager = (() => {
     roomId = [];
     _cellIntensity = new Float32Array(0);
     _mapCols = 0; _mapRows = 0;
-    if (typeof SpatialManager !== 'undefined') SpatialManager.clear('lights');
   }
 
   /* ── Swap-delete removal ─────────────────────── */
@@ -156,10 +150,6 @@ window.LightManager = (() => {
   function removeAt(i) {
     if (i < 0 || i >= count) return;
     const last = count - 1;
-    if (typeof SpatialManager !== 'undefined') {
-      SpatialManager.remove('lights', last);
-      SpatialManager.remove('lights', i);
-    }
     if (i !== last) {
       ids[i]        = ids[last];
       roomId[i]     = roomId[last];
@@ -176,8 +166,6 @@ window.LightManager = (() => {
       colorG[i]     = colorG[last];
       colorB[i]     = colorB[last];
       meshSlot[i]   = meshSlot[last];
-      // Re-register the moved slot under its new index
-      if (typeof SpatialManager !== 'undefined') SpatialManager.insert('lights', i, [posX[i], posZ[i]]);
     }
     ids.length    = last;
     roomId.length = last;

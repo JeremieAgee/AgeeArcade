@@ -294,6 +294,7 @@ window.EngineCore = (() => {
     lanternLights.forEach(l => { if (l.parent) l.parent.remove(l); });
     lanternLights = [];
     wallTorches = [];
+    if (typeof SpatialManager !== 'undefined') SpatialManager.clear('lights');
     _lastWallTorchCount   = 0;
     _lastTorchFingerprint = 0;
     _cachedRoomId         = undefined;
@@ -301,7 +302,9 @@ window.EngineCore = (() => {
   }
 
   function registerWallTorch(torchRecord) {
+    const _torchIdx = wallTorches.length;
     wallTorches.push(torchRecord);
+    if (typeof SpatialManager !== 'undefined') SpatialManager.insert('lights', _torchIdx, [torchRecord.x, torchRecord.z]);
 
     // Boss room gets red low-intensity torches; all others get standard warm orange
     const isBoss      = torchRecord.roomId === 'room_boss';
