@@ -297,6 +297,7 @@ const Game = (() => {
         // all geometry is built. fullyBuilt = false until Phase 2 completes.
         _prebuilt = { player: p, dungeon: d, enemies: ens, boss: pb, fullyBuilt: false };
 
+        if (typeof SpatialManager !== 'undefined') SpatialManager.init(d);
         Engine.buildDungeonChunked(d,
           // Phase 1 done — spawn area ready, enable button
           () => {
@@ -405,6 +406,7 @@ const Game = (() => {
       player._descentY = 0;
       Engine.init();
       Engine.clearDynamic();
+      if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
       Engine.buildDungeon(dungeon);
       Engine.buildPlayerMesh(player);
       enemies = Enemies.spawnAll(dungeon, floor);
@@ -477,6 +479,7 @@ const Game = (() => {
 
       Engine.init();
       Engine.clearDynamic();
+      if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
       Engine.buildDungeon(dungeon);
       Engine.buildPlayerMesh(player);
 
@@ -531,6 +534,7 @@ const Game = (() => {
 
     if (preBoss) { Engine.removeEnemyMesh(preBoss.id); preBoss = null; }
     Engine.clearDynamic();
+    if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
     Engine.buildDungeon(dungeon);
     Engine.buildArrivalPortal(dungeon);
 
