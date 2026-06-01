@@ -19,7 +19,8 @@ window.MonsterManager = (() => {
   /* ── factory ─────────────────────────────────── */
   // typeKeys — array of enemy.typeKey strings this manager owns.
   function create(typeKeys) {
-    const _keys = new Set(Array.isArray(typeKeys) ? typeKeys : [typeKeys]);
+    const _keys     = new Set(Array.isArray(typeKeys) ? typeKeys : [typeKeys]);
+    const _layer    = [..._keys][0]; // spatial layer name = first type key
 
     let count     = 0;
     let capacity  = 0;
@@ -99,6 +100,10 @@ window.MonsterManager = (() => {
       roomId    = new Array(count).fill(null);
       meshSlot.fill(-1, 0, count);
       for (let i = 0; i < mine.length; i++) _write(i, mine[i]);
+      if (typeof SpatialManager !== 'undefined') {
+        SpatialManager.clear(_layer);
+        for (let i = 0; i < count; i++) SpatialManager.insert(_layer, i, [posX[i], posZ[i]]);
+      }
       return count;
     }
 
@@ -110,6 +115,10 @@ window.MonsterManager = (() => {
       if (i < 0 || i >= count) return;
       const last   = count - 1;
       const deadId = ids[i];
+      if (typeof SpatialManager !== 'undefined') {
+        SpatialManager.remove(_layer, last);
+        SpatialManager.remove(_layer, i);
+      }
       if (i !== last) {
         ids[i]      = ids[last];
         posX[i]     = posX[last];
@@ -124,6 +133,7 @@ window.MonsterManager = (() => {
         meshSlot[i] = meshSlot[last];
         roomId[i]   = roomId[last];
         indexById.set(ids[i], i);
+        if (typeof SpatialManager !== 'undefined') SpatialManager.insert(_layer, i, [posX[i], posZ[i]]);
       }
       indexById.delete(deadId);
       ids.length    = last;
@@ -173,6 +183,13 @@ window.WraithManager     = window.MonsterManager.create(['wraith']);
 window.TrollManager      = window.MonsterManager.create(['troll']);
 window.ShardGolemManager = window.MonsterManager.create(['shardgolem']);
 window.BossManager       = window.MonsterManager.create(['boss']);
+
+// Register one spatial layer per manager type (first typeKey = layer name)
+if (typeof SpatialManager !== 'undefined') {
+  ['skeleton', 'goblin', 'wraith', 'troll', 'shardgolem', 'boss'].forEach(k =>
+    SpatialManager.registerLayer(k)
+  );
+}
 
 /* Ordered list for iteration (e.g. syncAll, instanced draw calls). */
 window.MonsterManager.ALL = [

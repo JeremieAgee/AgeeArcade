@@ -69,8 +69,9 @@ const Game = (() => {
   // Sorts enemies nearest-first, builds CHUNK_SIZE meshes synchronously,
   // then chains the next batch via setTimeout(0) so the main thread never stalls.
   // A generation counter cancels any pending chain when the floor changes.
-  const CHUNK_SIZE   = 4;
-  const LAZY_DIST_SQ = (4 * 20) ** 2; // squared — avoids sqrt each frame
+  const CHUNK_SIZE     = 4;
+  const LAZY_DIST_SQ   = (4 * 20) ** 2;
+  const ACTIVE_RADIUS  = 48;   // world units — enemies beyond this skip AI
   let   _buildGen    = 0;
 
   // onComplete fires (via setTimeout) after the last chunk finishes
@@ -218,7 +219,14 @@ const Game = (() => {
   }
 
   function rebuildEnemySoa() {
-    if (typeof EnemySoa !== 'undefined' && EnemySoa.rebuild) EnemySoa.rebuild(enemies);
+    if (typeof EnemySoa     !== 'undefined' && EnemySoa.rebuild) EnemySoa.rebuild(enemies);
+    if (typeof SpatialManager !== 'undefined') {
+      SpatialManager.clear('monsters');
+      for (let _i = 0; _i < enemies.length; _i++) {
+        const _e = enemies[_i];
+        if (!_e.dead) SpatialManager.insert('monsters', _i, [_e.x, _e.z]);
+      }
+    }
   }
 
   function syncEnemySoa() {
@@ -623,24 +631,48 @@ const Game = (() => {
     }
 
     // ── Solid collision: push player out of chests and enemies ──
-    for (const grp of Engine.chestMeshes) {
-      const cdx = player.x - grp.position.x, cdz = player.z - grp.position.z;
-      const dSq = cdx * cdx + cdz * cdz, minD = 0.85;
-      if (dSq < minD * minD && dSq > 0.0001) {
-        const d = Math.sqrt(dSq);
-        player.x = grp.position.x + cdx / d * minD;
-        player.z = grp.position.z + cdz / d * minD;
+    {
+      const _nearChestIds = typeof SpatialManager !== 'undefined'
+        ? new Set(SpatialManager.query('items', [player.x, player.z], 2))
+        : null;
+      for (const grp of Engine.chestMeshes) {
+        if (_nearChestIds && !_nearChestIds.has(grp.userData.staticItemIdx)) continue;
+        const cdx = player.x - grp.position.x, cdz = player.z - grp.position.z;
+        const dSq = cdx * cdx + cdz * cdz, minD = 0.85;
+        if (dSq < minD * minD && dSq > 0.0001) {
+          const d = Math.sqrt(dSq);
+          player.x = grp.position.x + cdx / d * minD;
+          player.z = grp.position.z + cdz / d * minD;
+        }
       }
     }
-    for (const e of enemies) {
-      if (e.dead) continue;
-      const edx = player.x - e.x, edz = player.z - e.z;
-      const dSq = edx * edx + edz * edz, minD = 0.35 + e.radius;
-      if (dSq < minD * minD && dSq > 0.0001) {
-        const d = Math.sqrt(dSq);
-        player.x = e.x + edx / d * minD;
-        player.z = e.z + edz / d * minD;
+    {
+      const _collIdxs = typeof SpatialManager !== 'undefined'
+        ? SpatialManager.query('monsters', [player.x, player.z], 3)
+        : null;
+      if (_collIdxs) {
+        for (const idx of _collIdxs) {
+          const e = enemies[idx]; if (!e || e.dead) continue;
+          const edx = player.x - e.x, edz = player.z - e.z;
+          const dSq = edx * edx + edz * edz, minD = 0.35 + e.radius;
+          if (dSq < minD * minD && dSq > 0.0001) {
+            const d = Math.sqrt(dSq);
+            player.x = e.x + edx / d * minD;
+            player.z = e.z + edz / d * minD;
+          }
+        }
+      } else {
+      for (const e of enemies) {
+        if (e.dead) continue;
+        const edx = player.x - e.x, edz = player.z - e.z;
+        const dSq = edx * edx + edz * edz, minD = 0.35 + e.radius;
+        if (dSq < minD * minD && dSq > 0.0001) {
+          const d = Math.sqrt(dSq);
+          player.x = e.x + edx / d * minD;
+          player.z = e.z + edz / d * minD;
+        }
       }
+      } // end else (no SpatialManager)
     }
 
     if (UI.isPauseMenuOpen()) {
@@ -656,8 +688,16 @@ const Game = (() => {
 
     checkBossEntry();
 
-    enemies.forEach(e => {
-      if (e.dead) return;
+    // Nearby enemy indices — all per-frame loops gate on this Set
+    const _nearIdx = typeof SpatialManager !== 'undefined'
+      ? new Set(SpatialManager.query('monsters', [player.x, player.z], ACTIVE_RADIUS))
+      : null;
+
+    // ── AI tick (nearby only) ──
+    for (let i = 0; i < enemies.length; i++) {
+      const e = enemies[i];
+      if (e.dead) continue;
+      if (_nearIdx && !_nearIdx.has(i)) continue;
       const result = Enemies.tick(e, player, dungeon, dt);
       if (result && result.attacked) {
         const dmg = Player.takeDamage(player, result.dmg);
@@ -673,14 +713,22 @@ const Game = (() => {
         result.summoned.forEach(s => {
           const summoned = Enemies.createAtWorld(s.typeKey, s.worldX, s.worldZ, floor);
           enemies.push(summoned);
-          rebuildEnemySoa();
+          rebuildEnemySoa(); // re-indexes spatial grid
           Engine.buildEnemyMesh(summoned);
           Engine.spawnParticles(summoned.x, 0.8, summoned.z, summoned.color, 14, 3.2, 0.8);
         });
       }
       Engine.updateEnemyHpBar(e);
       if (e.isBoss && bossSpawned) UI.updateBossBar(e);
-    });
+    }
+
+    // Sync moved positions back into spatial grid (index-keyed)
+    if (typeof SpatialManager !== 'undefined' && _nearIdx) {
+      for (const i of _nearIdx) {
+        const e = enemies[i];
+        if (e && !e.dead) SpatialManager.move('monsters', i, [e.x, e.z]);
+      }
+    }
 
     let _hadDeath = false;
     for (let i = enemies.length - 1; i >= 0; i--) {
@@ -691,13 +739,15 @@ const Game = (() => {
         _hadDeath = true;
       }
     }
-    if (_hadDeath) rebuildEnemySoa();
+    if (_hadDeath) rebuildEnemySoa(); // rebuilds index-keyed spatial grid
 
-    // ── Push enemies apart from each other ──
+    // ── Push enemies apart (nearby only, index-keyed) ──
     for (let i = 0; i < enemies.length; i++) {
       const a = enemies[i]; if (a.dead) continue;
+      if (_nearIdx && !_nearIdx.has(i)) continue;
       for (let j = i + 1; j < enemies.length; j++) {
         const b = enemies[j]; if (b.dead) continue;
+        if (_nearIdx && !_nearIdx.has(j)) continue;
         const dx = b.x - a.x, dz = b.z - a.z;
         const dSq = dx * dx + dz * dz, minD = a.radius + b.radius;
         if (dSq < minD * minD && dSq > 0.0001) {
@@ -709,9 +759,11 @@ const Game = (() => {
         }
       }
     }
-    // ── Push enemies away from chests ──
-    for (const e of enemies) {
-      if (e.dead) continue;
+
+    // ── Push enemies away from chests (nearby only, index-keyed) ──
+    for (let i = 0; i < enemies.length; i++) {
+      const e = enemies[i]; if (e.dead) continue;
+      if (_nearIdx && !_nearIdx.has(i)) continue;
       for (const grp of Engine.chestMeshes) {
         const dx = e.x - grp.position.x, dz = e.z - grp.position.z;
         const dSq = dx * dx + dz * dz, minD = e.radius + 0.5;
@@ -724,11 +776,23 @@ const Game = (() => {
       }
     }
 
-    // Lazy mesh builder — at most 1 build per frame to avoid spikes
-    for (const e of enemies) {
-      if (e.mesh || e.dead) continue;
-      const dx = e.x - player.x, dz = e.z - player.z;
-      if (dx * dx + dz * dz <= LAZY_DIST_SQ) { Engine.buildEnemyMesh(e); break; }
+    // ── Lazy mesh builder — index lookup O(1) ──
+    {
+      const _lazyIdxs = typeof SpatialManager !== 'undefined'
+        ? SpatialManager.query('monsters', [player.x, player.z], Math.sqrt(LAZY_DIST_SQ))
+        : null;
+      if (_lazyIdxs) {
+        for (const idx of _lazyIdxs) {
+          const _le = enemies[idx];
+          if (_le && !_le.mesh && !_le.dead) { Engine.buildEnemyMesh(_le); break; }
+        }
+      } else {
+        for (const e of enemies) {
+          if (e.mesh || e.dead) continue;
+          const dx = e.x - player.x, dz = e.z - player.z;
+          if (dx * dx + dz * dz <= LAZY_DIST_SQ) { Engine.buildEnemyMesh(e); break; }
+        }
+      }
     }
 
     Engine.updateEnemyAnimations(enemies, dt);

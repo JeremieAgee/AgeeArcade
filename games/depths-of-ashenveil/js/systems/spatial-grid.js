@@ -215,12 +215,125 @@ window.SpatialGrid = (() => {
 
 })();
 
-/* ── Named grid instances ────────────────────────────
-   Each category gets its own grid so a monster query
-   never contaminates an item lookup.
-   All share the same cell sizing — call init() on each
-   at floor load time.
-──────────────────────────────────────────────────── */
-window.MonsterGrid = window.SpatialGrid.create();
-window.ItemGrid    = window.SpatialGrid.create();
-window.LightGrid   = window.SpatialGrid.create();
+/* ═══════════════════════════════════════════════════
+   SpatialManager  —  Unified spatial layer registry
+
+   Owns one SpatialGrid per named layer.  Every manager
+   that needs spatial lookups registers its layer here
+   and calls through SpatialManager rather than holding
+   a private grid.
+
+   API:
+     registerLayer(name, opts?)       — add a new layer (idempotent)
+     init(dungeon)                    — (re)init all layers for current floor
+     insert(layer, id, pos)           — [x,z] world units
+     remove(layer, id)
+     move(layer, id, newPos)          — O(1) when cell hasn't changed
+     query(layer, pos, radius)        → Array<id>  (cell-granular, not exact)
+     queryAll(pos, radius)            → Map<layer, Array<id>>
+     clear(layer?)                    — clear entries; keep grid shape
+     reset(layer?)                    — full teardown
+     layer(name)                      → raw SpatialGrid instance
+     has(layer, id)                   → bool
+     stats()                          → per-layer diagnostics
+     layers()                         → string[]
+
+   Standard layers (pre-registered):
+     'monsters'  'items'  'lights'  'rooms'
+
+   Backward-compatible globals (aliases to their layers):
+     MonsterGrid  ItemGrid  LightGrid  RoomGrid
+════════════════════════════════════════════════════ */
+window.SpatialManager = (() => {
+
+  const _layers = new Map(); // name → { grid, opts }
+
+  function registerLayer(name, opts) {
+    if (_layers.has(name)) return;
+    _layers.set(name, { grid: window.SpatialGrid.create(), opts: opts || {} });
+  }
+
+  /* ── lifecycle ───────────────────────────────── */
+  function init(dungeon) {
+    _layers.forEach(({ grid, opts }) => {
+      grid.init(dungeon, opts.targetCellsPerAxis);
+    });
+  }
+
+  function clear(layerName) {
+    if (layerName !== undefined) {
+      const l = _layers.get(layerName);
+      if (l) l.grid.clear();
+    } else {
+      _layers.forEach(({ grid }) => grid.clear());
+    }
+  }
+
+  function reset(layerName) {
+    if (layerName !== undefined) {
+      const l = _layers.get(layerName);
+      if (l) l.grid.reset();
+    } else {
+      _layers.forEach(({ grid }) => grid.reset());
+    }
+  }
+
+  /* ── mutators ────────────────────────────────── */
+  function insert(layerName, id, pos) {
+    const l = _layers.get(layerName);
+    if (l) l.grid.insert(id, pos);
+  }
+
+  function remove(layerName, id) {
+    const l = _layers.get(layerName);
+    if (l) l.grid.remove(id);
+  }
+
+  function move(layerName, id, newPos) {
+    const l = _layers.get(layerName);
+    if (l) l.grid.move(id, newPos);
+  }
+
+  /* ── queries ─────────────────────────────────── */
+  // Returns Array<id> — cell-granular, caller filters exact distance if needed
+  function query(layerName, pos, radius) {
+    const l = _layers.get(layerName);
+    return l ? l.grid.query(pos, radius) : [];
+  }
+
+  // Cross-layer query — returns Map<layerName, Array<id>>
+  function queryAll(pos, radius) {
+    const out = new Map();
+    _layers.forEach(({ grid }, name) => {
+      const ids = grid.query(pos, radius);
+      if (ids.length) out.set(name, ids);
+    });
+    return out;
+  }
+
+  /* ── accessors ───────────────────────────────── */
+  function layer(name)         { const l = _layers.get(name); return l ? l.grid : null; }
+  function has(layerName, id)  { const l = _layers.get(layerName); return l ? l.grid.has(id) : false; }
+  function layers()            { return [..._layers.keys()]; }
+
+  function stats() {
+    const out = {};
+    _layers.forEach(({ grid }, name) => { out[name] = grid.stats(); });
+    return out;
+  }
+
+  /* ── pre-register standard layers ───────────── */
+  registerLayer('monsters');
+  registerLayer('items');
+  registerLayer('lights');
+  registerLayer('rooms');
+
+  return { registerLayer, init, insert, remove, move, query, queryAll, clear, reset, layer, has, layers, stats };
+
+})();
+
+/* ── Backward-compatible named aliases ────────────── */
+window.MonsterGrid = window.SpatialManager.layer('monsters');
+window.ItemGrid    = window.SpatialManager.layer('items');
+window.LightGrid   = window.SpatialManager.layer('lights');
+window.RoomGrid    = window.SpatialManager.layer('rooms');

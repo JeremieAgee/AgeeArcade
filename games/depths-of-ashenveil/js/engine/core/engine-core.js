@@ -20,7 +20,6 @@ window.EngineCore = (() => {
   let clock         = new THREE.Clock();
   let dungeonGroup  = null;
   let lanternLights = [];
-  let lanternLightGrid = new Map();
   let wallTorches   = [];
   let carryingTorch = false;
   let carriedTorch  = null;
@@ -29,10 +28,6 @@ window.EngineCore = (() => {
   let _cameraDungeon = null;
   let bolts          = [];
   let _lastWallTorchCount = 0;
-  let _scratchIdx        = new Int16Array(256);
-  let _scratchDist       = new Float32Array(256);
-  let _scratchCount      = 0;
-  let _scratchActiveFlags = new Uint8Array(256); // reused; resized if needed
   let _lastTorchFingerprint = 0;
   let _tileRoomId      = null;
   let _tileRoomCols    = 0;
@@ -82,7 +77,7 @@ window.EngineCore = (() => {
 
     if (!scene) {
       scene = new THREE.Scene();
-      scene.fog = new THREE.FogExp2(0x040200, 0.085);
+      scene.fog = new THREE.FogExp2(0x090604, 0.0045);
     }
 
     if (!camera) {
@@ -247,6 +242,7 @@ window.EngineCore = (() => {
 
   function addPerimeterWalls(group, TILE, COLS, ROWS, height, wallMat) {
     const borderMat = wallMat.clone();
+    borderMat.fog = false;
     const geo = new THREE.BoxGeometry(TILE, height, TILE);
     const seen = new Set();
 
@@ -297,7 +293,6 @@ window.EngineCore = (() => {
     });
     lanternLights.forEach(l => { if (l.parent) l.parent.remove(l); });
     lanternLights = [];
-    lanternLightGrid = new Map();
     wallTorches = [];
     _lastWallTorchCount   = 0;
     _lastTorchFingerprint = 0;
@@ -305,16 +300,8 @@ window.EngineCore = (() => {
     _scanRoomIds.clear();
   }
 
-  function lanternGridKey(gridX, gridY) {
-    return `${gridX},${gridY}`;
-  }
-
   function registerWallTorch(torchRecord) {
     wallTorches.push(torchRecord);
-    const key = lanternGridKey(torchRecord.gridX, torchRecord.gridY);
-    const bucket = lanternLightGrid.get(key);
-    if (bucket) bucket.push(torchRecord);
-    else lanternLightGrid.set(key, [torchRecord]);
 
     // Boss room gets red low-intensity torches; all others get standard warm orange
     const isBoss      = torchRecord.roomId === 'room_boss';
@@ -337,17 +324,6 @@ window.EngineCore = (() => {
     scene.add(light);
     torchRecord.light = light;
     lanternLights.push(light);
-  }
-
-  function queryWallTorchesInGridBox(centerX, centerY, rangeX, rangeY) {
-    const torches = [];
-    for (let y = centerY - rangeY; y <= centerY + rangeY; y++) {
-      for (let x = centerX - rangeX; x <= centerX + rangeX; x++) {
-        const bucket = lanternLightGrid.get(lanternGridKey(x, y));
-        if (bucket) torches.push(...bucket);
-      }
-    }
-    return torches;
   }
 
   function activateWallTorchLight(torchRecord) {
@@ -470,10 +446,47 @@ window.EngineCore = (() => {
     const floorGeo      = new THREE.BoxGeometry(TILE, 0.25,     TILE);
     _dungeonBounds = { minX: TILE, maxX: (COLS - 1) * TILE, minZ: TILE, maxZ: (ROWS - 1) * TILE };
     addPerimeterWalls(dungeonGroup, TILE, COLS, ROWS, BORDER_H, wallMat);
-    const tileInstances = createDungeonInstanceBatches(
-      dungeon, wallGeo, floorGeo, wallMat, floorMat, corridorMat, bossFloorMat, doorTx, doorTy
-    );
+    // Count tiles per room for per-room instanced batches
+    const _roomTileCounts = new Map(); // roomId → {wall,floor,corridor,bossFloor}
+    const _getRoomCounts = id => {
+      if (!_roomTileCounts.has(id)) _roomTileCounts.set(id, { wall: 0, floor: 0, corridor: 0, bossFloor: 0 });
+      return _roomTileCounts.get(id);
+    };
+    for (let row = 1; row < ROWS - 1; row++) {
+      for (let col = 1; col < COLS - 1; col++) {
+        const tile = grid[row][col];
+        const rid  = (_tileRoomId ? _tileRoomId[row * COLS + col] : null) ?? null;
+        const c    = _getRoomCounts(rid);
+        if      (tile === T.WALL && (col !== doorTx || row !== doorTy)) c.wall++;
+        else if (tile === T.WALL)      c.corridor++;
+        else if (tile === T.FLOOR)     c.floor++;
+        else if (tile === T.CORRIDOR)  c.corridor++;
+        else if (tile === T.BOSS_FLOOR) c.bossFloor++;
+      }
+    }
 
+    // Build per-room batches (castShadow starts false; enabled at runtime for nearby rooms)
+    const _roomBatches = new Map();
+    _roomTileCounts.forEach((counts, rid) => {
+      const b = {
+        wall:      createInstanceBatch(wallGeo,  wallMat,      counts.wall,      false, true),
+        floor:     createInstanceBatch(floorGeo, floorMat,     counts.floor,     false, true),
+        corridor:  createInstanceBatch(floorGeo, corridorMat,  counts.corridor,  false, true),
+        bossFloor: createInstanceBatch(floorGeo, bossFloorMat, counts.bossFloor, false, true),
+      };
+      _roomBatches.set(rid, b);
+      if (typeof RoomManager !== 'undefined') {
+        RoomManager.registerRoomMeshes(
+          rid,
+          b.wall      ? b.wall.mesh      : null,
+          b.floor     ? b.floor.mesh     : null,
+          b.corridor  ? b.corridor.mesh  : null,
+          b.bossFloor ? b.bossFloor.mesh : null,
+        );
+      }
+    });
+
+    // Place tiles into their room's batch
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
         const wx   = col * TILE + TILE / 2;
@@ -481,28 +494,23 @@ window.EngineCore = (() => {
         const tile = grid[row][col];
         if (row === 0 || row === ROWS - 1 || col === 0 || col === COLS - 1) continue;
 
-        // Skip wall mesh at door tile — door mesh renders there instead,
-        // but still lay a floor so there's no hole when the door opens
+        const rid     = (_tileRoomId ? _tileRoomId[row * COLS + col] : null) ?? null;
+        const batches = _roomBatches.get(rid);
+        if (!batches) continue;
+
         if (tile === T.WALL && col === doorTx && row === doorTy) {
-          addInstance(tileInstances.corridor, wx, -0.1, wz);
+          addInstance(batches.corridor, wx, -0.1, wz);
           continue;
         }
-
-        if (tile === T.WALL) {
-          addInstance(tileInstances.wall, wx, WALL_H / 2, wz);
-
-        } else if (tile === T.FLOOR) {
-          addInstance(tileInstances.floor, wx, -0.1, wz);
-
-        } else if (tile === T.CORRIDOR) {
-          addInstance(tileInstances.corridor, wx, -0.1, wz);
-
-        } else if (tile === T.BOSS_FLOOR) {
-          addInstance(tileInstances.bossFloor, wx, -0.1, wz);
-        }
+        if      (tile === T.WALL)       addInstance(batches.wall,      wx, WALL_H / 2, wz);
+        else if (tile === T.FLOOR)      addInstance(batches.floor,     wx, -0.1,       wz);
+        else if (tile === T.CORRIDOR)   addInstance(batches.corridor,  wx, -0.1,       wz);
+        else if (tile === T.BOSS_FLOOR) addInstance(batches.bossFloor, wx, -0.1,       wz);
       }
     }
-    addDungeonInstanceBatches(dungeonGroup, tileInstances);
+
+    // Add all room batches to the scene group
+    _roomBatches.forEach(batches => addDungeonInstanceBatches(dungeonGroup, batches));
 
     scene.add(dungeonGroup);
 
@@ -942,7 +950,6 @@ window.EngineCore = (() => {
   function buildChests(dungeon) {
     chestMeshes.forEach(m => scene.remove(m));
     chestMeshes = [];
-
     const chestBodyGeo = new THREE.BoxGeometry(0.7, 0.45, 0.55);
     const chestMat     = new THREE.MeshLambertMaterial({ color: 0x7a4810 });
     const chestLidGeo  = new THREE.BoxGeometry(0.7, 0.20, 0.55);
@@ -981,11 +988,16 @@ window.EngineCore = (() => {
       lock.position.set(0, 0.3, -0.28);
       grp.add(lock);
 
+      // Resolve StaticItemManager slot so game.js can map spatial query → mesh
+      const _simIdx = (typeof StaticItemManager !== 'undefined')
+        ? StaticItemManager.indexOf(`${StaticItemManager.TYPES.chest}_${chest.gx}_${chest.gy}`)
+        : -1;
       grp.position.set(w.x, 0, w.z);
-      grp.userData.chestData   = chest;
-      grp.userData.lidGroup    = lidGroup;
-      grp.userData.lidOpen    = 0;
-      grp.userData.isOpening   = false;
+      grp.userData.chestData      = chest;
+      grp.userData.staticItemIdx  = _simIdx;
+      grp.userData.lidGroup       = lidGroup;
+      grp.userData.lidOpen        = 0;
+      grp.userData.isOpening      = false;
       scene.add(grp);
       chestMeshes.push(grp);
     }
@@ -2552,69 +2564,43 @@ function updateChests(dt) {
     const pgz = Math.floor(pz / tile);
 
     const currentRoomId = _getTileRoomId(px, pz, tile);
-
-    // Rebuild scan room set only when the player's room changes
     if (currentRoomId !== _cachedRoomId) {
       _cachedRoomId = currentRoomId;
       _rebuildScanRooms(pgx, pgz, currentRoomId);
+      if (typeof RoomManager !== 'undefined') RoomManager.updateShadows(_scanRoomIds);
     }
 
-    const inRoom = currentRoomId !== null;
+    if (typeof SpatialManager === 'undefined') return;
 
-    _scratchCount = 0;
-    for (let i = 0; i < wallTorches.length; i++) {
-      const t = wallTorches[i];
-      if (!t.hasTorch || t === carriedTorch) continue;
-      // O(1) Set lookup — skip torches not in any nearby room
-      if (!_scanRoomIds.has(t.roomId)) continue;
-      // Activate based on world-unit distance, matching the same radius used for dimming
-      const dx_w = (t.gridX - pgx) * tile;
-      const dz_w = (t.gridY - pgz) * tile;
-      const d2_w = dx_w * dx_w + dz_w * dz_w;
-      if (d2_w <= LANTERN_RADIUS * LANTERN_RADIUS) {
-        _scratchIdx[_scratchCount]  = i;
-        _scratchDist[_scratchCount] = d2_w;
-        _scratchCount++;
-      }
+    // Query nearby light indices — wallTorches[i] aligns with LightManager slot i
+    let candidates = SpatialManager.query('lights', [px, pz], LANTERN_RADIUS)
+      .filter(i => { const t = wallTorches[i]; return t && t.hasTorch && t !== carriedTorch; });
+
+    // Cap to nearest MAX_ACTIVE_LANTERN_LIGHTS, sort by distance first
+    if (candidates.length > MAX_ACTIVE_LANTERN_LIGHTS) {
+      candidates = candidates
+        .map(i => { const t = wallTorches[i]; const dx = t.x - px, dz = t.z - pz; return { i, d2: dx * dx + dz * dz }; })
+        .sort((a, b) => a.d2 - b.d2)
+        .slice(0, MAX_ACTIVE_LANTERN_LIGHTS)
+        .map(x => x.i);
     }
 
-    // Cap to nearest MAX_ACTIVE_LANTERN_LIGHTS by distance
-    if (_scratchCount > MAX_ACTIVE_LANTERN_LIGHTS) {
-      for (let a = 0; a < MAX_ACTIVE_LANTERN_LIGHTS && a < _scratchCount; a++) {
-        let minI = a;
-        for (let b = a + 1; b < _scratchCount; b++) {
-          if (_scratchDist[b] < _scratchDist[minI]) minI = b;
-        }
-        if (minI !== a) {
-          const ti = _scratchIdx[a];  _scratchIdx[a]  = _scratchIdx[minI];  _scratchIdx[minI]  = ti;
-          const td = _scratchDist[a]; _scratchDist[a] = _scratchDist[minI]; _scratchDist[minI] = td;
-        }
-      }
-      _scratchCount = MAX_ACTIVE_LANTERN_LIGHTS;
-    }
-
-    // FNV-1a integer fingerprint — avoids string allocation
+    // FNV-1a fingerprint on sorted indices for stable change detection
     let fp = 2166136261;
-    for (let i = 0; i < _scratchCount; i++) {
-      fp ^= _scratchIdx[i];
+    for (let k = 0; k < candidates.length; k++) {
+      fp ^= candidates[k];
       fp  = Math.imul(fp, 16777619) >>> 0;
     }
     if (fp === _lastTorchFingerprint && wallTorches.length === _lastWallTorchCount) return;
     _lastTorchFingerprint = fp;
-    _lastWallTorchCount = wallTorches.length;
+    _lastWallTorchCount   = wallTorches.length;
 
-    // Build active flags keyed by wallTorches index — reuse scratch buffer
-    if (_scratchActiveFlags.length < wallTorches.length) {
-      _scratchActiveFlags = new Uint8Array(wallTorches.length * 2);
-    }
-    _scratchActiveFlags.fill(0, 0, wallTorches.length);
-    for (let i = 0; i < _scratchCount; i++) _scratchActiveFlags[_scratchIdx[i]] = 1;
-
+    const activeSet = new Set(candidates);
     for (let i = 0; i < wallTorches.length; i++) {
       const t = wallTorches[i];
       if (t === carriedTorch) continue;
-      if (_scratchActiveFlags[i]) activateWallTorchLight(t);
-      else                        deactivateWallTorchLight(t);
+      if (activeSet.has(i)) activateWallTorchLight(t);
+      else                  deactivateWallTorchLight(t);
     }
   }
 

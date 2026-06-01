@@ -98,12 +98,14 @@ window.StaticItemManager = (() => {
     indexById = new Map();
     _ensureCap(count);
 
+    if (typeof SpatialManager !== 'undefined') SpatialManager.clear('items');
     for (let i = 0; i < count; i++) {
       const it  = items[i];
       const key = `${it.t}_${it.gx}_${it.gz}`;
       ids[i]    = key;
       indexById.set(key, i);
       _write(i, it.t, it.gx, it.gz, it.s, dungeon);
+      if (typeof SpatialManager !== 'undefined') SpatialManager.insert('items', i, [posX[i], posZ[i]]);
     }
   }
 
@@ -124,6 +126,7 @@ window.StaticItemManager = (() => {
     gridZ[i]    = gz;
     state[i]    = initState;
     meshSlot[i] = -1;
+    if (typeof SpatialManager !== 'undefined') SpatialManager.insert('items', i, [worldX, worldZ]);
     return i;
   }
 
@@ -131,6 +134,7 @@ window.StaticItemManager = (() => {
     count     = 0;
     ids       = [];
     indexById = new Map();
+    if (typeof SpatialManager !== 'undefined') SpatialManager.clear('items');
   }
 
   /* ── per-slot API ────────────────────────────── */

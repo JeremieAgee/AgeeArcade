@@ -31,7 +31,10 @@ window.FloorManager = (() => {
     _floor = floorNum;
     for (const k in _flags) _flags[k] = false;
 
-    // RoomManager must init first — LightManager reads from it
+    // SpatialManager inits all layers before any manager needs spatial queries
+    if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
+
+    // RoomManager must init next — LightManager reads from it
     if (typeof RoomManager !== 'undefined') RoomManager.init(dungeon);
 
     // LightManager resolves roomIds via RoomManager
@@ -44,6 +47,7 @@ window.FloorManager = (() => {
   function clear() {
     _floor = 0;
     for (const k in _flags) _flags[k] = false;
+    if (typeof SpatialManager !== 'undefined') SpatialManager.reset();
     if (typeof RoomManager    !== 'undefined') RoomManager.clear();
     if (typeof LightManager   !== 'undefined') LightManager.clear();
   }

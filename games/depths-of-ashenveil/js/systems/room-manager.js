@@ -17,6 +17,27 @@
 ════════════════════════════════════════════════════ */
 window.RoomManager = (() => {
 
+  /* ── Per-room tile mesh registry ────────────── */
+  // roomId → { wall, floor, corridor, bossFloor } THREE.InstancedMesh
+  const _meshes = new Map();
+
+  function registerRoomMeshes(roomId, wall, floor, corridor, bossFloor) {
+    _meshes.set(roomId, { wall, floor, corridor, bossFloor });
+  }
+
+  function clearMeshes() { _meshes.clear(); }
+
+  // Toggle castShadow on nearby rooms. scanRoomIds is the Set from engine-core.
+  function updateShadows(scanRoomIds) {
+    _meshes.forEach((m, roomId) => {
+      const near = roomId !== null && scanRoomIds.has(roomId);
+      if (m.wall)      m.wall.castShadow      = near;
+      if (m.floor)     m.floor.castShadow     = near;
+      if (m.corridor)  m.corridor.castShadow  = near;
+      if (m.bossFloor) m.bossFloor.castShadow = near;
+    });
+  }
+
   /* ── SOA arrays ──────────────────────────────── */
   let _count   = 0;
   let ids      = [];
@@ -54,6 +75,7 @@ window.RoomManager = (() => {
   function clear() {
     _count = 0;
     ids = [];
+    _meshes.clear();
   }
 
   /* ── add ─────────────────────────────────────── */
@@ -170,6 +192,9 @@ window.RoomManager = (() => {
     getOrigin,
     arrays,
     count: () => _count,
+    registerRoomMeshes,
+    updateShadows,
+    clearMeshes,
   };
 
 })();
