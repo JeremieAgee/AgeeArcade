@@ -65,8 +65,7 @@ window.EngineCore = (() => {
       const _mobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       renderer = new THREE.WebGLRenderer({ antialias: !_mobile });
       renderer.setPixelRatio(_mobile ? Math.min(window.devicePixelRatio, 1.5) : window.devicePixelRatio);
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+      renderer.shadowMap.enabled = false;
       renderer.outputEncoding     = THREE.sRGBEncoding;
       renderer.toneMapping        = THREE.ReinhardToneMapping;
       renderer.toneMappingExposure = 1.15;
@@ -97,13 +96,7 @@ window.EngineCore = (() => {
     if (!torchLight) {
       torchLight = new THREE.PointLight(0xff9944, 5.5, 22);
       torchLight.decay = 1;
-      torchLight.castShadow = true;
-      torchLight.shadow.mapSize.set(512, 512);
-      torchLight.shadow.camera.near = 0.2;
-      torchLight.shadow.camera.far  = 22;
-      torchLight.shadow.bias        = -0.0005;
-      torchLight.shadow.normalBias  =  0.02;
-      torchLight.shadow.radius      = 1.5;
+      torchLight.castShadow = false;
       scene.add(torchLight);
     }
 
