@@ -341,7 +341,7 @@ function buildPauseMenu() {
       <button class="pmenu-tab"        data-tab="skills"   onclick="UI.pauseTab('skills')">✦ Skills</button>
       <button class="pmenu-tab"        data-tab="upgrades" onclick="UI.pauseTab('upgrades')">▲ Upgrades</button>
       <div style="flex:1"></div>
-      <button class="pmenu-exit" onclick="UI.closePauseMenu();Game.start()">↺ Restart</button>
+      <button class="pmenu-exit" onclick="UI.closePauseMenu();Game.restartRun()">↺ Restart</button>
       <button class="pmenu-exit danger" onclick="location.reload()">✕ Quit</button>
     </div>
     <div id="pauseContent" style="
