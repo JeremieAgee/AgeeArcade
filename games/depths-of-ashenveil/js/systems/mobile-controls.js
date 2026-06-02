@@ -138,13 +138,22 @@
   wireBtn('mBtnPause',    'pausePending');
 
   /* ── Pause / contextual visibility ──────────────── */
+  // Cache DOM refs once — querying by ID every 100ms is unnecessary overhead
+  const _vis = {
+    titleEl:     document.getElementById('titleScreen'),
+    pauseEl:     document.getElementById('pauseMenu'),
+    deathEl:     document.getElementById('deathScreen'),
+    blinkBtn:    document.getElementById('mBtnBlink'),
+    interactBtn: document.getElementById('mBtnInteract'),
+    chestPrompt: document.getElementById('chestPrompt'),
+    torchPrompt: document.getElementById('torchPrompt'),
+    doorPrompt:  document.getElementById('doorPrompt'),
+    stairPrompt: document.getElementById('stairPrompt'),
+  };
   setInterval(() => {
-    const titleEl  = document.getElementById('titleScreen');
-    const pauseEl  = document.getElementById('pauseMenu');
-    const deathEl  = document.getElementById('deathScreen');
-    const onTitle  = !!(titleEl  && titleEl.classList.contains('active'));
-    const onDeath  = !!(deathEl  && deathEl.classList.contains('active'));
-    const paused   = !!(pauseEl  && pauseEl.style.display   === 'flex');
+    const onTitle  = !!(_vis.titleEl  && _vis.titleEl.classList.contains('active'));
+    const onDeath  = !!(_vis.deathEl  && _vis.deathEl.classList.contains('active'));
+    const paused   = !!(_vis.pauseEl  && _vis.pauseEl.style.display === 'flex');
     const inGame   = !onTitle && !onDeath && !paused;
 
     const vis = inGame ? 'visible' : 'hidden';
@@ -160,16 +169,14 @@
 
     // Blink — only when skill is unlocked
     const p = (typeof Game !== 'undefined') ? Game.getPlayer() : null;
-    const blinkBtn = document.getElementById('mBtnBlink');
-    if (blinkBtn) blinkBtn.style.display = (p && p.hasBlink) ? 'flex' : 'none';
+    if (_vis.blinkBtn) _vis.blinkBtn.style.display = (p && p.hasBlink) ? 'flex' : 'none';
 
     // Interact — only when engine is showing a prompt (chest / torch / door / portal)
-    const nearInteractable = ['chestPrompt','torchPrompt','doorPrompt','stairPrompt'].some(id => {
-      const el = document.getElementById(id);
-      return el && parseFloat(el.style.opacity || '0') > 0.1;
-    });
-    const interactBtn = document.getElementById('mBtnInteract');
-    if (interactBtn) interactBtn.style.display = nearInteractable ? 'flex' : 'none';
+    const nearInteractable = !!(_vis.chestPrompt  && parseFloat(_vis.chestPrompt.style.opacity  || '0') > 0.1)
+                          || !!(_vis.torchPrompt  && parseFloat(_vis.torchPrompt.style.opacity  || '0') > 0.1)
+                          || !!(_vis.doorPrompt   && parseFloat(_vis.doorPrompt.style.opacity   || '0') > 0.1)
+                          || !!(_vis.stairPrompt  && parseFloat(_vis.stairPrompt.style.opacity  || '0') > 0.1);
+    if (_vis.interactBtn) _vis.interactBtn.style.display = nearInteractable ? 'flex' : 'none';
   }, 100);
 
   /* ── Block scroll/zoom on canvas ────────────────── */

@@ -746,12 +746,14 @@ const Game = (() => {
     if (_hadDeath) rebuildEnemySoa(); // rebuilds index-keyed spatial grid
 
     // ── Push enemies apart (nearby only, index-keyed) ──
-    for (let i = 0; i < enemies.length; i++) {
-      const a = enemies[i]; if (a.dead) continue;
-      if (_nearIdx && !_nearIdx.has(i)) continue;
-      for (let j = i + 1; j < enemies.length; j++) {
-        const b = enemies[j]; if (b.dead) continue;
-        if (_nearIdx && !_nearIdx.has(j)) continue;
+    // Build a flat array of nearby live enemies once so both loops are O(near²) not O(total²)
+    const _nearList = _nearIdx
+      ? [..._nearIdx].reduce((a, i) => { const e = enemies[i]; if (e && !e.dead) a.push(e); return a; }, [])
+      : enemies.filter(e => !e.dead);
+    for (let i = 0; i < _nearList.length; i++) {
+      const a = _nearList[i];
+      for (let j = i + 1; j < _nearList.length; j++) {
+        const b = _nearList[j];
         const dx = b.x - a.x, dz = b.z - a.z;
         const dSq = dx * dx + dz * dz, minD = a.radius + b.radius;
         if (dSq < minD * minD && dSq > 0.0001) {
