@@ -8,11 +8,35 @@ const UI = (() => {
   let activePanel = null;
   let pendingLeaderboardScore = null;
 
+  /* ── Cached DOM refs (set once on first refresh) ─ */
+  let _dom = null;
+  let _lastBuffKey = '';
+
+  function _initDom() {
+    if (_dom) return;
+    _dom = {
+      hpFill:   document.getElementById('hpFill'),
+      hpText:   document.getElementById('hpText'),
+      xpFill:   document.getElementById('xpFill'),
+      xpText:   document.getElementById('xpText'),
+      hudLevel: document.getElementById('hudLevel'),
+      hudAtk:   document.getElementById('hudAtk'),
+      hudDef:   document.getElementById('hudDef'),
+      hudSpd:   document.getElementById('hudSpd'),
+      buffBar:  document.getElementById('buffBar'),
+      eqWeapon: document.getElementById('eqWeapon'),
+      eqArmor:  document.getElementById('eqArmor'),
+      skillPts: document.getElementById('skillPts'),
+      msgLog:   document.getElementById('msgLog'),
+    };
+  }
+
   /* ── Message log ─────────────────────────────── */
   function addMsg(text, type = '') {
     messages.unshift({ text, type });
     if (messages.length > 3) messages.pop();
-    const log = document.getElementById('msgLog');
+    _initDom();
+    const log = _dom.msgLog;
     log.innerHTML = messages
       .map(m => `<div class="msg ${m.type}">${m.text}</div>`)
       .join('');
@@ -22,51 +46,55 @@ const UI = (() => {
   function refresh(player) {
     const p = player;
     if (!p) return;
+    _initDom();
+    const d = _dom;
 
     // HP bar
     const hpPct = Math.max(0, p.hp / p.maxHp * 100);
-    document.getElementById('hpFill').style.width = hpPct + '%';
-    document.getElementById('hpText').textContent  = `${Math.ceil(p.hp)}/${p.maxHp}`;
+    d.hpFill.style.width   = hpPct + '%';
+    d.hpText.textContent   = `${Math.ceil(p.hp)}/${p.maxHp}`;
 
     // XP bar
     const xpPct = p.xp / p.xpNext * 100;
-    document.getElementById('xpFill').style.width = xpPct + '%';
-    document.getElementById('xpText').textContent  = `${p.xp}/${p.xpNext}`;
+    d.xpFill.style.width   = xpPct + '%';
+    d.xpText.textContent   = `${p.xp}/${p.xpNext}`;
 
     // Stats
-    document.getElementById('hudLevel').textContent = `LVL ${p.level}`;
-    document.getElementById('hudAtk').textContent   = Player.totalAtk(p);
-    document.getElementById('hudDef').textContent   = Player.totalDef(p);
-    document.getElementById('hudSpd').textContent   = Player.totalSpeed(p).toFixed(1);
+    d.hudLevel.textContent = `LVL ${p.level}`;
+    d.hudAtk.textContent   = Player.totalAtk(p);
+    d.hudDef.textContent   = Player.totalDef(p);
+    d.hudSpd.textContent   = Player.totalSpeed(p).toFixed(1);
 
-    // Active buff pills
-    const buffBar = document.getElementById('buffBar');
-    if (buffBar) {
-      if (p.buffs.length === 0) {
-        buffBar.innerHTML = '';
-      } else {
-        buffBar.innerHTML = p.buffs.map(b => {
-          const secs = Math.ceil(b.remaining);
-          const pct  = Math.max(0, b.remaining / b.duration * 100);
-          return `<span class="buff-pill">
-            <span class="buff-icon">${b.icon || '✦'}</span>
-            <span class="buff-name">${b.name}</span>
-            <span class="buff-timer">${secs}s</span>
-            <span class="buff-track"><span class="buff-fill" style="width:${pct}%"></span></span>
-          </span>`;
-        }).join('');
+    // Active buff pills — only rebuild HTML when buff state changes
+    if (d.buffBar) {
+      const buffKey = p.buffs.map(b => `${b.name}:${Math.ceil(b.remaining)}`).join('|');
+      if (buffKey !== _lastBuffKey) {
+        _lastBuffKey = buffKey;
+        if (p.buffs.length === 0) {
+          d.buffBar.innerHTML = '';
+        } else {
+          d.buffBar.innerHTML = p.buffs.map(b => {
+            const secs = Math.ceil(b.remaining);
+            const pct  = Math.max(0, b.remaining / b.duration * 100);
+            return `<span class="buff-pill">
+              <span class="buff-icon">${b.icon || '✦'}</span>
+              <span class="buff-name">${b.name}</span>
+              <span class="buff-timer">${secs}s</span>
+              <span class="buff-track"><span class="buff-fill" style="width:${pct}%"></span></span>
+            </span>`;
+          }).join('');
+        }
       }
     }
 
     // Equipped gear names
     const w = Player.equippedWeapon(p);
     const a = Player.equippedArmor(p);
-    document.getElementById('eqWeapon').textContent = w ? w.name : '—';
-    document.getElementById('eqArmor').textContent  = a ? a.name : '—';
+    d.eqWeapon.textContent = w ? w.name : '—';
+    d.eqArmor.textContent  = a ? a.name : '—';
 
     // Skill points badge
-    const sp = document.getElementById('skillPts');
-    sp.textContent = p.skillPoints > 0 ? `✦ ${p.skillPoints} skill pts` : '';
+    d.skillPts.textContent = p.skillPoints > 0 ? `✦ ${p.skillPoints} skill pts` : '';
 
     // Panel refresh if open
     if (activePanel === 'inv')    renderInventory(p);

@@ -717,10 +717,10 @@ const Game = (() => {
         result.summoned.forEach(s => {
           const summoned = Enemies.createAtWorld(s.typeKey, s.worldX, s.worldZ, floor);
           enemies.push(summoned);
-          rebuildEnemySoa(); // re-indexes spatial grid
           Engine.buildEnemyMesh(summoned);
           Engine.spawnParticles(summoned.x, 0.8, summoned.z, summoned.color, 14, 3.2, 0.8);
         });
+        rebuildEnemySoa(); // once after all summons, not per-summon
       }
       Engine.updateEnemyHpBar(e);
       if (e.isBoss && bossSpawned) UI.updateBossBar(e);
