@@ -57,6 +57,8 @@ const Game = (() => {
   let _prebuilt = null;
   // Incremented on every start() call — cancels stale warmup RAF chains
   let _startGen = 0;
+  // Incremented on every preload() call and on start() — cancels stale preload async chains
+  let _preloadGen = 0;
   // Pre-generated dungeon data for the next floor (built during stair descent)
   let _nextDungeon = null;
   let _nextFloorNum = 0;
@@ -275,7 +277,10 @@ const Game = (() => {
     const btn    = document.getElementById('titleStartBtn');
     const loadEl = document.getElementById('titleLoading');
 
+    const myGen = ++_preloadGen;
     requestAnimationFrame(() => {
+      // Abort if start() or a newer preload() has superseded us
+      if (_preloadGen !== myGen) return;
       try {
         setStartupStatus('Generating dungeon...');
         const p = Player.create();
@@ -301,6 +306,7 @@ const Game = (() => {
         Engine.buildDungeonChunked(d,
           // Phase 1 done — spawn area ready, enable button
           () => {
+            if (_preloadGen !== myGen) return;
             if (btn)    btn.disabled = false;
             updateTitleStartLabel();
             setStartupStatus('Ready.');
@@ -308,6 +314,7 @@ const Game = (() => {
           },
           // Phase 2 done — all geometry ready
           () => {
+            if (_preloadGen !== myGen) return;
             setStartupStatus('Finishing dungeon...');
             Engine.buildEnemyMesh(pb);
             if (pb.mesh) pb.mesh.position.y = -5;
@@ -364,6 +371,7 @@ const Game = (() => {
 
   /* ── Start ───────────────────────────────────── */
   function start() {
+    ++_preloadGen; // cancel any pending preload rAF/callbacks that haven't fired yet
     UI.clearMessages();
     UI.closePanel();
     UI.hideBossBar();
@@ -747,10 +755,11 @@ const Game = (() => {
 
     // ── Push enemies apart (nearby only, index-keyed) ──
     // Build a flat array of nearby live enemies once so both loops are O(near²) not O(total²)
+    // No fallback: without SpatialManager the O(n²) cost is unacceptable at scale
     const _nearList = _nearIdx
       ? [..._nearIdx].reduce((a, i) => { const e = enemies[i]; if (e && !e.dead) a.push(e); return a; }, [])
-      : enemies.filter(e => !e.dead);
-    for (let i = 0; i < _nearList.length; i++) {
+      : null;
+    for (let i = 0; _nearList && i < _nearList.length; i++) {
       const a = _nearList[i];
       for (let j = i + 1; j < _nearList.length; j++) {
         const b = _nearList[j];

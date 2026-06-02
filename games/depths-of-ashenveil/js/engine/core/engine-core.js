@@ -30,6 +30,8 @@ window.EngineCore = (() => {
   let bolts          = [];
   let _lastWallTorchCount = 0;
   let _lastTorchFingerprint = 0;
+  let _lastLanternPx = null;
+  let _lastLanternPz = null;
   let _tileRoomId      = null;
   let _tileRoomCols    = 0;
   let _playerX         = 0;
@@ -292,6 +294,8 @@ window.EngineCore = (() => {
     if (typeof SpatialManager !== 'undefined') SpatialManager.clear('lights');
     _lastWallTorchCount   = 0;
     _lastTorchFingerprint = 0;
+    _lastLanternPx        = null;
+    _lastLanternPz        = null;
     _cachedRoomId         = undefined;
     _scanRoomIds.clear();
   }
@@ -496,12 +500,14 @@ window.EngineCore = (() => {
       const lz = wz + offsetZ;
 
       const sconce = buildWallSconce(lx, WALL_H*0.44, lz, rotationY, bracketMat, lanternMat);
+      sconce.visible = false;
       dungeonGroup.add(sconce);
 
       const _rid   = (typeof RoomManager !== 'undefined' ? RoomManager.getRoomIdAtGrid(gx, gy) : null) ?? `room_${lan.roomIndex ?? -1}`;
       const _boss  = _rid === 'room_boss';
       const flame  = makeFlameCluster(0.13, _boss ? 0xcc1100 : 0xff7a18, _boss ? 0xff4422 : 0xffc45a);
       const torchPiece = buildTorchPiece(lx, WALL_H*0.46, lz, rotationY, flame, lanternMat);
+      torchPiece.visible = false;
       dungeonGroup.add(torchPiece);
 
       const torchRecord = { x: lx, z: lz, gridX: gx, gridY: gy, roomId: _rid, holder: sconce, torch: torchPiece, flame, light: null, hasTorch: true };
@@ -640,11 +646,13 @@ window.EngineCore = (() => {
         if (!dir) continue;
         const lx = wx + ox, lz = wz + oz;
         const sconce = buildWallSconce(lx, WALL_H*0.44, lz, ry, bracketMat, lanternMat);
+        sconce.visible = false;
         dungeonGroup.add(sconce);
         const _rid   = (typeof RoomManager !== 'undefined' ? RoomManager.getRoomIdAtGrid(gx, gy) : null) ?? `room_${lan.roomIndex ?? -1}`;
       const _boss  = _rid === 'room_boss';
       const flame  = makeFlameCluster(0.13, _boss ? 0xcc1100 : 0xff7a18, _boss ? 0xff4422 : 0xffc45a);
         const torchPiece = buildTorchPiece(lx, WALL_H*0.46, lz, ry, flame, lanternMat);
+        torchPiece.visible = false;
         dungeonGroup.add(torchPiece);
         const torchRecord = { x: lx, z: lz, gridX: gx, gridY: gy, roomId: _rid, holder: sconce, torch: torchPiece, flame, light: null, hasTorch: true };
         registerWallTorch(torchRecord);
@@ -953,6 +961,7 @@ window.EngineCore = (() => {
       grp.userData.lidGroup       = lidGroup;
       grp.userData.lidOpen        = 0;
       grp.userData.isOpening      = false;
+      grp.visible = false; // proximity system reveals when player is close enough
       scene.add(grp);
       chestMeshes.push(grp);
     }
@@ -1408,8 +1417,10 @@ function updateChests(dt) {
     weaponArmGroup.add(wg);
     group.add(weaponArmGroup);
 
-    group.userData.armorMat = armorMat;
-    group.userData.helmMat  = helmMat;
+    group.userData.armorMat  = armorMat;
+    group.userData.helmMat   = helmMat;
+    group.userData.torchArm  = torchArmGroup;
+    group.userData.weaponArm = weaponArmGroup;
 
     playerMesh = group;
     playerMesh.traverse(child => {
@@ -1430,7 +1441,7 @@ function updateChests(dt) {
   /* ── Refresh weapon/armor visuals on equip ───── */
   function updatePlayerEquipment(player) {
     if (!playerMesh) return;
-    const arm = playerMesh.children.find(c => c.userData.isWeaponArm);
+    const arm = playerMesh.userData.weaponArm;
     if (arm) {
       const wg = arm.children.find(c => c.userData.isWeaponGroup);
       if (wg) buildWeaponMesh(wg, player);
@@ -1445,7 +1456,7 @@ function updateChests(dt) {
   /* ── Trigger weapon swing animation ─────────── */
   function triggerSwing() {
     if (!playerMesh) return;
-    const arm = playerMesh.children.find(c => c.userData.isWeaponArm);
+    const arm = playerMesh.userData.weaponArm;
     if (arm && !arm.userData.swinging) {
       arm.userData.swinging = true;
       arm.userData.swingT   = 0;
@@ -2546,6 +2557,31 @@ function updateChests(dt) {
 
     if (typeof SpatialManager === 'undefined') return;
 
+    // Skip spatial query if player hasn't moved meaningfully since last update
+    const _dxL = px - (_lastLanternPx ?? px + 1);
+    const _dzL = pz - (_lastLanternPz ?? pz + 1);
+    if (_dxL * _dxL + _dzL * _dzL < 0.09 && _lastTorchFingerprint !== 0) return;
+    _lastLanternPx = px;
+    _lastLanternPz = pz;
+
+    // Proximity visibility — show/hide sconces and chests based on player distance.
+    // Runs only when player has moved, so cost is amortized across many frames.
+    const _SCONCE_RSQ = (LANTERN_RADIUS + 14) * (LANTERN_RADIUS + 14); // ~52 world-unit radius
+    for (let _vi = 0; _vi < wallTorches.length; _vi++) {
+      const _t = wallTorches[_vi];
+      const _dx = _t.x - px, _dz = _t.z - pz;
+      const _vis = _dx * _dx + _dz * _dz <= _SCONCE_RSQ;
+      if (_t.holder  && _t.holder.visible  !== _vis) _t.holder.visible  = _vis;
+      if (_t.torch   && _t !== carriedTorch && _t.torch.visible !== _vis) _t.torch.visible = _vis;
+    }
+    const _CHEST_RSQ = (LANTERN_RADIUS * 2) * (LANTERN_RADIUS * 2); // ~76 world-unit radius
+    for (let _ci = 0; _ci < chestMeshes.length; _ci++) {
+      const _g = chestMeshes[_ci];
+      const _dx = _g.position.x - px, _dz = _g.position.z - pz;
+      const _vis = _dx * _dx + _dz * _dz <= _CHEST_RSQ;
+      if (_g.visible !== _vis) _g.visible = _vis;
+    }
+
     // Query nearby light indices — wallTorches[i] aligns with LightManager slot i
     let candidates = SpatialManager.query('lights', [px, pz], LANTERN_RADIUS)
       .filter(i => { const t = wallTorches[i]; return t && t.hasTorch && t !== carriedTorch; });
@@ -2624,7 +2660,7 @@ function updateTorchInteractionAnimations(dt) {
     // Compute target hand position (forearm tip via localToWorld)
     let hx, hy, hz;
     if (playerMesh) {
-      const torchArm = playerMesh.children.find(c => c.userData.isTorchArm);
+      const torchArm = playerMesh.userData.torchArm;
       if (torchArm) {
         playerMesh.updateMatrixWorld(true);
         const tip = new THREE.Vector3(0.08, -0.49, 0);
@@ -2768,8 +2804,8 @@ function updateTorchInteractionAnimations(dt) {
         const target = c.userData.isLeg === 'left' ? walkSwing : -walkSwing;
         c.rotation.x += (target - c.rotation.x) * 0.25;
       });
-      const torchArmMesh  = playerMesh.children.find(c => c.userData.isTorchArm);
-      const weaponArmMesh = playerMesh.children.find(c => c.userData.isWeaponArm);
+      const torchArmMesh  = playerMesh.userData.torchArm;
+      const weaponArmMesh = playerMesh.userData.weaponArm;
       const chestReach = chestOpenAmount();
       // Blend aimAngle toward chest during the walk phase so player faces it
       if (chestInteractAnim && chestInteractAnim.aimTarget !== undefined) {
@@ -2799,7 +2835,7 @@ function updateTorchInteractionAnimations(dt) {
       }
 
       // Weapon arm swing — 3-phase overhead: windup → strike → recover
-      const arm = playerMesh.children.find(c => c.userData.isWeaponArm);
+      const arm = playerMesh.userData.weaponArm;
       if (arm && arm.userData.swinging) {
         arm.userData.swingT = Math.min(1, arm.userData.swingT + (dt || 0.016) * 3.8);
         const st = arm.userData.swingT;
