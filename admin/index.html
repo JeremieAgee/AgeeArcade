@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    script-src  'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+    script-src  'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.jsdelivr.net/npm/;
     style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
     font-src    'self' https://fonts.gstatic.com;
     connect-src 'self'
                 https://xdvrgeaivfqpcsmuqeyi.supabase.co
-                wss://xdvrgeaivfqpcsmuqeyi.supabase.co;
+                wss://xdvrgeaivfqpcsmuqeyi.supabase.co
+                https://cdn.jsdelivr.net;
     img-src     'self' data:;
     frame-src   'none';
     object-src  'none';
@@ -544,7 +545,7 @@
   </div><!-- /dash-body -->
 </div><!-- /dashboard -->
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
 <script>
 const Admin = (() => {
   'use strict';
@@ -688,16 +689,18 @@ const Admin = (() => {
     const since = _since();
 
     let sq = _sb.from('arcade_sessions').select('visitor_id, is_returning', { count: 'exact', head: false });
-    if (since) sq = sq.gte('first_seen', since);
-    const { data: sessions, count: sessCount } = await sq;
+    if (since) sq = sq.gte('created_at', since);
+    const { data: sessions, count: sessCount, error: sessErr } = await sq;
+    if (sessErr) console.warn('[admin] arcade_sessions:', sessErr.message);
 
     let pvq = _sb.from('arcade_page_views').select('id', { count: 'exact', head: true });
     if (since) pvq = pvq.gte('created_at', since);
     const { count: pvCount } = await pvq;
 
     let gsq = _sb.from('arcade_game_sessions').select('duration_seconds', { count: 'exact', head: false });
-    if (since) gsq = gsq.gte('started_at', since);
-    const { data: gameSess, count: gsCount } = await gsq;
+    if (since) gsq = gsq.gte('created_at', since);
+    const { data: gameSess, count: gsCount, error: gsErr } = await gsq;
+    if (gsErr) console.warn('[admin] arcade_game_sessions:', gsErr.message);
 
     const visitors  = new Set((sessions || []).map(s => s.visitor_id)).size;
     const returning = (sessions || []).filter(s => s.is_returning).length;
@@ -716,7 +719,7 @@ const Admin = (() => {
   /* ── Source chart ───────────────────────── */
   async function loadSourceChart() {
     let q = _sb.from('arcade_sessions').select('source');
-    if (_since()) q = q.gte('first_seen', _since());
+    if (_since()) q = q.gte('created_at', _since());
     const { data } = await q;
     const counts = {};
     (data || []).forEach(r => { counts[r.source || 'other'] = (counts[r.source || 'other'] || 0) + 1; });
@@ -784,7 +787,7 @@ const Admin = (() => {
   /* ── Floor progression ──────────────────── */
   async function loadFloorChart() {
     let q = _sb.from('arcade_game_sessions').select('max_floor');
-    if (_since()) q = q.gte('started_at', _since());
+    if (_since()) q = q.gte('created_at', _since());
     const { data } = await q;
     const counts = {};
     (data || []).forEach(r => {
@@ -832,10 +835,10 @@ const Admin = (() => {
   /* ── Recent game sessions ───────────────── */
   async function loadGameSessions() {
     let q = _sb.from('arcade_game_sessions')
-      .select('started_at, ended_at, max_floor, max_level, duration_seconds, end_reason, session_id')
-      .order('started_at', { ascending: false })
+      .select('created_at, ended_at, max_floor, max_level, duration_seconds, end_reason, session_id')
+      .order('created_at', { ascending: false })
       .limit(20);
-    if (_since()) q = q.gte('started_at', _since());
+    if (_since()) q = q.gte('created_at', _since());
     const { data } = await q;
 
     // join source from sessions
@@ -867,7 +870,7 @@ const Admin = (() => {
         <td>${r.max_level || 1}</td>
         <td>${_fmtDur(r.duration_seconds)}</td>
         <td><span class="badge ${rc}">${r.end_reason || '—'}</span></td>
-        <td style="color:var(--muted)">${_timeAgo(r.started_at)}</td>
+        <td style="color:var(--muted)">${_timeAgo(r.created_at)}</td>
       </tr>`;
     }).join('');
     _tickLoad();
