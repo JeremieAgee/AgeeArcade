@@ -24,9 +24,10 @@ const ArcadeAuth = (() => {
   function init() {
     if (typeof window.supabase === 'undefined') return;
     // Reuse an existing client (e.g. from analytics.js) to avoid multiple GoTrueClient warnings
-    _client = window._ageeSupabaseClient
-      || (_ageeSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON));
-    window._ageeSupabaseClient = _client;
+    if (!window._ageeSupabaseClient) {
+      window._ageeSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    }
+    _client = window._ageeSupabaseClient;
 
     _client.auth.onAuthStateChange((_event, session) => {
       _user = session?.user ?? null;

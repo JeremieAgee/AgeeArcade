@@ -327,7 +327,7 @@ img { display: block; max-width: 100%; }
   left: 0;
   right: 0;
   z-index: 200;
-  height: 90px;
+  height: 60px;
   background: var(--ad-bg);
   border-top: 1px solid var(--ad-border);
   display: flex;
