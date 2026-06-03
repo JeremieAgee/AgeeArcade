@@ -14,17 +14,30 @@
       script-src  'self' 'unsafe-inline'
                   https://cdnjs.cloudflare.com
                   https://cdn.jsdelivr.net
-                  https://pagead2.googlesyndication.com;
+                  https://pagead2.googlesyndication.com
+                  https://googleads.g.doubleclick.net
+                  https://adservice.google.com
+                  https://www.googletagservices.com
+                  https://ep1.adtrafficquality.google;
       style-src   'self' 'unsafe-inline'
                   https://fonts.googleapis.com;
       font-src    'self'
                   https://fonts.gstatic.com;
       connect-src 'self'
                   https://xdvrgeaivfqpcsmuqeyi.supabase.co
-                  wss://xdvrgeaivfqpcsmuqeyi.supabase.co;
+                  wss://xdvrgeaivfqpcsmuqeyi.supabase.co
+                  https://pagead2.googlesyndication.com
+                  https://googleads.g.doubleclick.net
+                  https://adservice.google.com
+                  https://ep1.adtrafficquality.google
+                  https://cdn.jsdelivr.net;
       img-src     'self' data: blob:
-                  https://www.googletagmanager.com;
-      frame-src   'none';
+                  https://www.googletagmanager.com
+                  https://pagead2.googlesyndication.com
+                  https://googleads.g.doubleclick.net
+                  https://www.google.com;
+      frame-src   https://googleads.g.doubleclick.net
+                  https://tpc.googlesyndication.com;
       object-src  'none';
       base-uri    'self';
       form-action 'self';
