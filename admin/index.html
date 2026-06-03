@@ -542,6 +542,20 @@
       </div>
     </div>
 
+    <!-- ── Player Meta table ── -->
+    <div class="panel" style="margin-bottom:1.5rem; overflow-x:auto;">
+      <div class="panel-head">
+        <h2>Player Meta (depths_player_meta)</h2>
+        <span class="panel-head-count" id="playerMetaCount"></span>
+      </div>
+      <div class="panel-body" style="overflow-x:auto;">
+        <table class="data-table" id="playerMetaTable">
+          <thead id="playerMetaHead"></thead>
+          <tbody id="playerMetaBody"><tr><td class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
   </div><!-- /dash-body -->
 </div><!-- /dashboard -->
 
@@ -646,6 +660,7 @@ const Admin = (() => {
       loadGameSessions(),
       loadEventFeed(),
       loadPageViews(),
+      loadPlayerMeta(),
     ]);
     _doneLoad();
   }
@@ -940,6 +955,54 @@ const Admin = (() => {
         .map(([k]) => `<span class="badge">${SOURCE_LABELS[k] || k}</span>`).join(' ');
       return `<tr><td style="font-family:monospace;font-size:12px">${page}</td><td>${_fmt(d.total)}</td><td>${topSrc}</td></tr>`;
     }).join('');
+    _tickLoad();
+  }
+
+  /* ── Player Meta ────────────────────────── */
+  async function loadPlayerMeta() {
+    const { data, error } = await _sb
+      .from('depths_player_meta')
+      .select('*')
+      .order('updated_at', { ascending: false, nullsFirst: false })
+      .limit(100);
+
+    const thead = document.getElementById('playerMetaHead');
+    const tbody = document.getElementById('playerMetaBody');
+    const count = document.getElementById('playerMetaCount');
+
+    if (error) {
+      thead.innerHTML = '';
+      tbody.innerHTML = `<tr><td class="empty" style="color:var(--red)">${error.message}</td></tr>`;
+      count.textContent = 'error';
+      _tickLoad();
+      return;
+    }
+
+    if (!data || !data.length) {
+      thead.innerHTML = '';
+      tbody.innerHTML = '<tr><td class="empty">No player records yet</td></tr>';
+      count.textContent = '0 rows';
+      _tickLoad();
+      return;
+    }
+
+    const cols = Object.keys(data[0]);
+    count.textContent = data.length + ' rows';
+
+    thead.innerHTML = '<tr>' + cols.map(c =>
+      `<th>${c.replace(/_/g, ' ')}</th>`
+    ).join('') + '</tr>';
+
+    tbody.innerHTML = data.map(row => '<tr>' + cols.map(c => {
+      const val = row[c];
+      if (val === null || val === undefined) return '<td style="color:var(--muted)">—</td>';
+      if (typeof val === 'object') return `<td style="font-family:monospace;font-size:11px">${JSON.stringify(val)}</td>`;
+      // ISO timestamps — shorten for readability
+      if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
+        return `<td style="color:var(--muted);font-size:12px" title="${val}">${_timeAgo(val)}</td>`;
+      }
+      return `<td>${val}</td>`;
+    }).join('') + '</tr>').join('');
     _tickLoad();
   }
 

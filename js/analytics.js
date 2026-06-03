@@ -76,7 +76,20 @@
 
   var referrer    = document.referrer || '';
   var source      = _source(referrer);
-  var isReturning = localStorage.getItem('agee_arcade.has_visited') === 'true';
+  var isReturning = localStorage.getItem('agee_arcade.has_visited') === 'true';otal Sessions
+0
+site visits
+Unique Visitors
+0
+distinct visitor IDs
+Return Visitors
+0
+came back again
+Game Starts
+0
+Depths of Ashenveil
+Avg Play Time
+—
   localStorage.setItem('agee_arcade.has_visited', 'true');
 
   /* ── Session init ─────────────────────────────── */
