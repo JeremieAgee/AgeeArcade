@@ -14,11 +14,11 @@
       script-src  'self' 'unsafe-inline'
                   https://cdnjs.cloudflare.com
                   https://cdn.jsdelivr.net
-                  https://pagead2.googlesyndication.com
-                  https://googleads.g.doubleclick.net
-                  https://adservice.google.com
-                  https://www.googletagservices.com
-                  https://ep1.adtrafficquality.google;
+                  https://*.googlesyndication.com
+                  https://*.doubleclick.net
+                  https://*.google.com
+                  https://*.adtrafficquality.google
+                  https://*.googletagservices.com;
       style-src   'self' 'unsafe-inline'
                   https://fonts.googleapis.com;
       font-src    'self'
@@ -26,18 +26,20 @@
       connect-src 'self'
                   https://xdvrgeaivfqpcsmuqeyi.supabase.co
                   wss://xdvrgeaivfqpcsmuqeyi.supabase.co
-                  https://pagead2.googlesyndication.com
-                  https://googleads.g.doubleclick.net
-                  https://adservice.google.com
-                  https://ep1.adtrafficquality.google
-                  https://cdn.jsdelivr.net;
+                  https://cdn.jsdelivr.net
+                  https://*.googlesyndication.com
+                  https://*.doubleclick.net
+                  https://*.google.com
+                  https://*.gstatic.com
+                  https://*.adtrafficquality.google;
       img-src     'self' data: blob:
-                  https://www.googletagmanager.com
-                  https://pagead2.googlesyndication.com
-                  https://googleads.g.doubleclick.net
-                  https://www.google.com;
-      frame-src   https://googleads.g.doubleclick.net
-                  https://tpc.googlesyndication.com;
+                  https://*.googlesyndication.com
+                  https://*.doubleclick.net
+                  https://*.google.com
+                  https://*.gstatic.com
+                  https://www.googletagmanager.com;
+      frame-src   https://*.doubleclick.net
+                  https://*.googlesyndication.com;
       object-src  'none';
       base-uri    'self';
       form-action 'self';
@@ -67,9 +69,9 @@
 
     <main>
         <!-- AdSense: inline top -->
-        <div style="width:100%;display:flex;align-items:center;justify-content:center;padding:0.5rem 0;">
+        <div style="width:100%;padding:0.5rem 0;">
             <ins class="adsbygoogle"
-                 style="display:block"
+                 style="display:block;width:100%;min-height:90px;"
                  data-ad-client="ca-pub-9709866738532619"
                  data-ad-slot="7421345542"
                  data-ad-format="auto"
