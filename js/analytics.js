@@ -14,7 +14,10 @@
   function getClient() {
     if (_client) return _client;
     if (typeof window.supabase === 'undefined') return null;
-    try { _client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }
+    try {
+      _client = window._ageeSupabaseClient
+        || (window._ageeSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+    }
     catch (_) {}
     return _client;
   }
