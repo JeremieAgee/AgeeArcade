@@ -45,6 +45,16 @@ const ArcadeAuth = (() => {
   function _buildHeaderButton() {
     const nav = document.querySelector('.site-nav');
     if (!nav) return;
+
+    // Admin analytics link — hidden until admin signs in
+    const adminLink = document.createElement('a');
+    adminLink.id        = 'arcadeAdminBtn';
+    adminLink.className = 'arcade-admin-btn';
+    adminLink.textContent = '⚡ Analytics';
+    adminLink.href      = _arcadeUrl('admin/');
+    adminLink.style.display = 'none';
+    nav.appendChild(adminLink);
+
     const btn = document.createElement('button');
     btn.id = 'arcadeAuthBtn';
     btn.className = 'arcade-auth-btn';
@@ -61,6 +71,9 @@ const ArcadeAuth = (() => {
     if (!btn) return;
     btn.textContent = _user ? (_user.email.split('@')[0]) : 'Sign In';
     btn.classList.toggle('arcade-auth-btn--signed-in', !!_user);
+
+    const adminBtn = document.getElementById('arcadeAdminBtn');
+    if (adminBtn) adminBtn.style.display = _isAdmin() ? 'inline-flex' : 'none';
   }
 
   function _isAdmin() {
@@ -251,6 +264,17 @@ const ArcadeAuth = (() => {
   function _injectStyles() {
     const s = document.createElement('style');
     s.textContent = `
+/* Admin analytics nav button */
+.arcade-admin-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(108,59,255,0.15); border: 1px solid #6c3bff;
+  color: #c0aaff; font-family: 'Orbitron', sans-serif;
+  font-size: 10px; letter-spacing: 1px;
+  padding: 6px 12px; border-radius: 3px;
+  text-decoration: none; transition: all 0.2s;
+}
+.arcade-admin-btn:hover { background: rgba(108,59,255,0.3); color: #fff; }
+
 /* Arcade auth header button */
 .arcade-auth-btn {
   background: none; border: 1px solid #3a2a6a; color: #8888aa;
