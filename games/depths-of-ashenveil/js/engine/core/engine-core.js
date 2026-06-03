@@ -1508,7 +1508,7 @@ function updateChests(dt) {
     ctx2.fillStyle = enemy.isBoss ? '#ff2200' : '#cc2200';
     ctx2.fillRect(1, 1, 126, 14);
     const hpTex    = new THREE.CanvasTexture(canvas);
-    const hpMat    = new THREE.SpriteMaterial({ map: hpTex, depthTest: false });
+    const hpMat    = new THREE.SpriteMaterial({ map: hpTex, depthTest: false, transparent: true, opacity: 0 });
     const hpSprite = new THREE.Sprite(hpMat);
     hpSprite.scale.set(enemy.isBoss ? 2.4 : 1.4, 0.22, 1);
     hpSprite.position.y = enemy.height + 0.4;
@@ -2264,7 +2264,7 @@ function updateChests(dt) {
     group.add(arm);
   }
 
-  function updateEnemyHpBar(enemy) {
+  function updateEnemyHpBar(enemy, playerX, playerZ) {
     const group = enemyMeshes[enemy.id];
     if (!group) return;
     const sprite = group.children.find(c => c.userData.isHpBar);
@@ -2275,6 +2275,14 @@ function updateChests(dt) {
     ctx.fillStyle = enemy.isBoss ? '#ff2200' : '#882200';
     ctx.fillRect(1, 1, Math.round(126 * pct), 14);
     hpTex.needsUpdate = true;
+
+    // Proximity opacity: invisible beyond 10 units, fully visible within 4
+    if (playerX !== undefined && playerZ !== undefined) {
+      const dx   = enemy.x - playerX;
+      const dz   = enemy.z - playerZ;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      sprite.material.opacity = Math.max(0, Math.min(1, (10 - dist) / 6));
+    }
   }
 
   function removeEnemyMesh(id) {

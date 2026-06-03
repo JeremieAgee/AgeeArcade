@@ -51,7 +51,7 @@ const AuthUI = (() => {
     });
 
     // Listen for auth changes to update the title screen
-    document.addEventListener('depths-auth-change', updateTitleScreenUser);
+    document.addEventListener('arcade-auth-change', updateTitleScreenUser);
   }
 
   /* ── Mode switching ──────────────────────────── */
@@ -113,12 +113,12 @@ const AuthUI = (() => {
 
     try {
       if (mode === 'login') {
-        const { error } = await DepthsAuth.signIn(email, password);
+        const { error } = await ArcadeAuth.signIn(email, password);
         if (error) { showError(error); }
         else        { hide(); }
 
       } else if (mode === 'signup') {
-        const { error } = await DepthsAuth.signUp(email, password);
+        const { error } = await ArcadeAuth.signUp(email, password);
         if (error) { showError(error); }
         else {
           showInfo('Account created! Check your email to confirm, then sign in.');
@@ -126,7 +126,7 @@ const AuthUI = (() => {
         }
 
       } else if (mode === 'reset') {
-        const { error } = await DepthsAuth.resetPassword(email);
+        const { error } = await ArcadeAuth.resetPassword(email);
         if (error) { showError(error); }
         else        { showInfo('Reset link sent — check your inbox.'); }
       }
@@ -158,8 +158,8 @@ const AuthUI = (() => {
 
   /* ── Title screen integration ────────────────── */
   function updateTitleScreenUser() {
-    const user    = DepthsAuth.getUser();
-    const email   = DepthsAuth.getEmail();
+    const user    = ArcadeAuth.getUser();
+    const email   = ArcadeAuth.getEmail();
     let   el      = document.getElementById('authTitleStatus');
 
     if (!el) {
@@ -175,7 +175,7 @@ const AuthUI = (() => {
         <a href="#" class="auth-status-link" id="authSignOutBtn">Sign out</a>`;
       document.getElementById('authSignOutBtn').addEventListener('click', async e => {
         e.preventDefault();
-        await DepthsAuth.signOut();
+        await ArcadeAuth.signOut();
       });
       hide();
     } else {

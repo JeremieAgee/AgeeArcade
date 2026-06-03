@@ -42,6 +42,85 @@ const Game = (() => {
   let exitOpen     = false;
   let stairActive  = false;
 
+  /* ── Monster AI Worker ───────────────────────────── */
+  let _aiWorker       = null;
+  let _workerReady    = false;
+  // Latest tick result received from worker (applied next frame)
+  let _pendingUpdates = null;
+  let _pendingEvents  = null;
+  let _pendingDead    = null;
+
+  function _initWorker() {
+    if (_aiWorker) { _aiWorker.terminate(); }
+    _aiWorker    = new Worker('js/workers/monster-ai-worker.js');
+    _workerReady = true;
+    _aiWorker.onmessage = _onWorkerMessage;
+    _aiWorker.onerror   = err => console.error('[MonsterWorker]', err);
+  }
+
+  function _onWorkerMessage(e) {
+    const msg = e.data;
+    if (msg.type === 'spawned') {
+      // Worker created all enemies — populate enemies[] and build meshes
+      enemies = msg.enemies.map(snap => _snapToEnemy(snap));
+      preBoss = null; // boss comes separately via addBoss
+      rebuildEnemySoa();
+      const { cx, cy } = dungeon.roomCenter(dungeon.startRoom);
+      const w = dungeon.toWorld(cx, cy);
+      buildEnemyMeshesChunked(enemies, w.x, w.z, () => {
+        Engine.buildExitPortal(dungeon);
+        if (exitOpen) Engine.revealExitPortal();
+      });
+      return;
+    }
+    if (msg.type === 'bossCreated') {
+      preBoss = _snapToEnemy(msg.boss);
+      Engine.buildEnemyMesh(preBoss);
+      if (preBoss.mesh) preBoss.mesh.position.y = -5;
+      return;
+    }
+    if (msg.type === 'tickResult') {
+      _pendingUpdates = msg.updates;
+      _pendingEvents  = msg.events;
+      _pendingDead    = msg.dead;
+    }
+  }
+
+  // Convert a worker snapshot into a minimal enemy object the main thread needs
+  function _snapToEnemy(snap) {
+    return {
+      ...snap,
+      mesh:    null,
+      _walkT:  0,
+    };
+  }
+
+  // Send dungeon + spawns to worker — worker replies with 'spawned' + 'bossCreated'
+  function _workerInit(floorNum, dng) {
+    if (!_aiWorker) return;
+    const serialGrid = dng.grid.map(row => Array.from(row));
+    _aiWorker.postMessage({
+      type:   'init',
+      floor:  floorNum,
+      dungeon: {
+        grid:   serialGrid,
+        COLS:   dng.COLS,
+        ROWS:   dng.ROWS,
+        TILE:   dng.TILE,
+        spawns: dng.spawns,
+      },
+    });
+    // Kick off boss pre-creation immediately
+    if (dng.bossRoom) {
+      _aiWorker.postMessage({
+        type:    'addBoss',
+        bossRoom: dng.bossRoom,
+        floor:   floorNum,
+        dungeon: { TILE: dng.TILE },
+      });
+    }
+  }
+
   // Per-run analytics counters
   let _runStartTime       = 0;
   let _runDeaths          = 0;
@@ -295,12 +374,9 @@ const Game = (() => {
         Engine.buildPlayerMesh(p);
 
         setStartupStatus('Placing enemies...');
-        const ens = Enemies.spawnAll(d, 1);
-        const pb  = Enemies.createBoss(d.bossRoom, 1, d);
-
-        // Set _prebuilt immediately — start() can grab references even before
-        // all geometry is built. fullyBuilt = false until Phase 2 completes.
-        _prebuilt = { player: p, dungeon: d, enemies: ens, boss: pb, fullyBuilt: false };
+        // Worker will create enemies when start() calls _workerInit()
+        // Set _prebuilt immediately — start() can grab references even before all geometry is built.
+        _prebuilt = { player: p, dungeon: d, enemies: [], boss: null, fullyBuilt: false };
 
         if (typeof SpatialManager !== 'undefined') SpatialManager.init(d);
         Engine.buildDungeonChunked(d,
@@ -315,12 +391,8 @@ const Game = (() => {
           // Phase 2 done — all geometry ready
           () => {
             if (_preloadGen !== myGen) return;
-            setStartupStatus('Finishing dungeon...');
-            Engine.buildEnemyMesh(pb);
-            if (pb.mesh) pb.mesh.position.y = -5;
             _prebuilt.fullyBuilt = true;
             setStartupStatus('Dungeon ready.');
-            buildEnemyMeshesChunked(ens, p.x, p.z, () => Engine.buildExitPortal(d));
           }
         );
       } catch (err) {
@@ -400,11 +472,14 @@ const Game = (() => {
 
     const snap = _prebuilt;
 
+    _pendingUpdates = null; _pendingEvents = null; _pendingDead = null;
+    if (_aiWorker) _aiWorker.postMessage({ type: 'reset' });
     if (snap) {
       player  = snap.player;
       dungeon = snap.dungeon;
-      enemies = snap.enemies;
-      preBoss = snap.boss || null;
+      enemies = [];
+      preBoss = null;
+      _workerInit(floor, dungeon);
     } else {
       player  = Player.create();
       dungeon = Dungeon.generate(floor);
@@ -417,11 +492,10 @@ const Game = (() => {
       if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
       Engine.buildDungeon(dungeon);
       Engine.buildPlayerMesh(player);
-      enemies = Enemies.spawnAll(dungeon, floor);
-      preBoss = Enemies.createBoss(dungeon.bossRoom, floor, dungeon);
-      Engine.buildEnemyMesh(preBoss);
-      if (preBoss.mesh) preBoss.mesh.position.y = -5;
-      buildEnemyMeshesChunked(enemies, player.x, player.z, () => Engine.buildExitPortal(dungeon));
+      // Worker handles creation — enemies[] populated via 'spawned' message
+      enemies = [];
+      preBoss = null;
+      _workerInit(floor, dungeon);
     }
     rebuildEnemySoa();
 
@@ -470,8 +544,10 @@ const Game = (() => {
       player = saved.player;
       player._descentY = 0;
       dungeon = reviveDungeon(saved.dungeon);
-      enemies = (saved.enemies || []).map(e => ({ ...e, mesh: null })).filter(e => !e.dead);
-      preBoss = saved.preBoss ? { ...saved.preBoss, mesh: null } : null;
+      enemies = [];
+      preBoss = null;
+      _pendingUpdates = null; _pendingEvents = null; _pendingDead = null;
+      if (_aiWorker) _aiWorker.postMessage({ type: 'reset' });
       rebuildEnemySoa();
 
       const flags = saved.flags || {};
@@ -491,15 +567,8 @@ const Game = (() => {
       Engine.buildDungeon(dungeon);
       Engine.buildPlayerMesh(player);
 
-      if (preBoss) {
-        Engine.buildEnemyMesh(preBoss);
-        if (preBoss.mesh) preBoss.mesh.position.y = -5;
-      }
-
-      buildEnemyMeshesChunked(enemies, player.x, player.z, () => {
-        Engine.buildExitPortal(dungeon);
-        if (exitOpen) Engine.revealExitPortal();
-      });
+      _workerInit(floor, dungeon);
+      // Mesh building happens via 'spawned' worker message
 
       UI.refresh(player);
       UI.setFloor(floor);
@@ -546,16 +615,12 @@ const Game = (() => {
     Engine.buildDungeon(dungeon);
     Engine.buildArrivalPortal(dungeon);
 
-    // Use pre-spawned data from pregenNextFloor() if available
-    enemies = dungeon._preSpawns     || Enemies.spawnAll(dungeon, floor);
-    preBoss = dungeon._preBossData   || Enemies.createBoss(dungeon.bossRoom, floor, dungeon);
+    enemies = [];
+    preBoss = null;
+    _pendingUpdates = null; _pendingEvents = null; _pendingDead = null;
     rebuildEnemySoa();
-    Engine.buildEnemyMesh(preBoss);
-    if (preBoss.mesh) preBoss.mesh.position.y = -5;
-    buildEnemyMeshesChunked(enemies, player.x, player.z, () => {
-      Engine.buildExitPortal(dungeon);
-      if (bossDefeated) Engine.revealExitPortal();
-    });
+    _workerInit(floor, dungeon);
+    // Mesh building happens in response to 'spawned' worker message
 
     try { Engine.render(player, 0, 0.016); } catch (_) {}
 
@@ -700,39 +765,88 @@ const Game = (() => {
 
     checkBossEntry();
 
-    // Nearby enemy indices — all per-frame loops gate on this Set
+    // ── Dispatch tick to worker (fire-and-forget) ──
+    if (_aiWorker && _workerReady) {
+      _aiWorker.postMessage({ type: 'tick', dt, playerX: player.x, playerZ: player.z });
+    }
+
+    // ── Apply last worker result ──
+    if (_pendingUpdates) {
+      const updates = _pendingUpdates;
+      const events  = _pendingEvents  || [];
+      const dead    = _pendingDead    || [];
+      _pendingUpdates = null;
+      _pendingEvents  = null;
+      _pendingDead    = null;
+
+      // Apply position/state updates to main-thread enemy objects
+      const _byId = new Map(enemies.map(e => [e.id, e]));
+      for (const u of updates) {
+        const e = _byId.get(u.id);
+        if (!e) continue;
+        e.x        = u.x;
+        e.z        = u.z;
+        e.rotY     = u.rotY;
+        e.state    = u.state;
+        e.hp       = u.hp;
+        e.maxHp    = u.maxHp;
+        e.atkAnim  = u.atkAnim;
+        e.hitFlash = u.hitFlash;
+        if (e.mesh) {
+          if (e.atkAnim <= 0) {
+            e.mesh.position.x = e.x;
+            e.mesh.position.z = e.z;
+          }
+          e.mesh.rotation.y = e.rotY;
+        }
+        Engine.updateEnemyHpBar(e, player.x, player.z);
+        if (e.isBoss && bossSpawned) UI.updateBossBar(e);
+      }
+
+      // Handle events (attacks, bolts, summons)
+      let _died = false;
+      for (const ev of events) {
+        if (ev.type === 'attack') {
+          const dmg = Player.takeDamage(player, ev.dmg);
+          if (dmg > 0) UI.addMsg(ev.earthSlam ? `${ev.name}'s earth slam hits you for ${dmg}!` : `${ev.name} hits you for ${dmg}!`, 'combat');
+          if (ev.earthSlam) Engine.spawnParticles(player.x, 0.2, player.z, 0x8a6a3a, 22, 3.5, 0.7);
+          if (player.hp <= 0) { die(); return; }
+        }
+        if (ev.type === 'bolt') {
+          const b = ev.bolt;
+          Engine.fireBolt(b.x, b.z, b.vx, b.vz, b.dmg, b.kind);
+        }
+        if (ev.type === 'summon') {
+          for (const s of ev.summoned) {
+            const summoned = { ...Enemies.TYPES[s.typeKey], typeKey: s.typeKey, x: s.worldX, z: s.worldZ, hp: 22, maxHp: 22, atk: 6, xp: 9, state: 'idle', atkTimer: 0, atkAnim: 0, hitFlash: 0, dead: false, id: Math.random().toString(36).slice(2), mesh: null, _walkT: 0 };
+            enemies.push(summoned);
+            Engine.buildEnemyMesh(summoned);
+            Engine.spawnParticles(summoned.x, 0.8, summoned.z, summoned.color, 14, 3.2, 0.8);
+            if (_aiWorker) _aiWorker.postMessage({ type: 'addEnemy', enemy: summoned });
+          }
+          rebuildEnemySoa();
+        }
+      }
+
+      // Remove dead enemies (worker already removed them from its map)
+      if (dead.length > 0) {
+        const deadSet = new Set(dead);
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          if (deadSet.has(enemies[i].id)) {
+            if (enemies[i].mesh) Engine.removeEnemyMesh(enemies[i].id);
+            enemies[i] = enemies[enemies.length - 1];
+            enemies.length--;
+            _died = true;
+          }
+        }
+        if (_died) rebuildEnemySoa();
+      }
+    }
+
+    // Nearby enemy indices — per-frame loops gate on this Set
     const _nearIdx = typeof SpatialManager !== 'undefined'
       ? new Set(SpatialManager.query('monsters', [player.x, player.z], ACTIVE_RADIUS))
       : null;
-
-    // ── AI tick (nearby only) ──
-    for (let i = 0; i < enemies.length; i++) {
-      const e = enemies[i];
-      if (e.dead) continue;
-      if (_nearIdx && !_nearIdx.has(i)) continue;
-      const result = Enemies.tick(e, player, dungeon, dt);
-      if (result && result.attacked) {
-        const dmg = Player.takeDamage(player, result.dmg);
-        if (dmg > 0) UI.addMsg(result.earthSlam ? `${e.name}'s earth slam hits you for ${dmg}!` : `${e.name} hits you for ${dmg}!`, 'combat');
-        if (result.earthSlam) Engine.spawnParticles(player.x, 0.2, player.z, 0x8a6a3a, 22, 3.5, 0.7);
-        if (player.hp <= 0) { die(); return; }
-      }
-      if (result && result.boltFired) {
-        const b = result.boltFired;
-        Engine.fireBolt(b.x, b.z, b.vx, b.vz, b.dmg, b.kind);
-      }
-      if (result && result.summoned) {
-        result.summoned.forEach(s => {
-          const summoned = Enemies.createAtWorld(s.typeKey, s.worldX, s.worldZ, floor);
-          enemies.push(summoned);
-          Engine.buildEnemyMesh(summoned);
-          Engine.spawnParticles(summoned.x, 0.8, summoned.z, summoned.color, 14, 3.2, 0.8);
-        });
-        rebuildEnemySoa(); // once after all summons, not per-summon
-      }
-      Engine.updateEnemyHpBar(e);
-      if (e.isBoss && bossSpawned) UI.updateBossBar(e);
-    }
 
     // Sync moved positions back into spatial grid (index-keyed)
     if (typeof SpatialManager !== 'undefined' && _nearIdx) {
@@ -751,7 +865,7 @@ const Game = (() => {
         _hadDeath = true;
       }
     }
-    if (_hadDeath) rebuildEnemySoa(); // rebuilds index-keyed spatial grid
+    if (_hadDeath) rebuildEnemySoa();
 
     // ── Push enemies apart (nearby only, index-keyed) ──
     // Build a flat array of nearby live enemies once so both loops are O(near²) not O(total²)
@@ -846,13 +960,14 @@ const Game = (() => {
     bossSpawned = true;
     if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('boss_reached', { floor });
 
-    const boss = preBoss || Enemies.createBoss(dungeon.bossRoom, floor, dungeon);
+    const boss = preBoss;
     preBoss = null;
+    if (!boss) return; // worker hasn't replied yet — boss entry will retry next frame
     // Reveal pre-built mesh (lift from underground) — shaders already compiled, zero stall
     if (boss.mesh) {
       boss.mesh.position.y = 0;
     } else {
-      Engine.buildEnemyMesh(boss); // fallback if pre-build didn't happen
+      Engine.buildEnemyMesh(boss);
     }
     enemies.push(boss);
     rebuildEnemySoa();
@@ -867,6 +982,8 @@ const Game = (() => {
     const hits = Player.attack(player, enemies, aimAngleVal);
 
     hits.forEach(({ enemy, dmg, isCrit, killed }) => {
+      // Tell worker about the damage so it updates hp in its own state
+      if (_aiWorker) _aiWorker.postMessage({ type: 'damage', id: enemy.id, amount: dmg });
       Engine.spawnParticles(
         enemy.x, enemy.height * 0.7, enemy.z,
         isCrit ? 0xffff00 : 0xff3300,
@@ -1058,6 +1175,7 @@ const Game = (() => {
   function getPlayer() { return player; }
 
   function _init() {
+    _initWorker();
     wireInput();
     document.addEventListener('depths-save-change', updateTitleStartLabel);
     preload();
@@ -1086,6 +1204,7 @@ const Game = (() => {
 
   function goToTitle() {
     running = false;
+    if (_aiWorker) _aiWorker.postMessage({ type: 'reset' });
     if (window.AgeeAnalytics && window.AGEE_CURRENT_GAME_SESSION_ID) {
       window.AgeeAnalytics.trackEvent('game_quit', { floor, level: player ? player.level : 1 });
       window.AgeeAnalytics.endGameSession({

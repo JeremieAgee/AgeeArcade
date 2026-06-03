@@ -28,10 +28,12 @@ const ArcadeAuth = (() => {
     _client.auth.onAuthStateChange((_event, session) => {
       _user = session?.user ?? null;
       _renderHeaderUser();
+      document.dispatchEvent(new CustomEvent('arcade-auth-change', { detail: { user: _user } }));
     });
     _client.auth.getSession().then(({ data: { session } }) => {
       _user = session?.user ?? null;
       _renderHeaderUser();
+      document.dispatchEvent(new CustomEvent('arcade-auth-change', { detail: { user: _user } }));
     });
 
     _buildHeaderButton();
@@ -61,9 +63,17 @@ const ArcadeAuth = (() => {
     btn.classList.toggle('arcade-auth-btn--signed-in', !!_user);
   }
 
+  function _isAdmin() {
+    return _user?.app_metadata?.role === 'admin';
+  }
+
   function _renderSignedInMenu(anchor) {
     const existing = document.getElementById('arcadeUserMenu');
     if (existing) { existing.remove(); return; }
+
+    const adminLink = _isAdmin()
+      ? `<a class="aum-item aum-admin" href="${_arcadeUrl('admin/')}">⚡ Analytics</a>`
+      : '';
 
     const menu = document.createElement('div');
     menu.id = 'arcadeUserMenu';
@@ -71,6 +81,7 @@ const ArcadeAuth = (() => {
     menu.innerHTML = `
       <div class="aum-email">${_user.email}</div>
       <a class="aum-item" href="${_arcadeUrl('leaderboards/')}">Leaderboards</a>
+      ${adminLink}
       <button class="aum-item aum-signout" id="arcadeSignOut">Sign out</button>`;
 
     document.body.appendChild(menu);
@@ -261,6 +272,7 @@ const ArcadeAuth = (() => {
   border: none; border-bottom: 1px solid #1e1e2e; width: 100%; text-align: left;
   cursor: pointer; text-decoration: none; font-family: inherit; transition: background 0.15s; }
 .aum-item:hover { background: #1e1e2e; color: #fff; }
+.aum-admin { color: #c0aaff !important; border-top: 1px solid #1e1e2e; }
 .aum-signout { color: #cc4444 !important; }
 .aum-signout:hover { background: #2a1010 !important; }
 
@@ -337,5 +349,5 @@ const ArcadeAuth = (() => {
     init();
   }
 
-  return { show, hide, signIn, signUp, signOut, getUser, getUserId, getEmail, isLoggedIn };
+  return { show, hide, signIn, signUp, signOut, getUser, getUserId, getEmail, isLoggedIn, isAdmin: _isAdmin };
 })();

@@ -78,8 +78,7 @@ window.Save = (() => {
 
   function getPlayerId() {
     // Prefer authenticated user ID (from Arcade login or game-level auth)
-    const authId = (typeof DepthsAuth !== 'undefined' && DepthsAuth.getUserId())
-                || (typeof ArcadeAuth !== 'undefined' && ArcadeAuth.getUserId());
+    const authId = typeof ArcadeAuth !== 'undefined' && ArcadeAuth.getUserId();
     if (authId) return authId;
 
     // Fall back to anonymous localStorage ID
