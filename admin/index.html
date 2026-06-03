@@ -554,9 +554,8 @@ const Admin = (() => {
 
   // sessionStorage means the auth token is never written to localStorage —
   // it dies automatically when the tab closes or the user navigates away.
-  const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { storage: sessionStorage, persistSession: true, autoRefreshToken: true }
-  });
+  // Use default localStorage so the session from the main arcade site carries over automatically
+  const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   /* ── Inactivity timeout (30 min) ────────── */
   const INACTIVE_MS = 30 * 60 * 1000;
@@ -574,8 +573,6 @@ const Admin = (() => {
     _resetTimer();
   }
 
-  // Sign out when the tab is closed or the user navigates away
-  window.addEventListener('pagehide', () => { _sb.auth.signOut(); });
 
   /* ── Auth ───────────────────────────────── */
   async function login() {
