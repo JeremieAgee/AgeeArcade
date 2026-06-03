@@ -32,7 +32,7 @@ body {
   font-family: 'Inter', sans-serif;
   line-height: 1.6;
   min-height: 100vh;
-  padding-bottom: 90px; /* space for fixed bottom ad */
+  padding-bottom: 60px; /* space for fixed bottom ad */
 }
 
 a { color: var(--accent); text-decoration: none; }
