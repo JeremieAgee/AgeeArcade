@@ -1778,9 +1778,10 @@
     btn('btnStart',     startOrResumeGame);
     btn('btnNextFloor', nextFloor);
     btn('btnRestart',   restartGame);
-    btn('btnLB',        () => { loadLeaderboard(); showScreen('leaderboard'); });
-    btn('btnLBClose',   () => showScreen('title'));
-    btn('btnLBBack',    () => showScreen('game-over'));
+    let lbReturnScreen = 'title';
+    btn('btnLB',      () => { lbReturnScreen = 'title';     loadLeaderboard(); showScreen('leaderboard'); });
+    btn('btnLBBack',  () => { lbReturnScreen = 'game-over'; loadLeaderboard(); showScreen('leaderboard'); });
+    btn('btnLBClose', () => showScreen(lbReturnScreen));
 
     showScreen('title');
     loop();
