@@ -891,8 +891,8 @@
     if (keys['KeyD'] || keys['ArrowRight']) { dx += rgtX; dz += rgtZ; }
     if (joyActive) {
       // Joystick is also camera-relative
-      dx += touchVec.dx * rgtX - touchVec.dz * fwdX;
-      dz += touchVec.dx * rgtZ - touchVec.dz * fwdZ;
+      dx += touchVec.dx * rgtX + touchVec.dz * fwdX;
+      dz += touchVec.dx * rgtZ + touchVec.dz * fwdZ;
     }
 
     const len = Math.sqrt(dx * dx + dz * dz);
