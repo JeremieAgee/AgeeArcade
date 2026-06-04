@@ -1663,29 +1663,66 @@
     });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-    document.querySelectorAll('.wasd-btn').forEach(btn => {
-      const code = btn.dataset.key;
-      if (!code) return;
+    // ── D-pad sliding controller ──────────────────────
+    const dpad = document.getElementById('dpad');
+    const nub  = document.getElementById('dpad-nub');
+    const DPAD_DEAD = 10; // px dead zone
+    const DPAD_MAX  = 52; // max nub travel px
+    let dpadTouchId = null;
 
-      const press = e => {
-        if (state !== 'playing') return;
-        e.preventDefault();
-        keys[code] = true;
-        btn.classList.add('is-down');
-      };
-      const release = e => {
-        e.preventDefault();
-        keys[code] = false;
-        btn.classList.remove('is-down');
-      };
+    function dpadUpdate(cx, cy) {
+      const rect = dpad.getBoundingClientRect();
+      const ox = cx - (rect.left + rect.width  / 2);
+      const oy = cy - (rect.top  + rect.height / 2);
+      const dist = Math.sqrt(ox * ox + oy * oy);
 
-      btn.addEventListener('touchstart', press, { passive: false });
-      btn.addEventListener('touchend', release, { passive: false });
-      btn.addEventListener('touchcancel', release, { passive: false });
-      btn.addEventListener('mousedown', press);
-      btn.addEventListener('mouseup', release);
-      btn.addEventListener('mouseleave', release);
-    });
+      if (dist < DPAD_DEAD) {
+        dpadClear();
+        return;
+      }
+
+      const nx = ox / dist, ny = oy / dist;
+      const travel = Math.min(dist, DPAD_MAX);
+
+      // Move nub visually
+      if (nub) nub.style.transform = `translate(calc(-50% + ${nx * travel}px), calc(-50% + ${ny * travel}px))`;
+
+      // Map to keys — allow diagonals
+      keys['KeyW'] = oy < -DPAD_DEAD;
+      keys['KeyS'] = oy >  DPAD_DEAD;
+      keys['KeyA'] = ox < -DPAD_DEAD;
+      keys['KeyD'] = ox >  DPAD_DEAD;
+    }
+
+    function dpadClear() {
+      keys['KeyW'] = keys['KeyS'] = keys['KeyA'] = keys['KeyD'] = false;
+      if (nub) nub.style.transform = 'translate(-50%, -50%)';
+    }
+
+    if (dpad) {
+      dpad.addEventListener('touchstart', e => {
+        e.preventDefault();
+        if (dpadTouchId !== null) return;
+        const t = e.changedTouches[0];
+        dpadTouchId = t.identifier;
+        dpadUpdate(t.clientX, t.clientY);
+      }, { passive: false });
+
+      dpad.addEventListener('touchmove', e => {
+        e.preventDefault();
+        for (const t of e.changedTouches) {
+          if (t.identifier === dpadTouchId) dpadUpdate(t.clientX, t.clientY);
+        }
+      }, { passive: false });
+
+      const dpadEnd = e => {
+        for (const t of e.changedTouches) {
+          if (t.identifier === dpadTouchId) { dpadTouchId = null; dpadClear(); }
+        }
+      };
+      dpad.addEventListener('touchend',    dpadEnd, { passive: false });
+      dpad.addEventListener('touchcancel', dpadEnd, { passive: false });
+    }
 
     // ── Mobile jump button ────────────────────────────
     const btnJump = document.getElementById('btn-jump');

@@ -164,13 +164,16 @@
   </div><!-- /screens -->
 
   <!-- ── Mobile controls ──────────────────────────── -->
-  <div id="mobile-wasd" aria-label="Move">
-    <button class="wasd-btn wasd-w" data-key="KeyW" aria-label="Move forward">W</button>
-    <button class="wasd-btn wasd-a" data-key="KeyA" aria-label="Move left">A</button>
-    <button class="wasd-btn wasd-s" data-key="KeyS" aria-label="Move backward">S</button>
-    <button class="wasd-btn wasd-d" data-key="KeyD" aria-label="Move right">D</button>
+  <div id="dpad" aria-label="Move">
+    <div id="dpad-ring">
+      <span class="dpad-arrow dpad-u">▲</span>
+      <span class="dpad-arrow dpad-d">▼</span>
+      <span class="dpad-arrow dpad-l">◀</span>
+      <span class="dpad-arrow dpad-r">▶</span>
+      <div id="dpad-nub"></div>
+    </div>
   </div>
-  <button id="btn-jump" aria-label="Jump">↑</button>
+  <button id="btn-jump" aria-label="Jump">JUMP</button>
   <button id="btn-mobile-pause" aria-label="Pause">II</button>
 
   <!-- ── Sidebar (arcade link) ─────────────────────── -->
