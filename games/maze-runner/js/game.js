@@ -1658,7 +1658,8 @@
         e.preventDefault();
       }
       if (e.code === 'Escape' && state === 'playing') {
-        pauseGame();
+        state = 'paused';
+        showScreen('title');
       }
     });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -1697,6 +1698,13 @@
     function dpadClear() {
       keys['KeyW'] = keys['KeyS'] = keys['KeyA'] = keys['KeyD'] = false;
       if (nub) nub.style.transform = 'translate(-50%, -50%)';
+    }
+
+    // Show mobile controls on any touch-capable device
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      if (dpad) dpad.style.display = 'block';
+      const jb = document.getElementById('btn-jump');
+      if (jb) jb.style.display = 'flex';
     }
 
     if (dpad) {

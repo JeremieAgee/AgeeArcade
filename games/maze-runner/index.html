@@ -29,7 +29,8 @@
                 https://*.adtrafficquality.google;
     img-src     'self' data: blob:
                 https://*.googlesyndication.com
-                https://*.doubleclick.net;
+                https://*.doubleclick.net
+                https://*.adtrafficquality.google;
     frame-src   https://*.doubleclick.net
                 https://*.googlesyndication.com
                 https://*.adtrafficquality.google
@@ -39,6 +40,7 @@
     form-action 'self';
   ">
   <title>Maze Runner — Agee Arcade</title>
+  <link rel="icon" href="./thumb.jpg" type="image/jpeg" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
@@ -188,11 +190,11 @@
   <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous" />
   <link rel="preload" as="script" href="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous" />
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
   <script>window.AGEE_GAME_ID = 'maze_runner';</script>
   <script src="../../js/analytics.js" defer></script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
   <!-- Game scripts — execution order matters: gen → sounds → game -->
   <script src="../../sound/engine.js" defer></script>
   <script src="../../sound/tuner.js"  defer></script>
