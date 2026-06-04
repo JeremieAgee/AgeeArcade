@@ -221,33 +221,43 @@ html, body {
   pointer-events: all;
 }
 
-/* ── Mobile joystick ── */
-#joystick {
+/* ── Mobile WASD pad ── */
+#mobile-wasd {
   display: none;
   position: fixed;
-  bottom: 40px;
-  left: 50px;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: rgba(68, 136, 255, 0.12);
-  border: 2px solid rgba(68, 136, 255, 0.3);
+  bottom: 26px;
+  left: 22px;
+  grid-template-columns: repeat(3, 54px);
+  grid-template-rows: repeat(2, 54px);
+  gap: 8px;
   z-index: 80;
   touch-action: none;
 }
 
-#joy-nub {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(68, 136, 255, 0.5);
-  border: 2px solid var(--accent);
-  pointer-events: none;
+.wasd-btn {
+  width: 54px;
+  height: 54px;
+  border-radius: 8px;
+  background: rgba(68, 136, 255, 0.16);
+  border: 2px solid rgba(68, 136, 255, 0.38);
+  color: #99bbff;
+  font-family: var(--font-head);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
+.wasd-btn:active,
+.wasd-btn.is-down {
+  background: rgba(68, 136, 255, 0.38);
+  border-color: rgba(68, 136, 255, 0.72);
+}
+.wasd-w { grid-column: 2; grid-row: 1; }
+.wasd-a { grid-column: 1; grid-row: 2; }
+.wasd-s { grid-column: 2; grid-row: 2; }
+.wasd-d { grid-column: 3; grid-row: 2; }
 
 /* ── Mobile jump button ── */
 #btn-jump {
@@ -296,7 +306,7 @@ html, body {
 #btn-mobile-pause:active { background: rgba(68, 136, 255, 0.24); }
 
 @media (pointer: coarse) {
-  #joystick  { display: block; }
+  #mobile-wasd  { display: grid; }
   #btn-jump  { display: flex; align-items: center; justify-content: center; }
   #btn-mobile-pause { display: block; }
   #minimap   { top: 8px; right: 8px; }

@@ -76,11 +76,6 @@
   let mmCanvas, mmCtx;
   let visited = null;
 
-  let touchVec = { dx: 0, dz: 0 };
-  let joyActive = false, joyId = null;
-  let joyOrigin = { x: 0, y: 0 };
-  const JOY_DEAD = 12;
-
   // ─── Helpers ───────────────────────────────────────
   function cellKey(gr, gc) { return gr * 10000 + gc; }
   function worldCenter(gr, gc) { return { x: gc * CELL + CELL / 2, z: gr * CELL + CELL / 2 }; }
@@ -889,11 +884,6 @@
     if (keys['KeyS'] || keys['ArrowDown'])  { dx += fwdX; dz += fwdZ; }
     if (keys['KeyA'] || keys['ArrowLeft'])  { dx -= rgtX; dz -= rgtZ; }
     if (keys['KeyD'] || keys['ArrowRight']) { dx += rgtX; dz += rgtZ; }
-    if (joyActive) {
-      // Mobile: joystick directly steers the player in world space.
-      dx = touchVec.dx;
-      dz = touchVec.dz;
-    }
 
     const len = Math.sqrt(dx * dx + dz * dz);
     if (len > 1) { dx /= len; dz /= len; }
@@ -1277,7 +1267,7 @@
     const startBtn = document.getElementById('btnStart');
     if (startBtn) startBtn.textContent = state === 'paused' ? 'RESUME RUN' : 'START RUN';
     const mobileControlsVisible = state === 'playing' || state === 'dying';
-    ['joystick', 'btn-jump', 'btn-mobile-pause'].forEach(controlId => {
+    ['mobile-wasd', 'btn-jump', 'btn-mobile-pause'].forEach(controlId => {
       const control = document.getElementById(controlId);
       if (!control) return;
       control.style.visibility = mobileControlsVisible ? 'visible' : 'hidden';
@@ -1382,9 +1372,8 @@
   function pauseGame() {
     if (state !== 'playing') return;
     state = 'paused';
-    joyActive = false;
-    touchVec = { dx: 0, dz: 0 };
-    keys['Space'] = false;
+    ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'].forEach(code => { keys[code] = false; });
+    document.querySelectorAll('.wasd-btn.is-down').forEach(btn => btn.classList.remove('is-down'));
     if (window.SFX) SFX.stopAmbient();
     showScreen('title');
   }
@@ -1674,44 +1663,29 @@
     });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-    const joyEl = document.getElementById('joystick');
-    if (joyEl) {
-      joyEl.addEventListener('touchstart', e => {
+    document.querySelectorAll('.wasd-btn').forEach(btn => {
+      const code = btn.dataset.key;
+      if (!code) return;
+
+      const press = e => {
         if (state !== 'playing') return;
         e.preventDefault();
-        const t  = e.changedTouches[0];
-        joyId     = t.identifier;
-        joyOrigin = { x: t.clientX, y: t.clientY };
-        joyActive = true;
-      }, { passive: false });
-
-      joyEl.addEventListener('touchmove', e => {
-        if (state !== 'playing') return;
-        e.preventDefault();
-        for (const t of e.changedTouches) {
-          if (t.identifier !== joyId) continue;
-          const dx  = t.clientX - joyOrigin.x;
-          const dy  = t.clientY - joyOrigin.y;
-          const len = Math.sqrt(dx * dx + dy * dy);
-          if (len < JOY_DEAD) { touchVec = { dx: 0, dz: 0 }; return; }
-          touchVec = { dx: dx / len, dz: -dy / len };
-          const nub = document.getElementById('joy-nub');
-          if (nub) {
-            const clamp = Math.min(len, 40);
-            nub.style.transform = `translate(calc(-50% + ${(dx / len) * clamp}px), calc(-50% + ${(dy / len) * clamp}px))`;
-          }
-        }
-      }, { passive: false });
-
-      const endJoy = () => {
-        joyActive = false;
-        touchVec  = { dx: 0, dz: 0 };
-        const nub = document.getElementById('joy-nub');
-        if (nub) nub.style.transform = 'translate(-50%, -50%)';
+        keys[code] = true;
+        btn.classList.add('is-down');
       };
-      joyEl.addEventListener('touchend',    endJoy, { passive: false });
-      joyEl.addEventListener('touchcancel', endJoy, { passive: false });
-    }
+      const release = e => {
+        e.preventDefault();
+        keys[code] = false;
+        btn.classList.remove('is-down');
+      };
+
+      btn.addEventListener('touchstart', press, { passive: false });
+      btn.addEventListener('touchend', release, { passive: false });
+      btn.addEventListener('touchcancel', release, { passive: false });
+      btn.addEventListener('mousedown', press);
+      btn.addEventListener('mouseup', release);
+      btn.addEventListener('mouseleave', release);
+    });
 
     // ── Mobile jump button ────────────────────────────
     const btnJump = document.getElementById('btn-jump');
