@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Maze Runner — Endless 3D procedural maze game by Agee Gaming LLC. Escape every floor, dodge traps, survive!" />
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' 'unsafe-inline'
+                https://cdnjs.cloudflare.com
+                https://cdn.jsdelivr.net
+                https://*.googlesyndication.com
+                https://*.doubleclick.net
+                https://*.google.com
+                https://*.adtrafficquality.google
+                https://*.googletagservices.com;
+    style-src   'self' 'unsafe-inline'
+                https://fonts.googleapis.com;
+    font-src    'self'
+                https://fonts.gstatic.com;
+    connect-src 'self'
+                https://xdvrgeaivfqpcsmuqeyi.supabase.co
+                wss://xdvrgeaivfqpcsmuqeyi.supabase.co
+                https://cdn.jsdelivr.net
+                https://*.googlesyndication.com
+                https://*.doubleclick.net
+                https://*.google.com
+                https://*.gstatic.com
+                https://*.adtrafficquality.google;
+    img-src     'self' data: blob:
+                https://*.googlesyndication.com
+                https://*.doubleclick.net;
+    frame-src   https://*.doubleclick.net
+                https://*.googlesyndication.com
+                https://*.adtrafficquality.google
+                https://www.google.com;
+    object-src  'none';
+    base-uri    'self';
+    form-action 'self';
+  ">
+  <title>Maze Runner — Agee Arcade</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="./css/layout.css" />
+  <link rel="stylesheet" href="./css/ui.css" />
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9709866738532619"
+       crossorigin="anonymous"></script>
+</head>
+<body>
+
+  <nav class="site-nav maze-auth-nav" aria-label="Account"></nav>
+
+  <!-- ── 3D Canvas ──────────────────────────────────── -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- ── Minimap ───────────────────────────────────── -->
+  <canvas id="minimap"></canvas>
+
+  <!-- ── HUD ───────────────────────────────────────── -->
+  <div id="hud">
+    <div id="hud-left">
+      <div class="bar-row">
+        <span class="bar-label">HP</span>
+        <div class="bar"><div class="bar-fill" id="hpFill"></div></div>
+        <span class="bar-val" id="hpText">100 / 100</span>
+      </div>
+      <div id="hudLives" class="hud-lives">♥♥♥</div>
+    </div>
+    <div id="hud-center">
+      <span id="hudFloor">FLOOR 1</span>
+      <span id="hudTime">00:00</span>
+    </div>
+    <div id="hud-right">
+      <span id="hudScore">SCORE 0</span>
+      <a href="../../" class="hud-back-link">⬅ ARCADE</a>
+    </div>
+  </div>
+
+  <!-- ── Flash message ─────────────────────────────── -->
+  <div id="flash"></div>
+
+  <!-- ── Overlay screens ───────────────────────────── -->
+  <div id="screens">
+
+    <!-- TITLE -->
+    <div id="screen-title" class="game-screen active">
+      <div class="screen-inner">
+        <div class="screen-logo">
+          <div class="logo-sub">AGEE ARCADE PRESENTS</div>
+          <div class="logo-title">MAZE<br>RUNNER</div>
+          <div class="logo-tag">Every floor is procedurally generated. No two runs are the same.</div>
+        </div>
+        <div class="screen-controls desktop-only">
+          <div class="controls-grid">
+            <kbd>W A S D</kbd><span>Move</span>
+            <kbd>↑ ↓ ← →</kbd><span>Also Move</span>
+            <kbd>SPACE</kbd><span>Jump</span>
+            <kbd>ESC</kbd><span>Pause</span>
+          </div>
+        </div>
+        <div class="screen-stats-row">
+          <div class="stat-pill">3 Lives</div>
+          <div class="stat-pill">100 HP</div>
+          <div class="stat-pill">Endless Floors</div>
+        </div>
+        <button id="btnStart" class="btn-primary">START RUN</button>
+        <button id="btnLB"    class="btn-ghost">LEADERBOARD</button>
+        <div class="screen-legend">
+          <span class="legend-item trap">■ Trap (instant death)</span>
+          <span class="legend-item loot">■ Loot (+HP / +Life)</span>
+          <span class="legend-item exit">● Exit portal</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOOR COMPLETE -->
+    <div id="screen-floor-complete" class="game-screen">
+      <div class="screen-inner compact">
+        <div class="screen-title-small">FLOOR CLEARED</div>
+        <div class="screen-badge" id="sum-floor">Floor 1 Complete!</div>
+        <table class="stat-table">
+          <tr><td>Time</td><td id="sum-time">—</td></tr>
+          <tr><td>HP</td><td id="sum-hp">—</td></tr>
+          <tr><td>Lives</td><td id="sum-lives">—</td></tr>
+          <tr><td>Score</td><td id="sum-score">—</td></tr>
+        </table>
+        <button id="btnNextFloor" class="btn-primary">NEXT FLOOR →</button>
+      </div>
+    </div>
+
+    <!-- GAME OVER -->
+    <div id="screen-game-over" class="game-screen">
+      <div class="screen-inner compact">
+        <div class="screen-title-small" style="color:#ff4444;">GAME OVER</div>
+        <table class="stat-table">
+          <tr><td>Floors Survived</td><td id="go-floor">—</td></tr>
+          <tr><td>Final Score</td><td id="go-score">—</td></tr>
+          <tr><td>Total Time</td><td id="go-time">—</td></tr>
+        </table>
+        <button id="btnRestart" class="btn-primary">PLAY AGAIN</button>
+        <button id="btnLBBack"  class="btn-ghost">LEADERBOARD</button>
+        <a href="../../" class="btn-link">← Back to Arcade</a>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div id="screen-leaderboard" class="game-screen">
+      <div class="screen-inner">
+        <div class="screen-title-small">TOP RUNS</div>
+        <table class="lb-table">
+          <thead>
+            <tr><th>#</th><th>Player</th><th>Score</th><th>Floors</th></tr>
+          </thead>
+          <tbody id="lb-body">
+            <tr><td colspan="4" style="text-align:center;opacity:.5">Loading…</td></tr>
+          </tbody>
+        </table>
+        <button id="btnLBClose" class="btn-ghost">← BACK</button>
+      </div>
+    </div>
+
+  </div><!-- /screens -->
+
+  <!-- ── Mobile controls ──────────────────────────── -->
+  <div id="joystick">
+    <div id="joy-nub"></div>
+  </div>
+  <button id="btn-jump" aria-label="Jump">↑</button>
+  <button id="btn-mobile-pause" aria-label="Pause">II</button>
+
+  <!-- ── Sidebar (arcade link) ─────────────────────── -->
+  <aside id="arcade-sidebar">
+    <a href="../../" class="sidebar-link" rel="noopener">
+      <span class="sidebar-icon">🕹</span>
+      <span class="sidebar-text">MORE GAMES</span>
+    </a>
+  </aside>
+
+  <!-- ── CDN Assets ────────────────────────────────── -->
+  <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous" />
+  <link rel="preload" as="script" href="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>window.AGEE_GAME_ID = 'maze_runner';</script>
+  <script src="../../js/analytics.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Game scripts — execution order matters: gen → sounds → game -->
+  <script src="../../sound/engine.js" defer></script>
+  <script src="../../sound/tuner.js"  defer></script>
+  <script src="./js/maze-gen.js"      defer></script>
+  <script src="./js/sounds.js"        defer></script>
+  <script src="./js/game.js"     defer></script>
+  <script src="../../js/arcade-auth.js" defer></script>
+
+</body>
+</html>
