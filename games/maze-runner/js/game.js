@@ -890,9 +890,9 @@
     if (keys['KeyA'] || keys['ArrowLeft'])  { dx -= rgtX; dz -= rgtZ; }
     if (keys['KeyD'] || keys['ArrowRight']) { dx += rgtX; dz += rgtZ; }
     if (joyActive) {
-      // Joystick is also camera-relative
-      dx += touchVec.dx * rgtX + touchVec.dz * fwdX;
-      dz += touchVec.dx * rgtZ + touchVec.dz * fwdZ;
+      // Mobile: joystick directly steers the player in world space.
+      dx = touchVec.dx;
+      dz = touchVec.dz;
     }
 
     const len = Math.sqrt(dx * dx + dz * dz);
@@ -1694,7 +1694,7 @@
           const dy  = t.clientY - joyOrigin.y;
           const len = Math.sqrt(dx * dx + dy * dy);
           if (len < JOY_DEAD) { touchVec = { dx: 0, dz: 0 }; return; }
-          touchVec = { dx: dx / len, dz: dy / len };
+          touchVec = { dx: dx / len, dz: -dy / len };
           const nub = document.getElementById('joy-nub');
           if (nub) {
             const clamp = Math.min(len, 40);
