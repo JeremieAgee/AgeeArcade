@@ -19,6 +19,17 @@
   text-align: center;
 }
 
+#maze-comments .ac-wrap {
+  width: 100%;
+  max-width: 100%;
+  margin: 1.25rem 0 0;
+}
+
+#maze-comments .ac-textarea,
+#maze-comments .ac-submit {
+  width: 100%;
+}
+
 .screen-inner.compact {
   gap: 16px;
   padding: 32px 28px;

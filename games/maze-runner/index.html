@@ -114,6 +114,7 @@
           <span class="legend-item loot">■ Loot (+HP / +Life)</span>
           <span class="legend-item exit">● Exit portal</span>
         </div>
+        <div id="maze-comments" class="game-menu-comments"></div>
       </div>
     </div>
 
@@ -203,6 +204,12 @@
   <script src="./js/sounds.js"        defer></script>
   <script src="./js/game.js"     defer></script>
   <script src="../../js/arcade-auth.js" defer></script>
+  <script src="../../js/comments.js" defer></script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', function () {
+      ArcadeComments.init({ pageId: 'maze-runner', containerId: 'maze-comments', theme: 'arcade' });
+    });
+  </script>
 
 </body>
 </html>

@@ -260,7 +260,11 @@ const ArcadeComments = (() => {
 
   async function _submit(st, content, render) {
     const c = _client();
-    if (!c || !st.user) return;
+    if (!c || !st.user || !st.user.id) {
+      st.formError = 'Please sign in to post a comment.';
+      render();
+      return;
+    }
     st.submitting = true;
     st.formError  = '';
     render();
@@ -324,7 +328,7 @@ const ArcadeComments = (() => {
     let topHtml;
     if (!user) {
       topHtml = `<p class="ac-login-prompt">
-        <a href="#" class="ac-login-link">Sign in</a> to leave a comment.
+        <a href="#" class="ac-login-link">Sign in</a> to post a comment.
       </p>`;
     } else if (ownComment && !editing) {
       /* user already posted — show their comment with edit/delete */
