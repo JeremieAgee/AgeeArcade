@@ -277,11 +277,7 @@ const ArcadeComments = (() => {
     /* only attach user_id when authenticated */
     if (st.user?.id) payload.user_id = st.user.id;
 
-    const { data, error } = await c
-      .from('comments')
-      .insert(payload)
-      .select('id, user_id, display_name, content, created_at')
-      .maybeSingle();
+    const { error } = await c.from('comments').insert(payload);
 
     st.submitting = false;
     if (error) {
@@ -290,14 +286,9 @@ const ArcadeComments = (() => {
       return;
     }
 
-    /* logged-in users get to see and manage their comment */
+    /* logged-in users get to see and manage their comment — fetch it back so we have the real id */
     if (st.user?.id) {
-      st.ownComment = data || {
-        user_id: st.user.id,
-        display_name: name,
-        content: content.trim(),
-        created_at: new Date().toISOString(),
-      };
+      await _fetchOwnComment(st);
     }
     if (_isAdmin(st.user)) {
       await _fetchComments(st);
@@ -310,18 +301,17 @@ const ArcadeComments = (() => {
     const c = _client();
     if (!c) return;
     st.editError = '';
-    const { data, error } = await c
+    const { error } = await c
       .from('comments')
       .update({ content: newContent.trim() })
       .eq('id', id)
-      .eq('user_id', st.user.id)
-      .select('id, user_id, display_name, content, created_at')
-      .maybeSingle();
+      .eq('user_id', st.user.id);
     if (error) { st.editError = 'Could not save edit.'; render(); return; }
-    st.ownComment = data || st.ownComment;
+    /* update local state directly — no need to re-fetch */
+    st.ownComment = { ...st.ownComment, content: newContent.trim() };
     st.editing    = false;
     if (_isAdmin(st.user)) {
-      st.comments = st.comments.map(cm => cm.id === id ? (data || cm) : cm);
+      st.comments = st.comments.map(cm => cm.id === id ? { ...cm, content: newContent.trim() } : cm);
     }
     render();
   }
