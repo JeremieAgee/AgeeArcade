@@ -302,21 +302,9 @@
         </table>
       </div>
 
-      <div class="grid-2">
-        <div class="panel">
-          <div class="panel-head"><h2>Live Event Feed</h2></div>
-          <div class="feed" id="eventFeedArcade"><div class="empty">Loading...</div></div>
-        </div>
-        <div class="panel">
-          <div class="panel-head">
-            <h2>Comments</h2>
-            <span class="panel-head-count" id="commentsCount"></span>
-          </div>
-          <table class="data-table" id="commentsTable">
-            <thead><tr><th>Page</th><th>Author</th><th>Comment</th><th>Posted</th><th></th></tr></thead>
-            <tbody id="commentsBody"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
-          </table>
-        </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Live Event Feed</h2></div>
+        <div class="feed" id="eventFeedArcade"><div class="empty">Loading...</div></div>
       </div>
 
     </div><!-- /arcade-view -->
@@ -369,6 +357,18 @@
       </div>
 
     </div><!-- /game-view -->
+
+    <!-- ── Comments — shared across all views, filtered by active context ── -->
+    <div class="panel" style="margin-top:1.5rem;">
+      <div class="panel-head">
+        <h2>Comments</h2>
+        <span class="panel-head-count" id="commentsCount"></span>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Page</th><th>Author</th><th>Comment</th><th>Posted</th><th></th></tr></thead>
+        <tbody id="commentsBody"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
 
   </div><!-- /dash-body -->
 </div><!-- /dashboard -->
@@ -467,6 +467,7 @@ const Admin = (() => {
         loadGameSessions(),
         loadEventFeed('game'),
         loadPlayerMeta(),
+        loadComments(),
       ]);
     }
     _doneLoad();
@@ -599,10 +600,13 @@ const Admin = (() => {
   }
 
   async function loadComments() {
-    const { data, error } = await _sb.from('comments')
+    const view = _currentView();
+    let q = _sb.from('comments')
       .select('id, page_id, display_name, content, created_at, user_id')
       .order('created_at', { ascending: false })
       .limit(50);
+    q = q.eq('page_id', view);
+    const { data, error } = await q;
     const tbody = document.getElementById('commentsBody');
     const count = document.getElementById('commentsCount');
     if (error) {
