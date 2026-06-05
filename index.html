@@ -193,6 +193,11 @@
             </div>
         </section>
 
+        <!-- Comments -->
+        <section class="container">
+            <div id="arcade-comments"></div>
+        </section>
+
     </main>
 
     <!-- SHARED: site-footer — update all pages when changing -->
@@ -219,6 +224,12 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="./js/analytics.js"></script>
     <script src="./js/arcade-auth.js"></script>
+    <script src="./js/comments.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        ArcadeComments.init({ pageId: 'arcade', containerId: 'arcade-comments', theme: 'arcade' });
+      });
+    </script>
     <script src="./ads/adsense.js"></script>
 
 </body>

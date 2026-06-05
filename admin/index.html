@@ -457,6 +457,12 @@
         <option value="90">Last 90 days</option>
         <option value="0">All time</option>
       </select>
+      <select class="range-select" id="pageContextSelect" onchange="Admin.loadComments()" style="border-color:var(--accent3);color:var(--accent3);">
+        <option value="">💬 All Pages</option>
+        <option value="arcade">💬 Arcade</option>
+        <option value="depths-of-ashenveil">💬 Depths of Ashenveil</option>
+        <option value="maze-runner">💬 Maze Runner</option>
+      </select>
       <button class="refresh-btn" onclick="Admin.reload()">↻ Refresh</button>
       <button class="sign-out-btn" onclick="Admin.signOut()">Sign out</button>
     </div>
@@ -466,6 +472,7 @@
 
     <!-- ── KPI row ── -->
     <div class="stat-row" id="kpiRow">
+      <div class="stat-card"><div class="stat-card__label">Comments</div><div class="stat-card__value c-green" id="kpiComments">—</div><div class="stat-card__sub">total posted</div></div>
       <div class="stat-card"><div class="stat-card__label">Total Sessions</div><div class="stat-card__value c-purple" id="kpiSessions">—</div><div class="stat-card__sub">site visits</div></div>
       <div class="stat-card"><div class="stat-card__label">Unique Visitors</div><div class="stat-card__value c-blue" id="kpiVisitors">—</div><div class="stat-card__sub">distinct visitor IDs</div></div>
       <div class="stat-card"><div class="stat-card__label">Return Visitors</div><div class="stat-card__value c-green" id="kpiReturning">—</div><div class="stat-card__sub">came back again</div></div>
@@ -538,6 +545,22 @@
         <table class="data-table">
           <thead><tr><th>Page</th><th>Views</th><th>Sources</th></tr></thead>
           <tbody id="pagesBody"><tr><td colspan="3" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Comments table ── -->
+    <div class="panel" style="margin-bottom:1.5rem;">
+      <div class="panel-head">
+        <h2>Comments</h2>
+        <span class="panel-head-count" id="commentsCount"></span>
+      </div>
+      <div class="panel-body">
+        <table class="data-table" id="commentsTable">
+          <thead><tr>
+            <th>Page</th><th>Author</th><th>Comment</th><th>Posted</th><th></th>
+          </tr></thead>
+          <tbody id="commentsBody"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -660,6 +683,7 @@ const Admin = (() => {
       loadGameSessions(),
       loadEventFeed(),
       loadPageViews(),
+      loadComments(),
       loadPlayerMeta(),
     ]);
     _doneLoad();
@@ -958,6 +982,82 @@ const Admin = (() => {
     _tickLoad();
   }
 
+  /* ── Comments ───────────────────────────── */
+  async function loadComments() {
+    const pageFilter = document.getElementById('pageContextSelect')?.value || '';
+    let q = _sb.from('comments')
+      .select('id, page_id, display_name, content, created_at, user_id')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (pageFilter) q = q.eq('page_id', pageFilter);
+
+    const { data, error } = await q;
+    const tbody = document.getElementById('commentsBody');
+    const count = document.getElementById('commentsCount');
+    const kpi   = document.getElementById('kpiComments');
+
+    if (error) {
+      tbody.innerHTML = `<tr><td colspan="5" class="empty" style="color:var(--red)">${error.message}</td></tr>`;
+      count.textContent = 'error';
+      if (kpi) kpi.textContent = '—';
+      _tickLoad();
+      return;
+    }
+
+    const rows = data || [];
+    const filterLabel = pageFilter
+      ? ({ arcade: 'Arcade', 'depths-of-ashenveil': 'Depths of Ashenveil', 'maze-runner': 'Maze Runner' }[pageFilter] || pageFilter)
+      : 'all pages';
+    count.textContent = rows.length + ' comments — ' + filterLabel;
+    if (kpi) kpi.textContent = rows.length;
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">No comments yet</td></tr>';
+      _tickLoad();
+      return;
+    }
+
+    const PAGE_LABELS = {
+      'arcade': 'Arcade',
+      'depths-of-ashenveil': 'Depths of Ashenveil',
+      'maze-runner': 'Maze Runner',
+    };
+
+    tbody.innerHTML = rows.map(r => {
+      const pageLabel = PAGE_LABELS[r.page_id] || r.page_id;
+      const preview   = r.content.length > 120 ? r.content.slice(0, 120) + '…' : r.content;
+      return `<tr>
+        <td><span class="badge badge-purple">${pageLabel}</span></td>
+        <td style="color:var(--accent3);font-weight:500">${_escHtml(r.display_name)}</td>
+        <td style="font-size:12px;max-width:340px;word-break:break-word" title="${_escHtml(r.content)}">${_escHtml(preview)}</td>
+        <td style="color:var(--muted);white-space:nowrap">${_timeAgo(r.created_at)}</td>
+        <td>
+          <button onclick="Admin.deleteComment('${r.id}')"
+            style="background:none;border:1px solid var(--border-2);border-radius:4px;color:var(--muted);cursor:pointer;font-size:11px;padding:3px 8px;"
+            onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red)'"
+            onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border-2)'">
+            Delete
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+    _tickLoad();
+  }
+
+  async function deleteComment(id) {
+    if (!confirm('Delete this comment?')) return;
+    const { error } = await _sb.from('comments').delete().eq('id', id);
+    if (!error) loadComments();
+  }
+
+  function _escHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   /* ── Player Meta ────────────────────────── */
   async function loadPlayerMeta() {
     const { data, error } = await _sb
@@ -1023,7 +1123,7 @@ const Admin = (() => {
     });
   })();
 
-  return { login, signOut, reload };
+  return { login, signOut, reload, loadComments, deleteComment };
 })();
 </script>
 

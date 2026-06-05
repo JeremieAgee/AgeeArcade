@@ -48,6 +48,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
 
   <!-- Preload title background so it's ready when the screen renders -->
+  <link rel="icon" href="./thumb.jpg" type="image/jpeg" />
   <link rel="preload" as="image" href="./thumb.jpg" />
 
   <!-- Stylesheets -->
@@ -150,6 +151,9 @@
     </div>
 
   </div><!-- /pageShell -->
+
+  <!-- ── COMMENTS ────────────────────────────────── -->
+  <div id="doa-comments" style="background:#0e0b07;"></div>
 
   <!-- ── ENTRY CINEMATIC (shown when player clicks Enter) ── -->
   <div id="entryCinematic">
@@ -254,12 +258,12 @@
   <link rel="preload" as="script" href="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous" />
 
   <!-- ── Supabase SDK ── -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous" defer></script>
   <script>window.AGEE_GAME_ID = 'depths_of_ashenveil';</script>
   <script src="../../js/analytics.js" defer></script>
 
   <!-- ── THREE.JS CDN ── -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous" defer></script>
 
   <!-- ── GAME MODULES — defer so they don't block page paint ──
        Execution order is preserved with defer (runs in DOM order after parse).
@@ -279,6 +283,12 @@
   <script src="./js/systems/mesh-manager.js"                      defer></script>
   <script src="./js/core/player.js"                               defer></script>
   <script src="../../js/arcade-auth.js"                           defer></script>
+  <script src="../../js/comments.js"                              defer></script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', function () {
+      ArcadeComments.init({ pageId: 'depths-of-ashenveil', containerId: 'doa-comments', theme: 'dungeon' });
+    });
+  </script>
   <script src="./js/systems/save.js"                              defer></script>
   <script src="./js/engine/core/engine-state.js"                  defer></script>
   <script src="./js/engine/core/engine-core.js"                   defer></script>

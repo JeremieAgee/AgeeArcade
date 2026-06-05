@@ -44,6 +44,7 @@ window.Engine = {
   updateBolts: (...args) => window.EngineEffects.updateBolts(...args),
   updateTorchFlicker: (...args) => window.EngineLighting.updateTorchFlicker(...args),
   updateLights: (...args) => window.EngineLighting.updateLights(...args),
+  snapLanternsToPlayer: (...args) => window.EngineCore.snapLanternsToPlayer(...args),
   clearEffects: (...args) => window.EngineEffects.clearEffects(...args),
 
   initSound: (...args) => window.EngineSound.init(...args),
