@@ -33,6 +33,7 @@ const Game = (() => {
   let player  = null;
   let dungeon = null;
   let enemies = [];
+  let enemiesById = new Map();
   let floor   = 1;
   let running = false;
 
@@ -42,9 +43,66 @@ const Game = (() => {
   let exitOpen     = false;
   let stairActive  = false;
 
+  /* ── Floor Generation Worker ────────────────────── */
+  let _floorWorker    = null;
+  let _floorCallbacks = {}; // requestId → { resolve, floorNum }
+
+  function _initFloorWorker() {
+    if (_floorWorker) return;
+    try {
+      _floorWorker = new Worker('js/workers/floor-gen-worker.js');
+    } catch (err) {
+      console.warn('[FloorWorker] unavailable', err);
+      _floorWorker = null;
+      return;
+    }
+    _floorWorker.onmessage = function (e) {
+      const msg = e.data;
+      const cb  = _floorCallbacks[msg.requestId];
+      if (!cb) return;
+      delete _floorCallbacks[msg.requestId];
+      if (msg.type === 'ready') cb.resolve(msg);
+      else cb.reject(new Error(msg.message || 'floor-gen-worker error'));
+    };
+    _floorWorker.onerror = err => {
+      console.error('[FloorWorker]', err);
+      const pending = _floorCallbacks;
+      _floorCallbacks = {};
+      Object.values(pending).forEach(cb => {
+        if (cb && cb.reject) cb.reject(new Error('floor-gen-worker failed to load'));
+      });
+      if (_floorWorker) {
+        _floorWorker.terminate();
+        _floorWorker = null;
+      }
+    };
+  }
+
+  function _workerGenerateFloor(floorNum) {
+    return new Promise((resolve, reject) => {
+      _initFloorWorker();
+      if (!_floorWorker) {
+        reject(new Error('floor-gen-worker unavailable'));
+        return;
+      }
+      const requestId = floorNum + '-' + Date.now();
+      const timeoutId = setTimeout(() => {
+        delete _floorCallbacks[requestId];
+        reject(new Error('floor-gen-worker timed out'));
+      }, 2500);
+      _floorCallbacks[requestId] = {
+        floorNum,
+        resolve: msg => { clearTimeout(timeoutId); resolve(msg); },
+        reject: err => { clearTimeout(timeoutId); reject(err); },
+      };
+      _floorWorker.postMessage({ type: 'generate', floor: floorNum, requestId });
+    });
+  }
+
   /* ── Monster AI Worker ───────────────────────────── */
   let _aiWorker       = null;
   let _workerReady    = false;
+  let _aiTickInFlight = false;
   // Latest tick result received from worker (applied next frame)
   let _pendingUpdates = null;
   let _pendingEvents  = null;
@@ -52,10 +110,21 @@ const Game = (() => {
 
   function _initWorker() {
     if (_aiWorker) { _aiWorker.terminate(); }
-    _aiWorker    = new Worker('js/workers/monster-ai-worker.js');
+    try {
+      _aiWorker = new Worker('js/workers/monster-ai-worker.js');
+    } catch (err) {
+      console.warn('[MonsterWorker] unavailable', err);
+      _aiWorker = null;
+      _workerReady = false;
+      _aiTickInFlight = false;
+      return;
+    }
     _workerReady = true;
     _aiWorker.onmessage = _onWorkerMessage;
-    _aiWorker.onerror   = err => console.error('[MonsterWorker]', err);
+    _aiWorker.onerror   = err => {
+      _aiTickInFlight = false;
+      console.error('[MonsterWorker]', err);
+    };
   }
 
   function _onWorkerMessage(e) {
@@ -80,6 +149,7 @@ const Game = (() => {
       return;
     }
     if (msg.type === 'tickResult') {
+      _aiTickInFlight = false;
       _pendingUpdates = msg.updates;
       _pendingEvents  = msg.events;
       _pendingDead    = msg.dead;
@@ -121,6 +191,20 @@ const Game = (() => {
     }
   }
 
+  function _spawnEnemiesSync(floorNum, dng) {
+    enemies = Enemies.spawnAll(dng, floorNum);
+    preBoss = dng.bossRoom ? Enemies.createBoss(dng.bossRoom, floorNum, dng) : null;
+    rebuildEnemySoa();
+    if (preBoss) {
+      Engine.buildEnemyMesh(preBoss);
+      if (preBoss.mesh) preBoss.mesh.position.y = -5;
+    }
+    buildEnemyMeshesChunked(enemies, player.x, player.z, () => {
+      Engine.buildExitPortal(dng);
+      if (exitOpen) Engine.revealExitPortal();
+    });
+  }
+
   // Per-run analytics counters
   let _runStartTime       = 0;
   let _runDeaths          = 0;
@@ -131,6 +215,7 @@ const Game = (() => {
   const keys = {};
   let rafId  = null;
   let aimAngleVal = 0;
+  let _lastPromptT = 0;
 
   // Pre-built game state prepared while title/death screen is showing
   let _prebuilt = null;
@@ -150,7 +235,7 @@ const Game = (() => {
   // Sorts enemies nearest-first, builds CHUNK_SIZE meshes synchronously,
   // then chains the next batch via setTimeout(0) so the main thread never stalls.
   // A generation counter cancels any pending chain when the floor changes.
-  const CHUNK_SIZE     = 4;
+  const CHUNK_SIZE     = 6;
   const LAZY_DIST_SQ   = (4 * 20) ** 2;
   const ACTIVE_RADIUS  = 48;   // world units — enemies beyond this skip AI
   let   _buildGen    = 0;
@@ -270,14 +355,23 @@ const Game = (() => {
 
   function makeActiveRunSnapshot() {
     if (!running || !player || !dungeon || player.hp <= 0) return null;
+    const p = player;
     return {
       version: 1,
       savedAt: Date.now(),
       floor,
-      player: JSON.parse(JSON.stringify(player)),
+      player: {
+        x: p.x, y: p.y, z: p.z,
+        hp: p.hp, maxHp: p.maxHp,
+        atk: p.atk, def: p.def, speed: p.speed,
+        level: p.level, xp: p.xp, xpNext: p.xpNext, skillPoints: p.skillPoints,
+        critChance: p.critChance, lifesteal: p.lifesteal, atkSpeed: p.atkSpeed,
+        hasBlink: p.hasBlink, hasWhirl: p.hasWhirl, hasRegen: p.hasRegen, hasExecute: p.hasExecute,
+        skills: { ...p.skills },
+        inventory: p.inventory,
+        buffs: p.buffs,
+      },
       dungeon: serializeDungeon(dungeon),
-      enemies: enemies.map(serializeEnemy).filter(Boolean),
-      preBoss: serializeEnemy(preBoss),
       flags: { bossSpawned, bossDefeated, doorOpened, exitOpen },
     };
   }
@@ -285,11 +379,12 @@ const Game = (() => {
   function persistActiveRun(force = false) {
     if (typeof Save === 'undefined' || !Save.saveActiveRun) return;
     const now = Date.now();
-    if (!force && now - _lastPersistMs < 1200) return;
+    if (!force && now - _lastPersistMs < 5000) return;
     _lastPersistMs = now;
-    // Snapshot is expensive (full dungeon serialize + JSON clone) — only build after throttle passes
-    const snap = makeActiveRunSnapshot();
-    if (snap) Save.saveActiveRun(snap);
+    setTimeout(() => {
+      const snap = makeActiveRunSnapshot();
+      if (snap) Save.saveActiveRun(snap);
+    }, 0);
   }
 
   function loadSavedRun() {
@@ -300,14 +395,48 @@ const Game = (() => {
   }
 
   function rebuildEnemySoa() {
+    enemiesById = new Map();
     if (typeof EnemySoa     !== 'undefined' && EnemySoa.rebuild) EnemySoa.rebuild(enemies);
     if (typeof SpatialManager !== 'undefined') {
       SpatialManager.clear('monsters');
       for (let _i = 0; _i < enemies.length; _i++) {
         const _e = enemies[_i];
+        if (_e && _e.id) enemiesById.set(_e.id, _e);
         if (!_e.dead) SpatialManager.insert('monsters', _i, [_e.x, _e.z]);
       }
+    } else {
+      for (const _e of enemies) {
+        if (_e && _e.id) enemiesById.set(_e.id, _e);
+      }
     }
+  }
+
+  function swapRemoveEnemyAt(i) {
+    const lastIdx = enemies.length - 1;
+    const removed = enemies[i];
+    const moved = enemies[lastIdx];
+
+    if (removed && removed.id) enemiesById.delete(removed.id);
+
+    if (typeof SpatialManager !== 'undefined') {
+      SpatialManager.remove('monsters', i);
+      if (i !== lastIdx) SpatialManager.remove('monsters', lastIdx);
+    }
+
+    if (typeof EnemySoa !== 'undefined' && EnemySoa.removeAtSwap) {
+      EnemySoa.removeAtSwap(i);
+    }
+
+    if (i !== lastIdx) enemies[i] = moved;
+    enemies.pop();
+
+    if (i !== lastIdx && moved && moved.id) {
+      enemiesById.set(moved.id, moved);
+      if (typeof SpatialManager !== 'undefined' && !moved.dead) {
+        SpatialManager.insert('monsters', i, [moved.x, moved.z]);
+      }
+    }
+
   }
 
   function syncEnemySoa() {
@@ -343,64 +472,70 @@ const Game = (() => {
   }
 
   /* ── Preload ─────────────────────────────────── */
-  // Generates dungeon data immediately, then chunks geometry in the background.
-  // Phase 1 (spawn-band rows) → enables Enter button.
-  // Phase 2 (remaining rows + lanterns) → marks _prebuilt.fullyBuilt = true.
-  // start() shows an entry cinematic and waits for fullyBuilt before revealing.
+  // Generates floor 1 data on the floor worker (zero main-thread cost).
+  // Geometry is built in start() during the entry cinematic.
   function preload() {
     _prebuilt = null;
     refreshSaveMeta();
     updateTitleStartLabel();
-    setStartupStatus('Preparing dungeon...');
 
     const btn    = document.getElementById('titleStartBtn');
     const loadEl = document.getElementById('titleLoading');
+    const myGen  = ++_preloadGen;
+    if (btn) btn.disabled = false;
 
-    const myGen = ++_preloadGen;
-    requestAnimationFrame(() => {
-      // Abort if start() or a newer preload() has superseded us
+    _workerGenerateFloor(1).then(msg => {
       if (_preloadGen !== myGen) return;
+      const d = reviveDungeon(msg.dungeon);
+      d._preSpawns   = msg.spawns;
+      d._preBossData = msg.boss;
+      const p = Player.create();
+      const { cx, cy } = d.roomCenter(d.startRoom);
+      const w = d.toWorld(cx, cy);
+      p.x = w.x; p.z = w.z;
+      p._descentY = 0;
+
+      // Build geometry on title screen — no game loop competing, so no lag
+      if (typeof SpatialManager !== 'undefined') SpatialManager.init(d);
+      Engine.init();
+      Engine.clearDynamic();
+      Engine.buildPlayerMesh(p);
+      Engine.buildDungeonChunked(d,
+        null, // no spawn-ready callback needed on title screen
+        () => {
+          if (_preloadGen !== myGen) return;
+          // Snap lanterns now — they're all registered
+          Engine.snapLanternsToPlayer(p.x, p.z);
+          _prebuilt = { player: p, dungeon: d, geometryReady: true };
+          if (btn) btn.disabled = false;
+          updateTitleStartLabel();
+          if (loadEl) loadEl.style.opacity = '0';
+        }
+      );
+    }).catch(err => {
+      console.warn('[Depths] floor worker failed, falling back to sync', err);
       try {
-        setStartupStatus('Generating dungeon...');
-        const p = Player.create();
         const d = Dungeon.generate(1);
+        d._preSpawns = Enemies.spawnAll(d, 1);
+        const p = Player.create();
         const { cx, cy } = d.roomCenter(d.startRoom);
         const w = d.toWorld(cx, cy);
         p.x = w.x; p.z = w.z;
         p._descentY = 0;
-
+        if (typeof SpatialManager !== 'undefined') SpatialManager.init(d);
         Engine.init();
         Engine.clearDynamic();
         Engine.buildPlayerMesh(p);
-
-        setStartupStatus('Placing enemies...');
-        // Worker will create enemies when start() calls _workerInit()
-        // Set _prebuilt immediately — start() can grab references even before all geometry is built.
-        _prebuilt = { player: p, dungeon: d, enemies: [], boss: null, fullyBuilt: false };
-
-        if (typeof SpatialManager !== 'undefined') SpatialManager.init(d);
-        Engine.buildDungeonChunked(d,
-          // Phase 1 done — spawn area ready, enable button
-          () => {
-            if (_preloadGen !== myGen) return;
-            if (btn)    btn.disabled = false;
-            updateTitleStartLabel();
-            setStartupStatus('Ready.');
-            if (loadEl) loadEl.style.opacity = '0';
-          },
-          // Phase 2 done — all geometry ready
-          () => {
-            if (_preloadGen !== myGen) return;
-            _prebuilt.fullyBuilt = true;
-            setStartupStatus('Dungeon ready.');
-          }
-        );
-      } catch (err) {
-        console.error('[Depths startup] preload failed', err);
-        _prebuilt = null;
-        if (btn)    btn.disabled = false;
+        Engine.buildDungeonChunked(d, null, () => {
+          Engine.snapLanternsToPlayer(p.x, p.z);
+          _prebuilt = { player: p, dungeon: d, geometryReady: true };
+          if (btn) btn.disabled = false;
+          updateTitleStartLabel();
+          if (loadEl) loadEl.style.opacity = '0';
+        });
+      } catch (_) {
+        if (btn) btn.disabled = false;
         updateTitleStartLabel();
-        setStartupStatus('Startup fallback ready.');
         if (loadEl) loadEl.style.opacity = '0';
       }
     });
@@ -413,25 +548,25 @@ const Game = (() => {
     el.style.display = 'flex';
     setStartupStatus('Entering the dungeon...');
     requestAnimationFrame(() => el.classList.add('ec-visible'));
-    const MIN_MS = 3000;
-    const MAX_MS = 7000;
+    const MIN_MS = snap && snap.geometryReady ? 1800 : 2400;
+    const MAX_MS = 3900;
     const t0 = Date.now();
     let revealed = false;
     function tryReveal() {
       if (_startGen !== gen) return;
       const elapsed = Date.now() - t0;
-      const ready = !snap || snap.fullyBuilt || elapsed >= MAX_MS;
+      const ready = !snap || snap.geometryReady || snap.fullyBuilt || elapsed >= MAX_MS;
       if (ready && elapsed >= MIN_MS) {
         if (revealed) return;
         revealed = true;
-        if (snap && !snap.fullyBuilt) {
+        if (snap && !snap.geometryReady && !snap.fullyBuilt) {
           console.warn('[Depths startup] forced reveal before preload completed');
           setStartupStatus('Opening early...');
         } else {
           setStartupStatus('Opening dungeon...');
         }
         el.classList.remove('ec-visible');
-        setTimeout(() => { el.style.display = 'none'; }, 800);
+        setTimeout(() => { el.style.display = 'none'; }, 900);
         if (onReveal) onReveal();
         if (snap) _prebuilt = null;
       } else {
@@ -458,6 +593,7 @@ const Game = (() => {
     _nextDungeon = null;
     _nextFloorNum = 0;
     _nextFloorGenerating = false;
+    Engine.startAmbient();
 
     _runStartTime      = Date.now();
     _runDeaths         = 0;
@@ -471,33 +607,47 @@ const Game = (() => {
     }
 
     const snap = _prebuilt;
+    _prebuilt = null; // consumed — will be rebuilt when player dies or quits (die/goToTitle call preload)
 
     _pendingUpdates = null; _pendingEvents = null; _pendingDead = null;
+    _aiTickInFlight = false;
     if (_aiWorker) _aiWorker.postMessage({ type: 'reset' });
-    if (snap) {
+    if (snap && snap.geometryReady) {
+      // Geometry already built on title screen — just wire up player/dungeon refs
       player  = snap.player;
       dungeon = snap.dungeon;
-      enemies = [];
-      preBoss = null;
-      _workerInit(floor, dungeon);
+      if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
+      Engine.init();
+      setTimeout(pregenNextFloor, 800);
     } else {
-      player  = Player.create();
-      dungeon = Dungeon.generate(floor);
-      const { cx, cy } = dungeon.roomCenter(dungeon.startRoom);
-      const w = dungeon.toWorld(cx, cy);
-      player.x = w.x; player.z = w.z;
-      player._descentY = 0;
+      // Fallback: geometry not ready, build now
+      if (snap) { player = snap.player; dungeon = snap.dungeon; }
+      else {
+        player  = Player.create();
+        dungeon = Dungeon.generate(floor);
+        const { cx, cy } = dungeon.roomCenter(dungeon.startRoom);
+        const w = dungeon.toWorld(cx, cy);
+        player.x = w.x; player.z = w.z;
+        player._descentY = 0;
+      }
+      if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
       Engine.init();
       Engine.clearDynamic();
-      if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
-      Engine.buildDungeon(dungeon);
       Engine.buildPlayerMesh(player);
-      // Worker handles creation — enemies[] populated via 'spawned' message
-      enemies = [];
-      preBoss = null;
-      _workerInit(floor, dungeon);
+      Engine.buildDungeonChunked(dungeon,
+        null,
+        () => { Engine.snapLanternsToPlayer(player.x, player.z); pregenNextFloor(); }
+      );
     }
-    rebuildEnemySoa();
+
+    enemies = [];
+    preBoss = null;
+    if (_aiWorker) {
+      _workerInit(floor, dungeon);
+      rebuildEnemySoa();
+    } else {
+      _spawnEnemiesSync(floor, dungeon);
+    }
 
     UI.refresh(player);
     persistActiveRun(true);
@@ -547,6 +697,7 @@ const Game = (() => {
       enemies = [];
       preBoss = null;
       _pendingUpdates = null; _pendingEvents = null; _pendingDead = null;
+      _aiTickInFlight = false;
       if (_aiWorker) _aiWorker.postMessage({ type: 'reset' });
       rebuildEnemySoa();
 
@@ -564,11 +715,19 @@ const Game = (() => {
       Engine.init();
       Engine.clearDynamic();
       if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
-      Engine.buildDungeon(dungeon);
+      // Chunked build — spawn area ready quickly, rest fills in while player moves
+      Engine.buildDungeonChunked(dungeon,
+        null,
+        () => { Engine.snapLanternsToPlayer(player.x, player.z); pregenNextFloor(); }
+      );
       Engine.buildPlayerMesh(player);
 
-      _workerInit(floor, dungeon);
-      // Mesh building happens via 'spawned' worker message
+      if (_aiWorker) {
+        _workerInit(floor, dungeon);
+        rebuildEnemySoa();
+      } else {
+        _spawnEnemiesSync(floor, dungeon);
+      }
 
       UI.refresh(player);
       UI.setFloor(floor);
@@ -577,6 +736,8 @@ const Game = (() => {
       if (rafId) cancelAnimationFrame(rafId);
       ++_startGen;
       loop();
+      // Start N+1 pre-generation after restore settles
+      setTimeout(pregenNextFloor, 1000);
       persistActiveRun(true);
       return true;
     } catch (err) {
@@ -594,50 +755,62 @@ const Game = (() => {
     exitOpen     = false;
     stairActive  = false;
 
-    // Use pre-generated dungeon if it matches this floor number
+    // Pull pre-generated dungeon data if ready, otherwise generate synchronously
     dungeon = (_nextFloorNum === floor && _nextDungeon)
       ? _nextDungeon
       : Dungeon.generate(floor);
-    _nextDungeon  = null;
-    _nextFloorNum = 0;
+    _nextDungeon         = null;
+    _nextFloorNum        = 0;
     _nextFloorGenerating = false;
 
     const { cx, cy } = dungeon.roomCenter(dungeon.startRoom);
     const w = dungeon.toWorld(cx, cy);
     player.x = w.x; player.z = w.z;
-    player._descentY = 4.5;  // player starts above portal (y=3.5), descends through it
+    player._descentY = 4.5;
 
     player.hp = Math.min(player.maxHp, player.hp + Math.floor(player.maxHp * 0.3));
 
     if (preBoss) { Engine.removeEnemyMesh(preBoss.id); preBoss = null; }
     Engine.clearDynamic();
     if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
-    Engine.buildDungeon(dungeon);
-    Engine.buildArrivalPortal(dungeon);
 
     enemies = [];
     preBoss = null;
+    _aiTickInFlight = false;
     _pendingUpdates = null; _pendingEvents = null; _pendingDead = null;
-    rebuildEnemySoa();
-    _workerInit(floor, dungeon);
-    // Mesh building happens in response to 'spawned' worker message
-
-    try { Engine.render(player, 0, 0.016); } catch (_) {}
-
-    showFloorAnnounce(floor);
-    if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('floor_reached', { floor: floor });
-    // Fade the black overlay out quickly so the player can be seen descending
-    // through the arrival portal. The 1.2s CSS transition does the smooth fade.
-    setTimeout(() => {
-      const overlay = document.getElementById('stairOverlay');
-      if (overlay) overlay.style.opacity = '0';
-    }, 100);
+    if (_aiWorker) {
+      rebuildEnemySoa();
+      _workerInit(floor, dungeon);
+    } else {
+      _spawnEnemiesSync(floor, dungeon);
+    }
 
     UI.hideBossBar();
     UI.setFloor(floor);
     refreshSaveMeta(Save.recordFloorReached(floor, player.level));
     UI.addMsg(`Floor ${floor} — you drop through the portal...`, 'warn');
     UI.refresh(player);
+
+    // Build spawn-band geometry first (phase 1), then fade overlay so player
+    // sees a ready scene. Phase 2 fills the rest while they walk around.
+    Engine.buildDungeonChunked(dungeon,
+      () => {
+        // Phase 1 done — spawn area ready, reveal the floor
+        Engine.buildArrivalPortal(dungeon);
+        try { Engine.render(player, 0, 0.016); } catch (_) {}
+        showFloorAnnounce(floor);
+        if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('floor_reached', { floor: floor });
+        setTimeout(() => {
+          const overlay = document.getElementById('stairOverlay');
+          if (overlay) overlay.style.opacity = '0';
+        }, 100);
+      },
+      () => {
+        // Phase 2 + lanterns done — snap torches then pre-generate next floor
+        Engine.snapLanternsToPlayer(player.x, player.z);
+        pregenNextFloor();
+      }
+    );
   }
 
   /* ── Main loop ───────────────────────────────── */
@@ -766,7 +939,8 @@ const Game = (() => {
     checkBossEntry();
 
     // ── Dispatch tick to worker (fire-and-forget) ──
-    if (_aiWorker && _workerReady) {
+    if (_aiWorker && _workerReady && !_aiTickInFlight) {
+      _aiTickInFlight = true;
       _aiWorker.postMessage({ type: 'tick', dt, playerX: player.x, playerZ: player.z });
     }
 
@@ -780,9 +954,8 @@ const Game = (() => {
       _pendingDead    = null;
 
       // Apply position/state updates to main-thread enemy objects
-      const _byId = new Map(enemies.map(e => [e.id, e]));
       for (const u of updates) {
-        const e = _byId.get(u.id);
+        const e = enemiesById.get(u.id);
         if (!e) continue;
         e.x        = u.x;
         e.z        = u.z;
@@ -804,11 +977,10 @@ const Game = (() => {
       }
 
       // Handle events (attacks, bolts, summons)
-      let _died = false;
       for (const ev of events) {
         if (ev.type === 'attack') {
           const dmg = Player.takeDamage(player, ev.dmg);
-          if (dmg > 0) UI.addMsg(ev.earthSlam ? `${ev.name}'s earth slam hits you for ${dmg}!` : `${ev.name} hits you for ${dmg}!`, 'combat');
+          if (dmg > 0) { UI.addMsg(ev.earthSlam ? `${ev.name}'s earth slam hits you for ${dmg}!` : `${ev.name} hits you for ${dmg}!`, 'combat'); Engine.playSound('player_hurt'); }
           if (ev.earthSlam) Engine.spawnParticles(player.x, 0.2, player.z, 0x8a6a3a, 22, 3.5, 0.7);
           if (player.hp <= 0) { die(); return; }
         }
@@ -820,6 +992,7 @@ const Game = (() => {
           for (const s of ev.summoned) {
             const summoned = { ...Enemies.TYPES[s.typeKey], typeKey: s.typeKey, x: s.worldX, z: s.worldZ, hp: 22, maxHp: 22, atk: 6, xp: 9, state: 'idle', atkTimer: 0, atkAnim: 0, hitFlash: 0, dead: false, id: Math.random().toString(36).slice(2), mesh: null, _walkT: 0 };
             enemies.push(summoned);
+            enemiesById.set(summoned.id, summoned);
             Engine.buildEnemyMesh(summoned);
             Engine.spawnParticles(summoned.x, 0.8, summoned.z, summoned.color, 14, 3.2, 0.8);
             if (_aiWorker) _aiWorker.postMessage({ type: 'addEnemy', enemy: summoned });
@@ -828,18 +1001,16 @@ const Game = (() => {
         }
       }
 
-      // Remove dead enemies (worker already removed them from its map)
+      // Remove dead enemies — wait for death animation to finish first
       if (dead.length > 0) {
         const deadSet = new Set(dead);
         for (let i = enemies.length - 1; i >= 0; i--) {
-          if (deadSet.has(enemies[i].id)) {
-            if (enemies[i].mesh) Engine.removeEnemyMesh(enemies[i].id);
-            enemies[i] = enemies[enemies.length - 1];
-            enemies.length--;
-            _died = true;
+          const de = enemies[i];
+          if (deadSet.has(de.id) && (!de.deathAnim || de.deathAnim <= 0)) {
+            if (de.mesh) Engine.removeEnemyMesh(de.id);
+            swapRemoveEnemyAt(i);
           }
         }
-        if (_died) rebuildEnemySoa();
       }
     }
 
@@ -856,16 +1027,13 @@ const Game = (() => {
       }
     }
 
-    let _hadDeath = false;
     for (let i = enemies.length - 1; i >= 0; i--) {
-      if (enemies[i].dead) {
-        if (enemies[i].mesh) Engine.removeEnemyMesh(enemies[i].id);
-        enemies[i] = enemies[enemies.length - 1];
-        enemies.length--;
-        _hadDeath = true;
+      const _de = enemies[i];
+      if (_de.dead && (!_de.deathAnim || _de.deathAnim <= 0)) {
+        if (_de.mesh) Engine.removeEnemyMesh(_de.id);
+        swapRemoveEnemyAt(i);
       }
     }
-    if (_hadDeath) rebuildEnemySoa();
 
     // ── Push enemies apart (nearby only, index-keyed) ──
     // Build a flat array of nearby live enemies once so both loops are O(near²) not O(total²)
@@ -890,10 +1058,16 @@ const Game = (() => {
     }
 
     // ── Push enemies away from chests (nearby only, index-keyed) ──
+    const _nearChestIds = typeof SpatialManager !== 'undefined'
+      ? new Set(SpatialManager.query('items', [player.x, player.z], ACTIVE_RADIUS + 2))
+      : null;
+    const _chestList = _nearChestIds
+      ? Engine.chestMeshes.filter(grp => _nearChestIds.has(grp.userData.staticItemIdx))
+      : Engine.chestMeshes;
     for (let i = 0; i < enemies.length; i++) {
       const e = enemies[i]; if (e.dead) continue;
       if (_nearIdx && !_nearIdx.has(i)) continue;
-      for (const grp of Engine.chestMeshes) {
+      for (const grp of _chestList) {
         const dx = e.x - grp.position.x, dz = e.z - grp.position.z;
         const dSq = dx * dx + dz * dz, minD = e.radius + 0.5;
         if (dSq < minD * minD && dSq > 0.0001) {
@@ -924,20 +1098,30 @@ const Game = (() => {
       }
     }
 
-    Engine.updateEnemyAnimations(enemies, dt);
+    const _animList = _nearList ? _nearList.slice() : enemies;
+    if (_nearList) {
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        if (e && e.dead && e.deathAnim > 0) _animList.push(e);
+      }
+    }
+    Engine.updateEnemyAnimations(_animList, dt);
     const boltDmg = Engine.updateBolts(dt, player);
     if (boltDmg > 0) {
       const dmg = Player.takeDamage(player, boltDmg);
-      if (dmg > 0) UI.addMsg(`Struck by an arrow for ${dmg}!`, 'combat');
+      if (dmg > 0) { UI.addMsg(`Struck by an arrow for ${dmg}!`, 'combat'); Engine.playSound('player_hurt'); }
       if (player.hp <= 0) { die(); }
     }
     Engine.updateParticles(dt);
     Engine.updateTorchFlicker(t);
     Engine.updateChests(dt);
-    Engine.updateChestPrompt(player);
-    Engine.updateTorchPrompt(player);
-    Engine.updateDoorPrompt(player, dungeon, doorOpened);
-    Engine.updateStairPrompt(player, exitOpen, dungeon);
+    if (t - _lastPromptT > 0.12) {
+      _lastPromptT = t;
+      Engine.updateChestPrompt(player);
+      Engine.updateTorchPrompt(player);
+      Engine.updateDoorPrompt(player, dungeon, doorOpened);
+      Engine.updateStairPrompt(player, exitOpen, dungeon);
+    }
 
     Engine.render(player, t, dt);
 
@@ -958,6 +1142,7 @@ const Game = (() => {
     if (gx < 0 || gz < 0 || gx >= dungeon.COLS || gz >= dungeon.ROWS) return;
     if (dungeon.grid[gz][gx] !== 4) return;
     bossSpawned = true;
+    Engine.playSound('boss_roar');
     if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('boss_reached', { floor });
 
     const boss = preBoss;
@@ -979,6 +1164,7 @@ const Game = (() => {
   /* ── Attack ──────────────────────────────────── */
   function doAttack() {
     Engine.triggerSwing();
+    Engine.playSound('swing');
     const hits = Player.attack(player, enemies, aimAngleVal);
 
     hits.forEach(({ enemy, dmg, isCrit, killed }) => {
@@ -989,10 +1175,21 @@ const Game = (() => {
         isCrit ? 0xffff00 : 0xff3300,
         isCrit ? 14 : 8, isCrit ? 5 : 3, isCrit ? 0.8 : 0.5
       );
+      Engine.playSound(killed ? 'enemy_death' : 'hit');
       if (isCrit) UI.addMsg(`Critical! ${dmg} damage`, 'combat');
 
+      // Knockback / stagger on hit
+      if (!killed) {
+        const kbDX = enemy.x - player.x, kbDZ = enemy.z - player.z;
+        const kbD  = Math.sqrt(kbDX * kbDX + kbDZ * kbDZ) || 1;
+        enemy.staggerT = 0.25;
+        enemy.knockDX  = kbDX / kbD;
+        enemy.knockDZ  = kbDZ / kbD;
+      }
+
       if (killed) {
-        enemy.dead = true;
+        enemy.dead      = true;
+        enemy.deathAnim = 0.45;
         _runEnemiesKilled++;
         Engine.spawnParticles(enemy.x, 1.0, enemy.z, enemy.color, 20, 4, 1.0);
         player.xp += enemy.xp;
@@ -1020,7 +1217,7 @@ const Game = (() => {
         }
 
         const leveled = Player.checkLevelUp(player);
-        if (leveled) Engine.spawnParticles(player.x, 1.0, player.z, 0x4488ff, 24, 5, 1.2);
+        if (leveled) { Engine.spawnParticles(player.x, 1.0, player.z, 0x4488ff, 24, 5, 1.2); Engine.playSound('level_up'); }
         UI.refresh(player);
       }
     });
@@ -1052,6 +1249,7 @@ const Game = (() => {
       if (dx*dx + dz*dz < (dungeon.TILE * 2.5) ** 2) {
         doorOpened = true;
         Engine.openBossDoor(dungeon);
+        Engine.playSound('door_open');
         UI.addMsg('The door creaks open...', 'warn');
         return;
       }
@@ -1067,6 +1265,7 @@ const Game = (() => {
       if (dist < dungeon.TILE * 2.5) {
         stairActive = true;
         pregenNextFloor();
+        Engine.playSound('portal');
         UI.addMsg('The portal draws you inward...', 'warn');
         Engine.spawnParticles(player.x, 1.0, player.z, 0x8844ff, 20, 4, 1.0);
         Engine.startStairDescent(player, dungeon, () => { nextFloor(); });
@@ -1089,31 +1288,20 @@ const Game = (() => {
     if (_nextFloorGenerating) return;
     if (_nextFloorNum === nextF && _nextDungeon) return;
     _nextFloorGenerating = true;
-    _nextDungeon  = null;
-    _nextFloorNum = 0;
+    _nextDungeon         = null;
+    _nextFloorNum        = 0;
 
-    // Step 1 — generate dungeon grid (CPU-heavy, ~5-15ms)
-    setTimeout(() => {
-      try {
-        const d = Dungeon.generate(nextF);
-        // Step 2 — pre-compute enemy spawn list (cheap, but yield a frame first)
-        setTimeout(() => {
-          try {
-            d._preSpawns = Enemies.spawnAll(d, nextF);
-            d._preBossData = Enemies.createBoss(d.bossRoom, nextF, d);
-            _nextDungeon  = d;
-            _nextFloorNum = nextF;
-            _nextFloorGenerating = false;
-          } catch (_) {
-            _nextFloorGenerating = false;
-            /* enemy data falls back to sync */
-          }
-        }, 0);
-      } catch (_) {
-        _nextFloorGenerating = false;
-        /* dungeon falls back to sync in nextFloor() */
-      }
-    }, 200); // 200ms delay keeps it well clear of boss-death particle burst
+    _workerGenerateFloor(nextF).then(msg => {
+      if (_nextFloorNum !== 0 && _nextFloorNum !== nextF) return; // superseded
+      const d = reviveDungeon(msg.dungeon);
+      d._preSpawns         = msg.spawns;
+      d._preBossData       = msg.boss;
+      _nextDungeon         = d;
+      _nextFloorNum        = nextF;
+      _nextFloorGenerating = false;
+    }).catch(() => {
+      _nextFloorGenerating = false;
+    });
   }
 
   /* ── Chest opening ───────────────────────────── */
@@ -1129,6 +1317,7 @@ const Game = (() => {
         grp.userData.isOpening    = true;
         grp.userData.lidOpenT     = 0;
         Engine.startChestOpenAnimation(grp.position.x, grp.position.z, player.x, player.z);
+        Engine.playSound('chest_open');
 
         _runChestsOpened++;
         if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('chest_opened', { floor: floor });
@@ -1147,6 +1336,7 @@ const Game = (() => {
   function die() {
     if (!running) return;
     running = false;
+    Engine.stopAmbient();
     _runDeaths++;
     updateTitleStartLabel();
     if (Save.clearActiveRun) Save.clearActiveRun();
@@ -1175,11 +1365,13 @@ const Game = (() => {
   function getPlayer() { return player; }
 
   function _init() {
+    _initFloorWorker();
     _initWorker();
     wireInput();
+    Engine.initSound();
     document.addEventListener('depths-save-change', updateTitleStartLabel);
-    preload();
     if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('game_loaded', { game_id: 'depths_of_ashenveil' });
+    preload(); // data-only, no engine work — title screen stays smooth
 
     window.addEventListener('pagehide', function () {
       if (!window.AgeeAnalytics || !window.AGEE_CURRENT_GAME_SESSION_ID) return;
@@ -1204,6 +1396,8 @@ const Game = (() => {
 
   function goToTitle() {
     running = false;
+    Engine.stopAmbient();
+    _aiTickInFlight = false;
     if (_aiWorker) _aiWorker.postMessage({ type: 'reset' });
     if (window.AgeeAnalytics && window.AGEE_CURRENT_GAME_SESSION_ID) {
       window.AgeeAnalytics.trackEvent('game_quit', { floor, level: player ? player.level : 1 });

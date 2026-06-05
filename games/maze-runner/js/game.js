@@ -1310,14 +1310,27 @@
   }
 
   // ─── Leaderboard ───────────────────────────────────
+  function getMazeRunnerGuestId() {
+    const key = 'mazeRunner.guestPlayerId';
+    try {
+      let id = localStorage.getItem(key);
+      if (!id) {
+        id = crypto.randomUUID ? crypto.randomUUID() : 'guest-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+        localStorage.setItem(key, id);
+      }
+      return id;
+    } catch (_) {
+      return crypto.randomUUID ? crypto.randomUUID() : 'guest-' + Date.now();
+    }
+  }
+
   async function trySubmitScore() {
     const client = window._ageeSupabaseClient;
     if (!client) return;
-    const { data: { session } } = await client.auth.getSession();
-    if (!session) return;
     try {
+      const { data: { session } } = await client.auth.getSession();
       await client.from('maze_runner_runs').insert({
-        user_id:    session.user.id,
+        user_id:    session?.user?.id || getMazeRunnerGuestId(),
         floors:     gd.floor,
         score:      gd.score,
         time_ms:    Math.floor((gd.totalTime + gd.floorTime) * 1000),

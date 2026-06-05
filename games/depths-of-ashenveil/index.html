@@ -9,16 +9,34 @@
     script-src  'self' 'unsafe-inline'
                 https://cdnjs.cloudflare.com
                 https://cdn.jsdelivr.net
-                https://pagead2.googlesyndication.com;
+                https://*.googlesyndication.com
+                https://*.doubleclick.net
+                https://*.google.com
+                https://*.adtrafficquality.google
+                https://*.googletagservices.com;
     style-src   'self' 'unsafe-inline'
                 https://fonts.googleapis.com;
     font-src    'self'
                 https://fonts.gstatic.com;
     connect-src 'self'
                 https://xdvrgeaivfqpcsmuqeyi.supabase.co
-                wss://xdvrgeaivfqpcsmuqeyi.supabase.co;
-    img-src     'self' data: blob:;
-    frame-src   'none';
+                wss://xdvrgeaivfqpcsmuqeyi.supabase.co
+                https://cdn.jsdelivr.net
+                https://*.googlesyndication.com
+                https://*.doubleclick.net
+                https://*.google.com
+                https://*.gstatic.com
+                https://*.adtrafficquality.google;
+    img-src     'self' data: blob:
+                https://*.googlesyndication.com
+                https://*.doubleclick.net
+                https://*.google.com
+                https://*.gstatic.com
+                https://*.adtrafficquality.google;
+    frame-src   https://*.doubleclick.net
+                https://*.googlesyndication.com
+                https://*.adtrafficquality.google
+                https://www.google.com;
     object-src  'none';
     base-uri    'self';
     form-action 'self';
@@ -28,6 +46,9 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+
+  <!-- Preload title background so it's ready when the screen renders -->
+  <link rel="preload" as="image" href="./thumb.jpg" />
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="./css/layout.css" />
@@ -148,15 +169,16 @@
 
     <!-- TITLE SCREEN -->
     <div id="titleScreen" class="screen active">
+      <!-- AdSense title screen (enable once approved)
       <div class="game-screen-ad">
-        <ins class="adsbygoogle"
-             style="display:block"
+        <ins class="adsbygoogle ad-unit"
              data-ad-client="ca-pub-9709866738532619"
              data-ad-slot="7421345542"
              data-ad-format="auto"
              data-full-width-responsive="true"></ins>
         <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
       </div>
+      -->
       <div class="title-inner">
         <h1 id="titleText">DEPTHS OF ASHENVEIL</h1>
         <p class="title-sub">— Descend. Survive. Conquer. —</p>
@@ -178,6 +200,7 @@
 
     <!-- DEATH SCREEN -->
     <div id="deathScreen" class="screen">
+      <!-- AdSense death screen (enable once approved)
       <div class="game-screen-ad">
         <ins class="adsbygoogle"
              style="display:block"
@@ -187,6 +210,7 @@
              data-full-width-responsive="true"></ins>
         <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
       </div>
+      -->
       <div class="title-inner">
         <h1 style="color:#cc2200;">YOU PERISHED</h1>
         <p class="title-sub" id="deathMsg">The darkness claims another soul...</p>
@@ -225,46 +249,74 @@
 
   </div>
 
-  <!-- ── Supabase SDK (auth persists from Arcade login) ── -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script>window.AGEE_GAME_ID = 'depths_of_ashenveil';</script>
-  <script src="../../js/analytics.js"></script>
-  <!-- ── THREE.JS CDN ───────────────────────────────── -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- ── Preload heavy CDN assets so they fetch in parallel ── -->
+  <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous" />
+  <link rel="preload" as="script" href="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous" />
 
-  <!-- ── GAME MODULES (order matters) ─────────────────
+  <!-- ── Supabase SDK ── -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+  <script>window.AGEE_GAME_ID = 'depths_of_ashenveil';</script>
+  <script src="../../js/analytics.js" defer></script>
+
+  <!-- ── THREE.JS CDN ── -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+
+  <!-- ── GAME MODULES — defer so they don't block page paint ──
+       Execution order is preserved with defer (runs in DOM order after parse).
        dungeon → loot → enemies → managers → player → engine → ui → game
   ─────────────────────────────────────────────────── -->
-<script src="./js/core/dungeon.js"></script>
-<script src="./js/core/loot.js"></script>
-<script src="./js/systems/enemies.js"></script>
-<script src="./js/systems/enemy-soa.js"></script>
-<!-- ── Managers (SOA, require dungeon + enemies) ── -->
-<script src="./js/systems/room-manager.js"></script>
-<script src="./js/systems/dungeon-manager.js"></script>
-<script src="./js/systems/floor-manager.js"></script>
-<script src="./js/systems/light-manager.js"></script>
-<script src="./js/systems/static-item-manager.js"></script>
-<script src="./js/systems/monster-manager.js"></script>
-<script src="./js/systems/spatial-grid.js"></script>
-<script src="./js/systems/mesh-manager.js"></script>
-<script src="./js/core/player.js"></script>
-<script src="../../js/arcade-auth.js"></script>
-<script src="./js/systems/save.js"></script>
-<script src="./js/engine/core/engine-state.js"></script>
-<script src="./js/engine/core/engine-core.js"></script>
-<script src="./js/engine/dungeon/engine-dungeon-renderer.js"></script>
-<script src="./js/engine/entities/engine-entities-renderer.js"></script>
-<script src="./js/engine/interactables/engine-interactables.js"></script>
-<script src="./js/engine/effects/engine-effects.js"></script>
-<script src="./js/engine/lighting/engine-lighting.js"></script>
-<script src="./js/engine/sound/engine-sound.js"></script>
-<script src="./js/engine/engine.js"></script>
-<script src="./js/pages/ui.js"></script>
-<script src="./js/pages/game.js"></script>
-  <script src="./js/pages/auth-ui.js"></script>
-  <script src="./js/systems/mobile-controls.js"></script>
-  <script src="../../ads/adsense.js"></script>
+  <script src="./js/core/dungeon.js"                              defer></script>
+  <script src="./js/core/loot.js"                                 defer></script>
+  <script src="./js/systems/enemies.js"                           defer></script>
+  <script src="./js/systems/enemy-soa.js"                         defer></script>
+  <script src="./js/systems/room-manager.js"                      defer></script>
+  <script src="./js/systems/dungeon-manager.js"                   defer></script>
+  <script src="./js/systems/floor-manager.js"                     defer></script>
+  <script src="./js/systems/light-manager.js"                     defer></script>
+  <script src="./js/systems/static-item-manager.js"               defer></script>
+  <script src="./js/systems/monster-manager.js"                   defer></script>
+  <script src="./js/systems/spatial-grid.js"                      defer></script>
+  <script src="./js/systems/mesh-manager.js"                      defer></script>
+  <script src="./js/core/player.js"                               defer></script>
+  <script src="../../js/arcade-auth.js"                           defer></script>
+  <script src="./js/systems/save.js"                              defer></script>
+  <script src="./js/engine/core/engine-state.js"                  defer></script>
+  <script src="./js/engine/core/engine-core.js"                   defer></script>
+  <script src="./js/engine/dungeon/engine-dungeon-renderer.js"    defer></script>
+  <script src="./js/engine/entities/engine-entities-renderer.js"  defer></script>
+  <script src="./js/engine/interactables/engine-interactables.js" defer></script>
+  <script src="./js/engine/effects/engine-effects.js"             defer></script>
+  <script src="./js/engine/lighting/engine-lighting.js"           defer></script>
+  <script src="../../sound/engine.js"                              defer></script>
+  <script src="../../sound/settings.js"                            defer></script>
+  <script src="../../sound/tuner.js"                               defer></script>
+  <script src="./js/engine/sound/engine-sound.js"                 defer></script>
+  <script src="./js/engine/engine.js"                             defer></script>
+  <script src="./js/pages/ui.js"                                  defer></script>
+  <script src="./js/pages/game.js"                                defer></script>
+  <script src="./js/pages/auth-ui.js"                             defer></script>
+  <script src="./js/systems/mobile-controls.js"                   defer></script>
+
+  <!-- Ember particles for title screen — pure CSS, no JS dependency -->
+  <script>
+    (function() {
+      var screen = document.getElementById('titleScreen');
+      if (!screen) return;
+      var EMBER_COUNT = 18;
+      for (var i = 0; i < EMBER_COUNT; i++) {
+        var e = document.createElement('div');
+        e.className = 'title-ember';
+        e.style.left     = (4 + Math.random() * 92) + '%';
+        e.style.bottom   = (Math.random() * 20) + '%';
+        e.style.width    = (2 + Math.random() * 4) + 'px';
+        e.style.height   = e.style.width;
+        e.style.opacity  = (0.4 + Math.random() * 0.6).toFixed(2);
+        e.style.animationDuration  = (4 + Math.random() * 7) + 's';
+        e.style.animationDelay     = (Math.random() * 6) + 's';
+        screen.appendChild(e);
+      }
+    })();
+  </script>
 
 </body>
 </html>

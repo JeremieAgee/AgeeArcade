@@ -320,7 +320,7 @@ function buildPauseMenu() {
   const menu = document.createElement('div');
   menu.id = 'pauseMenu';
  menu.style.cssText = `
-  display:none;position:fixed;inset:0;z-index:100;
+  display:none;position:fixed;inset:0;z-index:800;
   background:rgba(28,15,6,0.68);
   backdrop-filter:blur(6px);
   -webkit-backdrop-filter:blur(6px);
@@ -458,7 +458,7 @@ function resumeGame() {
     closePauseMenu();
   } else {
     const mount = document.getElementById('canvasMount');
-    if (mount) mount.requestPointerLock();
+    if (mount) setTimeout(() => mount.requestPointerLock(), 150);
   }
 }
 

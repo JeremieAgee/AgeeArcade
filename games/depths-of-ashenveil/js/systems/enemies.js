@@ -277,14 +277,7 @@ const Enemies = (() => {
         enemy.spd    *= 2.0;
         enemy.atkCD   = Math.floor(enemy.atkCD * 0.45);
       }
-      if (enemy.ability === 'regen' && enemy.hp < enemy.maxHp) {
-        enemy.regenTimer -= dt * 60;
-        if (enemy.regenTimer <= 0) {
-          enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.regenAmt);
-          enemy.regenTimer = enemy.regenInterval;
-        }
-      }
-      if (enemy.ability === 'bone_summon' && enemy.hp < enemy.maxHp) {
+      if ((enemy.ability === 'regen' || enemy.ability === 'bone_summon') && enemy.hp < enemy.maxHp) {
         enemy.regenTimer -= dt * 60;
         if (enemy.regenTimer <= 0) {
           enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.regenAmt);

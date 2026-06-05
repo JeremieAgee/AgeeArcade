@@ -48,7 +48,11 @@ window.Engine = {
 
   initSound: (...args) => window.EngineSound.init(...args),
   playSound: (...args) => window.EngineSound.play(...args),
+  footstep: (...args) => window.EngineSound.footstep(...args),
+  registerFootstepMaterial: (...args) => window.EngineSound.registerFootstepMaterial(...args),
   stopAllSounds: (...args) => window.EngineSound.stopAll(...args),
+  startAmbient: (...args) => window.EngineSound.startAmbient(...args),
+  stopAmbient: (...args) => window.EngineSound.stopAmbient(...args),
 
   flashPlayer: (...args) => window.EngineCore.flashPlayer(...args),
   clearDynamic: (...args) => window.EngineCore.clearDynamic(...args),

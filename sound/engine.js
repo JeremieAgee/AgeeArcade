@@ -26,13 +26,44 @@ window.ArcadeSound = (() => {
   ───────────────────────────────────────────────────── */
   let _ctx         = null;
   let _masterGain  = null;
+  let _musicBusGain = null;
+  let _sfxGain     = null;
   let _initPromise = null;
+  const _volume = { master: 0.7, music: 1, sfx: 1 };
+
+  function _clampVolume(level) {
+    const n = Number(level);
+    if (!Number.isFinite(n)) return 0;
+    return Math.max(0, Math.min(1, n));
+  }
+
+  function _applyGain(gainNode, level) {
+    if (!gainNode || !_ctx) return;
+    const value = _clampVolume(level);
+    try {
+      gainNode.gain.setTargetAtTime(value, _ctx.currentTime, 0.05);
+    } catch (_) {
+      gainNode.gain.value = value;
+    }
+  }
+
+  function _applyVolumes() {
+    _applyGain(_masterGain, _volume.master);
+    _applyGain(_musicBusGain, _volume.music);
+    _applyGain(_sfxGain, _volume.sfx);
+  }
 
   function _getCtx() {
     if (!_ctx) {
       _ctx = new (window.AudioContext || window.webkitAudioContext)();
       _masterGain = _ctx.createGain();
-      _masterGain.gain.value = 0.7;
+      _musicBusGain = _ctx.createGain();
+      _sfxGain = _ctx.createGain();
+      _masterGain.gain.value = _volume.master;
+      _musicBusGain.gain.value = _volume.music;
+      _sfxGain.gain.value = _volume.sfx;
+      _musicBusGain.connect(_masterGain);
+      _sfxGain.connect(_masterGain);
       _masterGain.connect(_ctx.destination);
     }
     if (_ctx.state === 'suspended') _ctx.resume();
@@ -57,7 +88,7 @@ window.ArcadeSound = (() => {
     _workletsLoaded = true;
 
     _footstepNode = new AudioWorkletNode(c, 'arcade-footstep');
-    _footstepNode.connect(_masterGain);
+    _footstepNode.connect(_sfxGain);
     Object.entries(_footstepConfigs).forEach(([material, params]) => {
       _footstepNode.port.postMessage({ config: { material, params } });
     });
@@ -65,7 +96,7 @@ window.ArcadeSound = (() => {
     _envNode = new AudioWorkletNode(c, 'arcade-environment', {
       parameterData: { intensity: 0 },
     });
-    _envNode.connect(_masterGain);
+    _envNode.connect(_sfxGain);
   }
 
   /* ─────────────────────────────────────────────────────
@@ -327,16 +358,25 @@ window.ArcadeSound = (() => {
   /* ─────────────────────────────────────────────────────
      Public API
   ───────────────────────────────────────────────────── */
-  async function init() {
+  async function init(options = {}) {
+    const deferWorklets = options.deferWorklets === true;
+    const preloadSFX = options.preloadSFX !== false;
     if (_initPromise) return _initPromise;
     _initPromise = (async () => {
       _getCtx();
-      try {
-        await _loadWorklets();
-      } catch (e) {
-        console.warn('[ArcadeSound] AudioWorklets unavailable; footstep/env disabled.', e.message);
+      const loadWorklets = async () => {
+        try {
+          await _loadWorklets();
+        } catch (e) {
+          console.warn('[ArcadeSound] AudioWorklets unavailable; footstep/env disabled.', e.message);
+        }
+      };
+      if (deferWorklets) {
+        loadWorklets();
+      } else {
+        await loadWorklets();
       }
-      _preloadSFX();
+      if (preloadSFX) _preloadSFX();
     })();
     return _initPromise;
   }
@@ -351,7 +391,7 @@ window.ArcadeSound = (() => {
       const c   = _getCtx();
       const src = c.createBufferSource();
       src.buffer = buf;
-      src.connect(_masterGain);
+      src.connect(_sfxGain);
       src.start();
     } catch (_) {}
   }
@@ -385,7 +425,7 @@ window.ArcadeSound = (() => {
     _activeTheme = theme;
     const c = _getCtx();
     _musicGain = c.createGain();
-    _musicGain.connect(_masterGain);
+    _musicGain.connect(_musicBusGain);
     _musicGain.gain.setValueAtTime(0, c.currentTime);
     _musicGain.gain.linearRampToValueAtTime(theme.gain == null ? 0.55 : theme.gain, c.currentTime + 3);
     _chordIdx = 0;
@@ -408,7 +448,18 @@ window.ArcadeSound = (() => {
   }
 
   function setVolume(level) {
-    if (_masterGain) _masterGain.gain.setTargetAtTime(Math.max(0, Math.min(1, level)), _getCtx().currentTime, 0.05);
+    setVolumes({ master: level });
+  }
+
+  function setVolumes(levels = {}) {
+    if (Object.prototype.hasOwnProperty.call(levels, 'master')) _volume.master = _clampVolume(levels.master);
+    if (Object.prototype.hasOwnProperty.call(levels, 'music')) _volume.music = _clampVolume(levels.music);
+    if (Object.prototype.hasOwnProperty.call(levels, 'sfx')) _volume.sfx = _clampVolume(levels.sfx);
+    _applyVolumes();
+  }
+
+  function getVolumes() {
+    return { ..._volume };
   }
 
   function stopAll() {
@@ -416,7 +467,7 @@ window.ArcadeSound = (() => {
     stopEnvironment();
     clearTimeout(_musicTimer);
     try { if (_ctx) _ctx.close(); } catch (_) {}
-    _ctx = null; _masterGain = null; _footstepNode = null; _envNode = null;
+    _ctx = null; _masterGain = null; _musicBusGain = null; _sfxGain = null; _footstepNode = null; _envNode = null;
     _musicGain = null; _crackleNode = null; _workletsLoaded = false;
     _initPromise = null; _sfxPreloadStarted = false;
     for (const k in _sfxBuffers) delete _sfxBuffers[k];
@@ -454,5 +505,5 @@ window.ArcadeSound = (() => {
     setSFXBuffer(name, buf) { _sfxBuffers[name] = buf; },
   };
 
-  return { init, play, footstep, registerFootstepMaterial, startEnvironment, stopEnvironment, startAmbient, stopAmbient, setVolume, stopAll, registerSFX, registerTheme, _internal };
+  return { init, play, footstep, registerFootstepMaterial, startEnvironment, stopEnvironment, startAmbient, stopAmbient, setVolume, setVolumes, getVolumes, stopAll, registerSFX, registerTheme, _internal };
 })();

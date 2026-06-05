@@ -46,6 +46,16 @@
   let joyTouchId = -1;
   let joyBaseX   = 0;
   let joyBaseY   = 0;
+  let controlsEnabled = true;
+
+  function resetJoystick() {
+    joyTouchId = -1;
+    joyNub.style.transform = 'translate(-50%,-50%)';
+    joyRing.style.opacity  = '0.32';
+    window._mobileCtrl.joyNx = 0;
+    window._mobileCtrl.joyNy = 0;
+    window._mobileCtrl.active = false;
+  }
 
   /* ── Get fixed ring center from its CSS position ─── */
   function getRingCenter() {
@@ -55,6 +65,7 @@
 
   /* ── Joystick touch handlers ─────────────────────── */
   function onJoyStart(e) {
+    if (!controlsEnabled) return;
     e.preventDefault();
     if (joyTouchId !== -1) return;
     const t = e.changedTouches[0];
@@ -70,12 +81,16 @@
     window._mobileCtrl.active = false;
   }
 
+  function findJoyTouch(e) {
+    for (let i = 0; i < e.changedTouches.length; i++)
+      if (e.changedTouches[i].identifier === joyTouchId) return e.changedTouches[i];
+    return null;
+  }
+
   function onJoyMove(e) {
+    if (!controlsEnabled) return;
     e.preventDefault();
-    let t = null;
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      if (e.changedTouches[i].identifier === joyTouchId) { t = e.changedTouches[i]; break; }
-    }
+    const t = findJoyTouch(e);
     if (!t) return;
 
     const dx   = t.clientX - joyBaseX;
@@ -100,17 +115,7 @@
   }
 
   function onJoyEnd(e) {
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      if (e.changedTouches[i].identifier === joyTouchId) {
-        joyTouchId = -1;
-        joyNub.style.transform = 'translate(-50%,-50%)';
-        joyRing.style.opacity  = '0.32';
-        window._mobileCtrl.joyNx = 0;
-        window._mobileCtrl.joyNy = 0;
-        window._mobileCtrl.active = false;
-        break;
-      }
-    }
+    if (findJoyTouch(e)) resetJoystick();
   }
 
   joyZone.addEventListener('touchstart',  onJoyStart, { passive: false });
@@ -141,7 +146,6 @@
   // Cache DOM refs once — querying by ID every 100ms is unnecessary overhead
   const _vis = {
     titleEl:     document.getElementById('titleScreen'),
-    pauseEl:     document.getElementById('pauseMenu'),
     deathEl:     document.getElementById('deathScreen'),
     blinkBtn:    document.getElementById('mBtnBlink'),
     interactBtn: document.getElementById('mBtnInteract'),
@@ -153,18 +157,29 @@
   setInterval(() => {
     const onTitle  = !!(_vis.titleEl  && _vis.titleEl.classList.contains('active'));
     const onDeath  = !!(_vis.deathEl  && _vis.deathEl.classList.contains('active'));
-    const paused   = !!(_vis.pauseEl  && _vis.pauseEl.style.display === 'flex');
+    const pauseEl  = document.getElementById('pauseMenu');
+    const paused   = !!(pauseEl && pauseEl.style.display === 'flex');
     const inGame   = !onTitle && !onDeath && !paused;
+    controlsEnabled = inGame;
 
     const vis = inGame ? 'visible' : 'hidden';
+    overlay.style.pointerEvents = inGame ? 'none' : 'none';
     joyRing.style.visibility     = vis;
     joyZone.style.pointerEvents  = inGame ? 'all' : 'none';
     mobileRight.style.visibility = vis;
+    mobileRight.style.pointerEvents = inGame ? 'all' : 'none';
+    const pauseBtn = document.getElementById('mBtnPause');
+    if (pauseBtn) {
+      pauseBtn.style.visibility = vis;
+      pauseBtn.style.pointerEvents = inGame ? 'all' : 'none';
+    }
 
     if (!inGame) {
-      window._mobileCtrl.active = false;
-      window._mobileCtrl.joyNx = 0;
-      window._mobileCtrl.joyNy = 0;
+      resetJoystick();
+      window._mobileCtrl.attackPending = false;
+      window._mobileCtrl.interactPending = false;
+      window._mobileCtrl.blinkPending = false;
+      window._mobileCtrl.pausePending = false;
     }
 
     // Blink — only when skill is unlocked

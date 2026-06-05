@@ -113,6 +113,38 @@ window.EnemySoa = (() => {
     return count;
   }
 
+  function removeAtSwap(index) {
+    if (index < 0 || index >= count) return count;
+
+    const last = count - 1;
+    const removedId = ids[index];
+    if (removedId !== undefined) indexById.delete(removedId);
+
+    if (index !== last) {
+      const movedId = ids[last];
+      ids[index] = movedId;
+      indexById.set(movedId, index);
+      typeId[index] = typeId[last];
+      state[index] = state[last];
+      posX[index] = posX[last];
+      posY[index] = posY[last];
+      posZ[index] = posZ[last];
+      rotY[index] = rotY[last];
+      hp[index] = hp[last];
+      maxHp[index] = maxHp[last];
+      radius[index] = radius[last];
+      height[index] = height[last];
+      animTime[index] = animTime[last];
+      attackTime[index] = attackTime[last];
+      hitFlash[index] = hitFlash[last];
+      meshSlot[index] = meshSlot[last];
+    }
+
+    ids.length = last;
+    count = last;
+    return count;
+  }
+
   function indexOf(id) {
     return indexById.has(id) ? indexById.get(id) : -1;
   }
@@ -144,6 +176,7 @@ window.EnemySoa = (() => {
     STATE_IDS,
     rebuild,
     syncFromEnemies,
+    removeAtSwap,
     indexOf,
     arrays,
   };

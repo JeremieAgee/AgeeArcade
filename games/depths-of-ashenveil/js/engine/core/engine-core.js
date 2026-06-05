@@ -41,6 +41,39 @@ window.EngineCore = (() => {
   let torchInteractAnim = null;
   let chestInteractAnim = null;
 
+  // 4×4 spatial grids for torches and chests — rebuilt on floor load, queried instead of full scans
+  let _torchGrid = null;
+  let _chestGrid = null;
+  let _visibleTorchSet = new Set(); // indices currently marked visible
+  let _visibleChestSet = new Set();
+
+  function _buildGrid(items, getX, getZ) {
+    if (!_dungeonBounds) return null;
+    const { minX, maxX, minZ, maxZ } = _dungeonBounds;
+    const cellW = (maxX - minX) / 4;
+    const cellH = (maxZ - minZ) / 4;
+    const cells = Array.from({ length: 16 }, () => []);
+    for (let i = 0; i < items.length; i++) {
+      const cx = Math.min(3, Math.max(0, Math.floor((getX(items[i]) - minX) / cellW)));
+      const cz = Math.min(3, Math.max(0, Math.floor((getZ(items[i]) - minZ) / cellH)));
+      cells[cz * 4 + cx].push(i);
+    }
+    return { cells, minX, minZ, cellW, cellH };
+  }
+
+  function _gridQuery(grid, px, pz, radius) {
+    const { cells, minX, minZ, cellW, cellH } = grid;
+    const cxMin = Math.max(0, Math.floor((px - radius - minX) / cellW));
+    const cxMax = Math.min(3, Math.floor((px + radius - minX) / cellW));
+    const czMin = Math.max(0, Math.floor((pz - radius - minZ) / cellH));
+    const czMax = Math.min(3, Math.floor((pz + radius - minZ) / cellH));
+    const result = [];
+    for (let cz = czMin; cz <= czMax; cz++)
+      for (let cx = cxMin; cx <= cxMax; cx++)
+        for (const idx of cells[cz * 4 + cx]) result.push(idx);
+    return result;
+  }
+
   // Stair descent animation
   let stairDescending      = false;
   let stairDescentTime     = 0;
@@ -291,6 +324,7 @@ window.EngineCore = (() => {
     lanternLights.forEach(l => { if (l.parent) l.parent.remove(l); });
     lanternLights = [];
     wallTorches = [];
+    _torchGrid = null; _visibleTorchSet.clear();
     if (typeof SpatialManager !== 'undefined') SpatialManager.clear('lights');
     _lastWallTorchCount   = 0;
     _lastTorchFingerprint = 0;
@@ -336,6 +370,16 @@ window.EngineCore = (() => {
   function deactivateWallTorchLight(torchRecord) {
     if (!torchRecord.light || torchRecord === carriedTorch) return;
     torchRecord.light.userData.targetBase = 0;
+  }
+
+  function setWallTorchBrightNow(torchRecord) {
+    if (!torchRecord || !torchRecord.light) return;
+    const intensity = torchRecord.light.userData.baseIntensity || 0;
+    torchRecord.light.userData.targetBase  = intensity;
+    torchRecord.light.userData.currentBase = intensity;
+    torchRecord.light.intensity            = intensity;
+    if (torchRecord.holder) torchRecord.holder.visible = true;
+    if (torchRecord.torch)  torchRecord.torch.visible  = true;
   }
 
   function countDungeonTileInstances(dungeon, doorTx, doorTy) {
@@ -591,76 +635,102 @@ window.EngineCore = (() => {
       });
     }
 
-    // Phase 1: rows around spawn (visible on entry); Phase 2: everything else
-    const sc    = dungeon.roomCenter(dungeon.startRoom);
-    const BAND  = 10;
-    const v0    = Math.max(0, sc.cy - BAND);
-    const v1    = Math.min(ROWS, sc.cy + BAND);
-    const CHUNK = 8;
+    // Phase 1: rows around spawn (player sees these first) — small chunks, fast
+    // Phase 2: remaining rows — idle-time only so gameplay isn't interrupted
+    const sc      = dungeon.roomCenter(dungeon.startRoom);
+    const BAND    = 10;
+    const v0      = Math.max(0, sc.cy - BAND);
+    const v1      = Math.min(ROWS, sc.cy + BAND);
+    const CHUNK1  = 8;  // phase 1 — spawn area, built before reveal
+    const CHUNK2  = 4;  // phase 2 — background rows, still idle-time only
 
-    // phases: [startRow, endRow, callbackAfter]
+    // Use requestIdleCallback for background work when available
+    const _idle = typeof requestIdleCallback === 'function'
+      ? (fn) => requestIdleCallback(fn, { timeout: 200 })
+      : (fn) => setTimeout(fn, 0);
+
     const phases = [
-      [v0, v1,  onSpawnReady],
-      [0,  v0,  null],
-      [v1, ROWS, null],
+      [v0, v1,  onSpawnReady, CHUNK1, false],
+      [0,  v0,  null,         CHUNK2, true ],
+      [v1, ROWS, null,        CHUNK2, true ],
     ].filter(([a, b]) => a < b);
 
     let phaseIdx = 0;
     let curRow   = phases[0][0];
 
     function runChunk() {
-      const [, pEnd, pCb] = phases[phaseIdx];
-      const end = Math.min(curRow + CHUNK, pEnd);
+      const [, pEnd, pCb, chunk, useIdle] = phases[phaseIdx];
+      const end = Math.min(curRow + chunk, pEnd);
       for (let r = curRow; r < end; r++) buildRow(r);
       curRow = end;
 
       if (curRow < pEnd) {
-        setTimeout(runChunk, 0);
+        useIdle ? _idle(runChunk) : setTimeout(runChunk, 0);
       } else {
         if (pCb) pCb();
         phaseIdx++;
         if (phaseIdx < phases.length) {
           curRow = phases[phaseIdx][0];
-          setTimeout(runChunk, 0);
+          const nextIdle = phases[phaseIdx][4];
+          nextIdle ? _idle(runChunk) : setTimeout(runChunk, 0);
         } else {
-          buildLanterns();
+          buildLanternsChunked();
         }
       }
     }
 
-    function buildLanterns() {
+    function buildLanternsChunked() {
       _buildTileRoomIndex(dungeon);
       const lanternMat = new THREE.MeshStandardMaterial({ color: 0x241004, roughness: 0.72, metalness: 0.35 });
       const bracketMat = new THREE.MeshLambertMaterial({ color: 0x4a3a2a });
-      const LO = TILE / 2 + 0.1;
+      const LO         = TILE / 2 + 0.1;
+      const lanterns   = dungeon.lanterns || [];
+      const LCHUNK     = 8; // build lanterns in larger idle batches
+      let li           = 0;
+      const startCenter = dungeon.startRoom ? dungeon.roomCenter(dungeon.startRoom) : null;
+      const startWorld  = startCenter ? dungeon.toWorld(startCenter.cx, startCenter.cy) : null;
+      const startBrightSq = LANTERN_RADIUS * LANTERN_RADIUS;
 
-      for (const lan of dungeon.lanterns) {
-        const gx = lan.x, gy = lan.y;
-        if (grid[gy][gx] !== T.WALL) continue;
-        const wx = gx * TILE + TILE / 2, wz = gy * TILE + TILE / 2;
-        let dir = null, ox = 0, oz = 0, ry = 0;
-        if      (gy > 0      && grid[gy-1][gx] !== T.WALL) { dir='n'; oz=-LO; ry=0; }
-        else if (gy < ROWS-1 && grid[gy+1][gx] !== T.WALL) { dir='s'; oz= LO; ry=Math.PI; }
-        else if (gx > 0      && grid[gy][gx-1] !== T.WALL) { dir='w'; ox=-LO; ry=Math.PI/2; }
-        else if (gx < COLS-1 && grid[gy][gx+1] !== T.WALL) { dir='e'; ox= LO; ry=-Math.PI/2; }
-        if (!dir) continue;
-        const lx = wx + ox, lz = wz + oz;
-        const sconce = buildWallSconce(lx, WALL_H*0.44, lz, ry, bracketMat, lanternMat);
-        sconce.visible = false;
-        dungeonGroup.add(sconce);
-        const _rid   = (typeof RoomManager !== 'undefined' ? RoomManager.getRoomIdAtGrid(gx, gy) : null) ?? `room_${lan.roomIndex ?? -1}`;
-      const _boss  = _rid === 'room_boss';
-      const flame  = makeFlameCluster(0.13, _boss ? 0xcc1100 : 0xff7a18, _boss ? 0xff4422 : 0xffc45a);
-        const torchPiece = buildTorchPiece(lx, WALL_H*0.46, lz, ry, flame, lanternMat);
-        torchPiece.visible = false;
-        dungeonGroup.add(torchPiece);
-        const torchRecord = { x: lx, z: lz, gridX: gx, gridY: gy, roomId: _rid, holder: sconce, torch: torchPiece, flame, light: null, hasTorch: true };
-        registerWallTorch(torchRecord);
+      function buildLanternChunk() {
+        const end = Math.min(li + LCHUNK, lanterns.length);
+        for (; li < end; li++) {
+          const lan = lanterns[li];
+          const gx = lan.x, gy = lan.y;
+          if (grid[gy][gx] !== T.WALL) continue;
+          const wx = gx * TILE + TILE / 2, wz = gy * TILE + TILE / 2;
+          let dir = null, ox = 0, oz = 0, ry = 0;
+          if      (gy > 0      && grid[gy-1][gx] !== T.WALL) { dir='n'; oz=-LO; ry=0; }
+          else if (gy < ROWS-1 && grid[gy+1][gx] !== T.WALL) { dir='s'; oz= LO; ry=Math.PI; }
+          else if (gx > 0      && grid[gy][gx-1] !== T.WALL) { dir='w'; ox=-LO; ry=Math.PI/2; }
+          else if (gx < COLS-1 && grid[gy][gx+1] !== T.WALL) { dir='e'; ox= LO; ry=-Math.PI/2; }
+          if (!dir) continue;
+          const lx = wx + ox, lz = wz + oz;
+          const sconce = buildWallSconce(lx, WALL_H*0.44, lz, ry, bracketMat, lanternMat);
+          sconce.visible = false;
+          dungeonGroup.add(sconce);
+          const _rid  = (typeof RoomManager !== 'undefined' ? RoomManager.getRoomIdAtGrid(gx, gy) : null) ?? `room_${lan.roomIndex ?? -1}`;
+          const _boss = _rid === 'room_boss';
+          const flame = makeFlameCluster(0.13, _boss ? 0xcc1100 : 0xff7a18, _boss ? 0xff4422 : 0xffc45a);
+          const torchPiece = buildTorchPiece(lx, WALL_H*0.46, lz, ry, flame, lanternMat);
+          torchPiece.visible = false;
+          dungeonGroup.add(torchPiece);
+          const torchRecord = { x: lx, z: lz, gridX: gx, gridY: gy, roomId: _rid, holder: sconce, torch: torchPiece, flame, light: null, hasTorch: true };
+          registerWallTorch(torchRecord);
+          if (startWorld) {
+            const dx = lx - startWorld.x;
+            const dz = lz - startWorld.z;
+            if (dx * dx + dz * dz <= startBrightSq) setWallTorchBrightNow(torchRecord);
+          }
+        }
+        if (li < lanterns.length) {
+          _idle(buildLanternChunk);
+        } else {
+          buildBossDoor(dungeon);
+          buildChests(dungeon);
+          if (onComplete) onComplete(); // onComplete fires AFTER all lanterns registered
+        }
       }
-
-      buildBossDoor(dungeon);
-      buildChests(dungeon);
-      if (onComplete) onComplete();
+      _idle(buildLanternChunk);
     }
 
     runChunk();
@@ -912,7 +982,7 @@ window.EngineCore = (() => {
   /* ── Chests ──────────────────────────────────── */
   function buildChests(dungeon) {
     chestMeshes.forEach(m => scene.remove(m));
-    chestMeshes = [];
+    chestMeshes = []; _chestGrid = null; _visibleChestSet.clear();
     const chestBodyGeo = new THREE.BoxGeometry(0.7, 0.45, 0.55);
     const chestMat     = new THREE.MeshLambertMaterial({ color: 0x7a4810 });
     const chestLidGeo  = new THREE.BoxGeometry(0.7, 0.20, 0.55);
@@ -985,27 +1055,27 @@ function updateChests(dt) {
   function updateChestPrompt(player) {
     const el = document.getElementById('chestPrompt');
     if (!el) return;
+    if (!_chestGrid) _chestGrid = _buildGrid(chestMeshes, m => m.position.x, m => m.position.z);
+    const candidates = _chestGrid ? _gridQuery(_chestGrid, player.x, player.z, 2.5) : chestMeshes.map((_, i) => i);
     let near = false;
-    for (const g of chestMeshes) {
+    for (const i of candidates) {
+      const g = chestMeshes[i];
       if (g.userData.chestData.opened) continue;
-      const dx = player.x - g.position.x;
-      const dz = player.z - g.position.z;
-      if (dx*dx + dz*dz < 6.25) { near = true; break; } // 2.5^2
+      const dx = player.x - g.position.x, dz = player.z - g.position.z;
+      if (dx*dx + dz*dz < 6.25) { near = true; break; }
     }
     el.style.opacity = near ? '1' : '0';
   }
 
   function nearbyWallTorch(player) {
-    let best = null;
-    let bestD = Infinity;
-    for (const t of wallTorches) {
-      const dx = player.x - t.x;
-      const dz = player.z - t.z;
+    if (!_torchGrid) _torchGrid = _buildGrid(wallTorches, t => t.x, t => t.z);
+    const candidates = _torchGrid ? _gridQuery(_torchGrid, player.x, player.z, 2.5) : wallTorches.map((_, i) => i);
+    let best = null, bestD = Infinity;
+    for (const i of candidates) {
+      const t = wallTorches[i];
+      const dx = player.x - t.x, dz = player.z - t.z;
       const dSq = dx * dx + dz * dz;
-      if (dSq < 6.25 && dSq < bestD) {
-        best = t;
-        bestD = dSq;
-      }
+      if (dSq < 6.25 && dSq < bestD) { best = t; bestD = dSq; }
     }
     return best;
   }
@@ -2290,65 +2360,165 @@ function updateChests(dt) {
     if (m) { scene.remove(m); delete enemyMeshes[id]; }
   }
 
-  /* ── Enemy animations: attack swing, lunge, hp bar blink ── */
+  /* ── Per-type attack duration ── */
+  function _atkDur(typeKey) {
+    if (typeKey === 'troll')  return 0.55;
+    if (typeKey === 'goblin') return 0.20;
+    if (typeKey === 'wraith') return 0.28;
+    return 0.32;
+  }
+
+  /* ── Enemy animations: wind-up, swing, stagger, death, walk ── */
   function updateEnemyAnimations(enemies, dt) {
     enemies.forEach(e => {
       const mesh = enemyMeshes[e.id];
-      if (!mesh || e.dead) return;
+      if (!mesh) return;
 
-      // Hit: blink the HP bar sprite instead of scaling the mesh
+      // ── Death animation ──
+      if (e.dead) {
+        if ((e.deathAnim || 0) > 0) {
+          e.deathAnim -= dt;
+          const p = 1.0 - Math.max(0, e.deathAnim) / 0.45;
+          mesh.rotation.x = p * 1.5;
+          mesh.position.y = -p * 0.45;
+          const hpSprite = mesh.children.find(c => c.userData.isHpBar);
+          if (hpSprite) hpSprite.visible = false;
+        }
+        return;
+      }
+
+      // ── HP bar blink on hit ──
       const hpSprite = mesh.children.find(c => c.userData.isHpBar);
       if (hpSprite) {
         hpSprite.visible = e.hitFlash <= 0 || (Math.floor(e.hitFlash) % 2 === 0);
       }
 
-      // Decrement animation timer
-      if (e.atkAnim > 0) e.atkAnim = Math.max(0, e.atkAnim - dt);
+      // ── Decrement timers ──
+      if (e.atkAnim  > 0) e.atkAnim  = Math.max(0, e.atkAnim  - dt);
+      if (e.staggerT > 0) e.staggerT = Math.max(0, e.staggerT - dt);
 
       const arm = mesh.userData.attackArm;
+
+      // ── Stagger / knockback (takes priority) ──
+      if (e.staggerT > 0) {
+        const p = e.staggerT / 0.25;
+        mesh.position.x = e.x + (e.knockDX || 0) * p * 0.55;
+        mesh.position.z = e.z + (e.knockDZ || 0) * p * 0.55;
+        mesh.rotation.x = -p * 0.4;
+        mesh.position.y  = p * 0.07;
+        return;
+      }
+
+      // Ease stagger rotation back
+      if (Math.abs(mesh.rotation.x) > 0.01) mesh.rotation.x *= 0.72;
+      else mesh.rotation.x = 0;
+
+      // ── Attack animation (wind-up → strike) ──
       if (e.atkAnim > 0) {
-        const progress = 1.0 - (e.atkAnim / 0.32);
-        const swing    = Math.sin(progress * Math.PI);
+        const dur      = _atkDur(e.typeKey);
+        const progress = 1.0 - (e.atkAnim / dur);
 
-        // Lunge forward in facing direction
-        const lunge = swing * 0.45;
-        mesh.position.x = e.x + Math.sin(mesh.rotation.y) * lunge;
-        mesh.position.z = e.z + Math.cos(mesh.rotation.y) * lunge;
+        if (progress < 0.35) {
+          // Wind-up phase: arm pulls back, enemy crouches slightly
+          const wp = progress / 0.35;
+          mesh.position.x = e.x;
+          mesh.position.z = e.z;
+          mesh.rotation.x = wp * 0.18;
+          mesh.position.y = wp * 0.06;
+          if (arm) arm.rotation.x = 1.0 + wp * 0.9;
+        } else {
+          // Strike phase: drive forward with type-specific style
+          const sp    = (progress - 0.35) / 0.65;
+          const swing = Math.sin(sp * Math.PI);
 
-        // Overhand swing: arm rises back (+1.0) then drives forward/down (-1.2)
-        if (arm) arm.rotation.x = 1.0 - swing * 2.2;
-      } else {
-        // Sync position back to entity coords
-        mesh.position.x = e.x;
-        mesh.position.z = e.z;
+          if (e.typeKey === 'troll') {
+            // Heavy overhead slam — huge lunge, exaggerated arm
+            const lunge = swing * 0.75;
+            mesh.position.x = e.x + Math.sin(mesh.rotation.y) * lunge;
+            mesh.position.z = e.z + Math.cos(mesh.rotation.y) * lunge;
+            mesh.position.y = swing * 0.08;
+            mesh.rotation.x = -swing * 0.25;
+            if (arm) arm.rotation.x = 1.9 - swing * 3.8;
 
-        if (e.state === 'chase') {
-          // Walk animation — all enemies bob + swing arm
-          e._walkT = (e._walkT || 0) + dt;
+          } else if (e.typeKey === 'goblin') {
+            // Quick side swipe
+            const lunge = swing * 0.28;
+            mesh.position.x = e.x + Math.sin(mesh.rotation.y) * lunge;
+            mesh.position.z = e.z + Math.cos(mesh.rotation.y) * lunge;
+            mesh.rotation.x = 0;
+            if (arm) {
+              arm.rotation.x = 0.4 - swing * 1.8;
+              arm.rotation.z = swing * 0.7;
+            }
+
+          } else if (e.typeKey === 'wraith') {
+            // Gliding phase lunge — rises up then dives
+            const lunge = swing * 0.6;
+            mesh.position.x = e.x + Math.sin(mesh.rotation.y) * lunge;
+            mesh.position.z = e.z + Math.cos(mesh.rotation.y) * lunge;
+            mesh.position.y = 0.1 + swing * 0.3;
+            if (arm) arm.rotation.x = -swing * 1.6;
+
+          } else {
+            // Default overhand chop (skeleton, shardgolem, archer)
+            const lunge = swing * 0.45;
+            mesh.position.x = e.x + Math.sin(mesh.rotation.y) * lunge;
+            mesh.position.z = e.z + Math.cos(mesh.rotation.y) * lunge;
+            mesh.position.y = 0;
+            if (arm) arm.rotation.x = 1.0 - swing * 2.2;
+          }
+        }
+        return;
+      }
+
+      // ── Idle / walk animation ──
+      mesh.position.x = e.x;
+      mesh.position.z = e.z;
+
+      if (e.state === 'chase') {
+        e._walkT = (e._walkT || 0) + dt;
+
+        if (e.typeKey === 'troll') {
+          const s = Math.sin(e._walkT * 4.5);
+          mesh.position.y = Math.abs(s) * 0.13;
+          if (arm) arm.rotation.x = s * 0.45;
+
+        } else if (e.typeKey === 'wraith') {
+          mesh.position.y = 0.2 + Math.sin(e._walkT * 3.0) * 0.09;
+          if (arm) arm.rotation.x = Math.sin(e._walkT * 3.0) * 0.12;
+
+        } else {
           const step = Math.sin(e._walkT * 8);
           mesh.position.y = Math.abs(step) * 0.06;
           if (arm) arm.rotation.x = step * 0.28;
 
-          // Skeleton: also swing the leg pivot groups
-          if (e.typeKey === 'skeleton') {
+          if (e.typeKey === 'skeleton' || e.typeKey === 'archer') {
             const legL = mesh.children.find(c => c.userData.isSkelLeg === 'left');
             const legR = mesh.children.find(c => c.userData.isSkelLeg === 'right');
             if (legL) legL.rotation.x =  step * 0.55;
             if (legR) legR.rotation.x = -step * 0.55;
           }
+        }
+        if (arm) arm.rotation.z *= 0.8;
+
+      } else {
+        // Idle — settle back to rest
+        if (e.typeKey === 'wraith') {
+          e._walkT = (e._walkT || 0) + dt;
+          mesh.position.y = 0.15 + Math.sin(e._walkT * 2.0) * 0.05;
         } else {
-          // Idle — settle everything back to rest
           mesh.position.y *= 0.88;
-          if (arm) {
-            arm.rotation.x *= 0.75;
-            if (Math.abs(arm.rotation.x) < 0.01) arm.rotation.x = 0;
-          }
-          if (e.typeKey === 'skeleton') {
-            const legL = mesh.children.find(c => c.userData.isSkelLeg === 'left');
-            const legR = mesh.children.find(c => c.userData.isSkelLeg === 'right');
-            if (legL) legL.rotation.x *= 0.8;
-            if (legR) legR.rotation.x *= 0.8;
-          }
+        }
+        if (arm) {
+          arm.rotation.x *= 0.75;
+          arm.rotation.z *= 0.75;
+          if (Math.abs(arm.rotation.x) < 0.01) arm.rotation.x = 0;
+        }
+        if (e.typeKey === 'skeleton' || e.typeKey === 'archer') {
+          const legL = mesh.children.find(c => c.userData.isSkelLeg === 'left');
+          const legR = mesh.children.find(c => c.userData.isSkelLeg === 'right');
+          if (legL) legL.rotation.x *= 0.8;
+          if (legR) legR.rotation.x *= 0.8;
         }
       }
     });
@@ -2572,22 +2742,52 @@ function updateChests(dt) {
     _lastLanternPx = px;
     _lastLanternPz = pz;
 
-    // Proximity visibility — show/hide sconces and chests based on player distance.
-    // Runs only when player has moved, so cost is amortized across many frames.
-    const _SCONCE_RSQ = (LANTERN_RADIUS + 14) * (LANTERN_RADIUS + 14); // ~52 world-unit radius
-    for (let _vi = 0; _vi < wallTorches.length; _vi++) {
-      const _t = wallTorches[_vi];
-      const _dx = _t.x - px, _dz = _t.z - pz;
-      const _vis = _dx * _dx + _dz * _dz <= _SCONCE_RSQ;
-      if (_t.holder  && _t.holder.visible  !== _vis) _t.holder.visible  = _vis;
-      if (_t.torch   && _t !== carriedTorch && _t.torch.visible !== _vis) _t.torch.visible = _vis;
+    // Proximity visibility — show/hide sconces and chests using 4×4 spatial grid.
+    // Runs only when player has moved. Grid query replaces full O(n) scan.
+    if (!_torchGrid) _torchGrid = _buildGrid(wallTorches, t => t.x, t => t.z);
+    if (!_chestGrid) _chestGrid = _buildGrid(chestMeshes, m => m.position.x, m => m.position.z);
+
+    const _SCONCE_R   = LANTERN_RADIUS + 14; // ~52 world units
+    const _SCONCE_RSQ = _SCONCE_R * _SCONCE_R;
+    if (_torchGrid) {
+      const _nowVisible = new Set(_gridQuery(_torchGrid, px, pz, _SCONCE_R));
+      // hide torches that left range
+      for (const _vi of _visibleTorchSet) {
+        if (!_nowVisible.has(_vi)) {
+          const _t = wallTorches[_vi];
+          if (_t.holder) _t.holder.visible = false;
+          if (_t.torch && _t !== carriedTorch) _t.torch.visible = false;
+        }
+      }
+      // show torches newly in range (with distance check since cells can straddle boundary)
+      for (const _vi of _nowVisible) {
+        const _t = wallTorches[_vi];
+        const _dx = _t.x - px, _dz = _t.z - pz;
+        const _vis = _dx * _dx + _dz * _dz <= _SCONCE_RSQ;
+        if (_t.holder  && _t.holder.visible  !== _vis) _t.holder.visible  = _vis;
+        if (_t.torch   && _t !== carriedTorch && _t.torch.visible !== _vis) _t.torch.visible = _vis;
+        if (_vis) _nowVisible.add(_vi); else _nowVisible.delete(_vi);
+      }
+      _visibleTorchSet.clear();
+      for (const _vi of _nowVisible) _visibleTorchSet.add(_vi);
     }
-    const _CHEST_RSQ = (LANTERN_RADIUS * 2) * (LANTERN_RADIUS * 2); // ~76 world-unit radius
-    for (let _ci = 0; _ci < chestMeshes.length; _ci++) {
-      const _g = chestMeshes[_ci];
-      const _dx = _g.position.x - px, _dz = _g.position.z - pz;
-      const _vis = _dx * _dx + _dz * _dz <= _CHEST_RSQ;
-      if (_g.visible !== _vis) _g.visible = _vis;
+
+    const _CHEST_R   = LANTERN_RADIUS * 2; // ~76 world units
+    const _CHEST_RSQ = _CHEST_R * _CHEST_R;
+    if (_chestGrid) {
+      const _nowVisible = new Set(_gridQuery(_chestGrid, px, pz, _CHEST_R));
+      for (const _ci of _visibleChestSet) {
+        if (!_nowVisible.has(_ci)) { const _g = chestMeshes[_ci]; if (_g.visible) _g.visible = false; }
+      }
+      for (const _ci of _nowVisible) {
+        const _g = chestMeshes[_ci];
+        const _dx = _g.position.x - px, _dz = _g.position.z - pz;
+        const _vis = _dx * _dx + _dz * _dz <= _CHEST_RSQ;
+        if (_g.visible !== _vis) _g.visible = _vis;
+        if (_vis) _nowVisible.add(_ci); else _nowVisible.delete(_ci);
+      }
+      _visibleChestSet.clear();
+      for (const _ci of _nowVisible) _visibleChestSet.add(_ci);
     }
 
     // Query nearby light indices — wallTorches[i] aligns with LightManager slot i
@@ -2620,6 +2820,24 @@ function updateChests(dt) {
       if (activeSet.has(i)) activateWallTorchLight(t);
       else                  deactivateWallTorchLight(t);
     }
+  }
+
+  // Snap nearby lanterns to full brightness instantly — call once after dungeon loads
+  // so spawn-area torches don't fade in from dark.
+  function snapLanternsToPlayer(px, pz) {
+    if (typeof SpatialManager === 'undefined') return;
+    const candidates = SpatialManager.query('lights', [px, pz], LANTERN_RADIUS)
+      .filter(i => { const t = wallTorches[i]; return t && t.hasTorch; });
+    const activeSet = new Set(candidates);
+    for (let i = 0; i < wallTorches.length; i++) {
+      const t = wallTorches[i];
+      if (!t.light) continue;
+      if (activeSet.has(i)) {
+        setWallTorchBrightNow(t);
+      }
+    }
+    _lastLanternPx = null; // force a full re-query next frame
+    _lastTorchFingerprint = 0;
   }
 
 function updateTorchInteractionAnimations(dt) {
@@ -2962,7 +3180,7 @@ function updateTorchInteractionAnimations(dt) {
     Object.values(enemyMeshes).forEach(m => scene.remove(m));
     enemyMeshes = {};
     chestMeshes.forEach(m => scene.remove(m));
-    chestMeshes = [];
+    chestMeshes = []; _chestGrid = null; _visibleChestSet.clear();
     particles.forEach(p => scene.remove(p));
     particles = [];
     if (portalMesh) { scene.remove(portalMesh); portalMesh = null; }
@@ -3046,7 +3264,7 @@ function updateTorchInteractionAnimations(dt) {
   let mouseDX = 0;
 
   function updateAimFromMouse() {
-    aimAngle += mouseDX * 0.004;
+    aimAngle += mouseDX * 0.008;
     mouseDX = 0;
     return aimAngle;
   }
@@ -3151,7 +3369,7 @@ function buildSegmentedWing(r, h, mat, side) {
     toggleNearbyWallTorch,
     spawnParticles, updateParticles,
     fireBolt, updateBolts,
-    updateTorchFlicker, updateActiveLanternLights,
+    updateTorchFlicker, updateActiveLanternLights, snapLanternsToPlayer,
     flashPlayer,
     render,
     clearDynamic,

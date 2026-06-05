@@ -30,6 +30,7 @@ let _COLS = 0;
 let _ROWS = 0;
 let _TILE = 2;
 const WALL = 1;
+const ACTIVE_RADIUS_SQ = 48 * 48;
 
 /* ── Live enemy map: id → enemy object ───────────── */
 const _enemies = new Map();
@@ -234,7 +235,8 @@ function tick(enemy, playerX, playerZ, dt) {
     }
     if (dist <= enemy.atkR + 0.1 && enemy.atkTimer <= 0) {
       enemy.atkTimer = enemy.atkCD;
-      enemy.atkAnim  = 0.32;
+      const _atkDurs = { troll: 0.55, goblin: 0.20, wraith: 0.28 };
+      enemy.atkAnim  = _atkDurs[enemy.typeKey] || 0.32;
       const result = { attacked: true, dmg: enemy.atk };
       if (enemy.ability === 'lifedrain') enemy.hp = Math.min(enemy.maxHp, enemy.hp + Math.round(enemy.atk * 0.3));
       if (enemy.ability === 'shockwave') { result.dmg = Math.round(enemy.atk * 1.6); result.shockwave = true; }
@@ -307,6 +309,10 @@ self.onmessage = function(e) {
 
     for (const [, enemy] of _enemies) {
       if (enemy.dead) { dead.push(enemy.id); continue; }
+
+      const dx = enemy.x - playerX;
+      const dz = enemy.z - playerZ;
+      if (!enemy.isBoss && dx * dx + dz * dz > ACTIVE_RADIUS_SQ) continue;
 
       const result = tick(enemy, playerX, playerZ, dt);
 

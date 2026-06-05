@@ -165,6 +165,29 @@
   white-space: nowrap;
 }
 
+/* ── Title entrance animations ───────────────────── */
+@keyframes titleFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes titleDrop {
+  from { opacity: 0; transform: translateY(-28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes titleRise {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes titleGlow {
+  0%, 100% { text-shadow: 0 0 30px #ff6600, 0 0 60px #aa330066; }
+  50%       { text-shadow: 0 0 50px #ff8800, 0 0 100px #cc550099, 0 0 8px #fff8; }
+}
+@keyframes emberRise {
+  0%   { transform: translateY(0)   translateX(0)    scale(1);   opacity: 0.7; }
+  50%  { transform: translateY(-45vh) translateX(12px)  scale(0.7); opacity: 0.5; }
+  100% { transform: translateY(-90vh) translateX(-6px)  scale(0.3); opacity: 0; }
+}
+
 /* ── SCREENS (title / death) ─────────────────────── */
 .screen {
   position: fixed;
@@ -173,12 +196,39 @@
   align-items: center;
   justify-content: center;
   background:
-    linear-gradient(180deg, rgba(74, 45, 20, 0.28), rgba(14, 7, 3, 0.68)),
-    radial-gradient(ellipse at center, rgba(120, 70, 10, 0.52) 0%, rgba(22, 10, 2, 0.78) 100%);
+    linear-gradient(180deg, rgba(42, 20, 6, 0.58), rgba(8, 4, 2, 0.78)),
+    radial-gradient(ellipse at center, rgba(150, 82, 18, 0.42) 0%, rgba(10, 4, 1, 0.82) 100%);
   z-index: 300;
   overflow: hidden;
 }
-.screen.active { display: flex; }
+.screen.active {
+  display: flex;
+  animation: titleFadeIn 0.5s ease both;
+}
+
+/* Staggered entrance for title children */
+#titleScreen.active .title-inner          { animation: titleRise 0.55s 0.15s ease both; }
+#titleScreen.active h1#titleText          { animation: titleDrop 0.6s 0.25s ease both, titleGlow 3s 0.85s ease-in-out infinite; }
+#titleScreen.active .title-sub            { animation: titleRise 0.5s 0.40s ease both; }
+#titleScreen.active .save-meta-row        { animation: titleRise 0.5s 0.52s ease both; }
+#titleScreen.active .title-loading        { animation: titleRise 0.5s 0.60s ease both; }
+#titleScreen.active #titleStartBtn        { animation: titleRise 0.5s 0.65s ease both; }
+#titleScreen.active #titleRestartBtn      { animation: titleRise 0.5s 0.65s ease both; }
+#titleScreen.active .title-link-btn       { animation: titleRise 0.5s 0.72s ease both; }
+#titleScreen.active .key-hints            { animation: titleRise 0.5s 0.80s ease both; }
+#titleScreen.active .auth-title-status    { animation: titleRise 0.5s 0.85s ease both; }
+
+/* Floating embers */
+#titleScreen.active .title-ember {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ff6600;
+  box-shadow: 0 0 6px #ff4400, 0 0 12px #ff220044;
+  pointer-events: none;
+  animation: emberRise linear infinite;
+}
 
 /* game screen ad slot — fixed bottom strip inside title/death screens */
 .game-screen-ad {
@@ -208,9 +258,9 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.46)),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.28), rgba(70, 34, 8, 0.08), rgba(0, 0, 0, 0.28)),
     url("../thumb.jpg") center / cover no-repeat;
-  opacity: 0.58;
+  opacity: 0.74;
   transform: scale(1.03);
 }
 
@@ -219,8 +269,8 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.42) 72%),
-    linear-gradient(180deg, rgba(44, 24, 8, 0.18), rgba(0, 0, 0, 0.48));
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0.06) 0%, rgba(0, 0, 0, 0.46) 76%),
+    linear-gradient(180deg, rgba(20, 8, 2, 0.28), rgba(0, 0, 0, 0.52));
 }
 
 .title-inner {
@@ -228,13 +278,13 @@
   flex-direction: column;
   align-items: center;
   gap: 18px;
-  padding: 50px 48px;
+  padding: 46px 48px;
   background:
-    linear-gradient(180deg, rgba(58, 38, 21, 0.9), rgba(28, 15, 6, 0.9)),
-    radial-gradient(circle at 50% 0%, rgba(200, 146, 42, 0.18), transparent 60%);
-  border: 1px solid #7a4a18;
-  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.42), inset 0 0 42px rgba(200, 146, 42, 0.1);
-  max-width: 540px;
+    linear-gradient(180deg, rgba(42, 23, 8, 0.94), rgba(16, 8, 3, 0.96)),
+    radial-gradient(circle at 50% 0%, rgba(232, 170, 54, 0.2), transparent 58%);
+  border: 1px solid rgba(213, 158, 66, 0.72);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.72), inset 0 0 42px rgba(200, 146, 42, 0.11);
+  max-width: 590px;
   width: 90%;
   position: relative;
   z-index: 1;
@@ -242,24 +292,26 @@
 
 h1#titleText {
   font-family: 'Cinzel', serif;
-  font-size: 42px;
+  font-size: clamp(32px, 5vw, 46px);
   font-weight: 700;
-  color: #c8922a;
-  text-shadow: 0 0 30px #ff6600, 0 0 60px #aa330066;
+  color: #f4c96f;
+  text-shadow: 0 0 20px rgba(255, 102, 0, 0.72), 0 0 48px rgba(170, 51, 0, 0.56), 0 2px 2px #000;
   letter-spacing: 4px;
   text-align: center;
   line-height: 1.2;
 }
 
 .title-sub {
-  font-size: 15px;
-  color: #d1a95a;
+  font-size: 16px;
+  color: #f0d18b;
   font-style: italic;
   letter-spacing: 2px;
+  text-align: center;
+  text-shadow: 0 1px 2px #000;
 }
 
 .save-meta-row {
-  color: #b99452;
+  color: #d9b36c;
   font-family: 'Cinzel', serif;
   font-size: 12px;
   letter-spacing: 0.8px;
@@ -267,7 +319,25 @@ h1#titleText {
 }
 
 .save-meta-row span {
-  color: #f0c060;
+  color: #ffe09a;
+}
+
+.key-hints {
+  color: #d9b36c;
+  line-height: 1.75;
+  text-align: center;
+  text-shadow: 0 1px 1px #000;
+}
+
+@media (max-width: 620px) {
+  .title-inner {
+    width: min(94vw, 590px);
+    padding: 34px 24px;
+    gap: 14px;
+  }
+  h1#titleText { letter-spacing: 2px; }
+  .title-sub { font-size: 14px; }
+  .save-meta-row { line-height: 1.6; }
 }
 
 /* Title-screen auth */
@@ -572,11 +642,12 @@ h1#titleText {
 
 .key-hints {
   font-size: 11px;
-  color: #b99452;
+  color: #d9b36c;
   text-align: center;
   line-height: 1.8;
   font-family: 'Cinzel', serif;
   letter-spacing: 0.5px;
+  text-shadow: 0 1px 1px #000;
 }
 
 html.leaderboard-document,
