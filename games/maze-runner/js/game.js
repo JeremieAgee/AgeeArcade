@@ -15,7 +15,7 @@
   const CAM_DIST      = 11.5;  // orbit radius
   const CAM_LERP      = 0.13;
   const CAM_PITCH_MIN = 0.18;  // ~10° above horizon
-  const CAM_PITCH_MAX = 1.20;  // ~69° (nearly top-down)
+  const CAM_PITCH_MAX = 1.45;  // ~83° (nearly top-down)
 
   // ─── Module state ──────────────────────────────────
   let renderer, scene, camera, clock;
@@ -70,7 +70,7 @@
 
   // Camera (fixed angle, yaw-only orbit removed)
   let camYaw   = 0;
-  let camPitch = 0.960; // 55°
+  let camPitch = 1.32; // ~76° (closer to top-down)
 
   let MAT = {};
   let mmCanvas, mmCtx;
@@ -938,10 +938,16 @@
     const rgtZ = -Math.sin(camYaw);
 
     let dx = 0, dz = 0;
-    if (keys['KeyW'] || keys['ArrowUp'])    { dx -= fwdX; dz -= fwdZ; }
-    if (keys['KeyS'] || keys['ArrowDown'])  { dx += fwdX; dz += fwdZ; }
-    if (keys['KeyA'] || keys['ArrowLeft'])  { dx -= rgtX; dz -= rgtZ; }
-    if (keys['KeyD'] || keys['ArrowRight']) { dx += rgtX; dz += rgtZ; }
+    if (_joyAx !== 0 || _joyAy !== 0) {
+      // Analog joystick: smooth 360° movement, speed proportional to push distance
+      dx = fwdX * _joyAy + rgtX * _joyAx;
+      dz = fwdZ * _joyAy + rgtZ * _joyAx;
+    } else {
+      if (keys['KeyW'] || keys['ArrowUp'])    { dx -= fwdX; dz -= fwdZ; }
+      if (keys['KeyS'] || keys['ArrowDown'])  { dx += fwdX; dz += fwdZ; }
+      if (keys['KeyA'] || keys['ArrowLeft'])  { dx -= rgtX; dz -= rgtZ; }
+      if (keys['KeyD'] || keys['ArrowRight']) { dx += rgtX; dz += rgtZ; }
+    }
 
     const len = Math.sqrt(dx * dx + dz * dz);
     if (len > 1) { dx /= len; dz /= len; }
@@ -1225,6 +1231,7 @@
   function onGameOver() {
     if (state !== 'playing') return;
     state = 'game-over';
+    clearSave();
     if (window.SFX) SFX.once('gameover');
     if (window.SFX) SFX.stopAmbient();
     updateGameOverSummary();
@@ -1428,13 +1435,73 @@
     }
   }
 
+  // ─── Save / Continue ───────────────────────────────
+  const SAVE_KEY = 'mazeRunner.activeRun.v1';
+
+  function saveRun() {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        gd: { ...gd },
+        px, pz,
+      }));
+    } catch (_) {}
+    updateContinueBtn();
+  }
+
+  function clearSave() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
+    updateContinueBtn();
+  }
+
+  function loadSave() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (!s || s.version !== 1 || !s.gd || s.gd.floor < 1) return null;
+      return s;
+    } catch (_) { return null; }
+  }
+
+  function updateContinueBtn() {
+    const save = loadSave();
+    const btn  = document.getElementById('btnContinue');
+    if (!btn) return;
+    if (save) {
+      btn.hidden = false;
+      btn.textContent = `CONTINUE (FLOOR ${save.gd.floor})`;
+    } else {
+      btn.hidden = true;
+    }
+  }
+
   // ─── Game flow ─────────────────────────────────────
   function startGame() {
     document.activeElement && document.activeElement.blur();
     if (window.SFX) SFX.init(); // unlock audio on first user gesture
     if (window.SFX) SFX.startAmbient();
+    clearSave();
     gd = { hp: HP_MAX, lives: LIVES_START, floor: 1, score: 0, totalTime: 0, floorTime: 0 };
     buildFloor(1);
+    state = 'playing';
+    showScreen(null);
+    updateHUD();
+    saveRun();
+  }
+
+  function continueGame() {
+    const save = loadSave();
+    if (!save) { startGame(); return; }
+    document.activeElement && document.activeElement.blur();
+    if (window.SFX) SFX.init();
+    if (window.SFX) SFX.startAmbient();
+    gd = { ...save.gd };
+    buildFloor(gd.floor);
+    // Player position is restored after buildFloor places them at start;
+    // restore saved position only if it looks valid (non-zero and on the floor)
+    if (save.px && save.pz) { px = save.px; pz = save.pz; }
     state = 'playing';
     showScreen(null);
     updateHUD();
@@ -1459,6 +1526,7 @@
 
   function startOrResumeGame() {
     if (state === 'paused') resumeGame();
+    else if (loadSave()) continueGame();
     else startGame();
   }
 
@@ -1471,6 +1539,7 @@
     if (window.SFX) SFX.startAmbient();
     showScreen(null);
     updateHUD();
+    saveRun();
   }
 
   function restartGame() { startGame(); }
@@ -1757,6 +1826,7 @@
     const DPAD_DEAD = 10; // px dead zone
     const DPAD_MAX  = 52; // max nub travel px
     let dpadTouchId = null;
+    let _joyAx = 0, _joyAy = 0; // analog joystick values -1..+1
 
     function dpadUpdate(cx, cy) {
       const rect = dpad.getBoundingClientRect();
@@ -1771,19 +1841,18 @@
 
       const nx = ox / dist, ny = oy / dist;
       const travel = Math.min(dist, DPAD_MAX);
+      const mag = (travel - DPAD_DEAD) / (DPAD_MAX - DPAD_DEAD); // 0→1 after dead zone
+
+      // Analog values for smooth movement
+      _joyAx = nx * mag;
+      _joyAy = ny * mag;
 
       // Move nub visually
       if (nub) nub.style.transform = `translate(calc(-50% + ${nx * travel}px), calc(-50% + ${ny * travel}px))`;
-
-      // Map to keys — allow diagonals
-      keys['KeyW'] = oy < -DPAD_DEAD;
-      keys['KeyS'] = oy >  DPAD_DEAD;
-      keys['KeyA'] = ox < -DPAD_DEAD;
-      keys['KeyD'] = ox >  DPAD_DEAD;
     }
 
     function dpadClear() {
-      keys['KeyW'] = keys['KeyS'] = keys['KeyA'] = keys['KeyD'] = false;
+      _joyAx = 0; _joyAy = 0;
       if (nub) nub.style.transform = 'translate(-50%, -50%)';
     }
 
@@ -1862,9 +1931,11 @@
     mmCtx    = mmCanvas ? mmCanvas.getContext('2d') : null;
 
     const btn = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
-    btn('btnStart',     startOrResumeGame);
+    btn('btnStart',    startGame);
+    btn('btnContinue', continueGame);
     btn('btnNextFloor', nextFloor);
     btn('btnRestart',   restartGame);
+    updateContinueBtn();
     let lbReturnScreen = 'title';
     btn('btnLB',      () => { lbReturnScreen = 'title';     loadLeaderboard(); showScreen('leaderboard'); });
     btn('btnLBBack',  () => { lbReturnScreen = 'game-over'; loadLeaderboard(); showScreen('leaderboard'); });

@@ -893,11 +893,10 @@ const Game = (() => {
       const mc = window._mobileCtrl;
       if (mc) {
         if (mc.active) {
-          // Joystick X → rotate camera (like mouse left/right)
-          const TURN_SPEED = 2.0; // radians per second — tune up/down to taste
+          // Joystick X → rotate player + camera; Y → forward/backward
+          const TURN_SPEED = 2.4;
           aimAngleVal += mc.joyNx * TURN_SPEED * dt;
           Engine.setAimAngleDirect(aimAngleVal);
-          // Joystick Y → forward / backward (up = forward, down = back)
           keys['w'] = mc.joyNy < -0.15;
           keys['s'] = mc.joyNy >  0.15;
         } else {

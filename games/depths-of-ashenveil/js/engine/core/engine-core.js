@@ -2964,25 +2964,16 @@ function updateTorchInteractionAnimations(dt) {
   }
 
   function updateCamera(player) {
-    const camDist  = 5.25;
-    const camH     = 4.0;
+    const camDist  = 4.2;   // orbit radius behind player
+    const camH     = 3.8;   // camera height
     const descentY = player._descentY || 0;
-
-    // Cap camera height at camH so it never rises above normal eye level.
-    // During arrival descent the player starts at y=4.5 and falls to 0,
-    // but the camera stays fixed at normal follow height looking down — you see the portal
-    // floating above the floor and the player drop through it.
     const clampedY = Math.min(descentY, 0);
 
-    let camX = player.x - Math.cos(aimAngle) * camDist;
-    let camZ = player.z - Math.sin(aimAngle) * camDist;
-    if (_dungeonBounds) {
-      camX = Math.max(_dungeonBounds.minX, Math.min(_dungeonBounds.maxX, camX));
-      camZ = Math.max(_dungeonBounds.minZ, Math.min(_dungeonBounds.maxZ, camZ));
-    }
+    const camX = player.x - Math.cos(aimAngle) * camDist;
+    const camZ = player.z - Math.sin(aimAngle) * camDist;
 
     camera.position.set(camX, camH + clampedY, camZ);
-    camera.lookAt(player.x + Math.cos(aimAngle) * 0.35, 0.75 + clampedY, player.z + Math.sin(aimAngle) * 0.35);
+    camera.lookAt(player.x + Math.cos(aimAngle) * 1.5, 0.9 + clampedY, player.z + Math.sin(aimAngle) * 1.5);
   }
 
   /* ── Flash player ────────────────────────────── */

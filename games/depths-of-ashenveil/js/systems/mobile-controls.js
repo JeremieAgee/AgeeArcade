@@ -11,7 +11,7 @@
   /* ── Shared state read by game.js each frame ─────── */
   window._mobileCtrl = {
     active:          false,
-    joyNx:           0,     // -1=left … +1=right  (camera turn)
+    joyNx:           0,     // -1=left … +1=right  (player/camera turn)
     joyNy:           0,     // -1=up/fwd … +1=down/back
     attackPending:   false,
     interactPending: false,
