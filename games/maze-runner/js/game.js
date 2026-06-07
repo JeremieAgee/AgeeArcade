@@ -279,11 +279,26 @@
     seededShuffle(corridors);
     const trapCount = getTrapCount(floor);
     let placed = 0;
+    const DIRS4 = [[-1,0],[1,0],[0,-1],[0,1]];
+    const isLava = t => t === 'lava';
+    const isFall = t => t === 'fall' || t === 'fall-deep';
     for (const c of corridors) {
       if (placed >= trapCount) break;
       // ~40% lava, ~35% regular fall, ~25% deep fall
       const r = placed % 4;
       const type = r === 0 || r === 3 ? 'lava' : r === 1 ? 'fall' : 'fall-deep';
+      // Reject if any orthogonal neighbor already has a trap of the same kind
+      // (lava next to lava, or fall/fall-deep next to fall/fall-deep or lava)
+      let blocked = false;
+      for (const [dr, dc] of DIRS4) {
+        const neighbor = md.traps.get(cellKey(c.gr + dr, c.gc + dc));
+        if (!neighbor) continue;
+        if (isLava(type) && isLava(neighbor)) { blocked = true; break; }
+        if (isFall(type) && isFall(neighbor)) { blocked = true; break; }
+        if (isLava(type) && isFall(neighbor)) { blocked = true; break; }
+        if (isFall(type) && isLava(neighbor)) { blocked = true; break; }
+      }
+      if (blocked) continue;
       md.traps.set(cellKey(c.gr, c.gc), type);
       placed++;
     }
@@ -298,6 +313,14 @@
       if (dist2D(c.gr, c.gc, start.gr, start.gc) < 3) continue;
       const types = ['spike', 'blade', 'axe', 'plate', 'flame', 'ball'];
       const type  = types[dmgPlaced % types.length];
+      // Axe requires walls on both sides of one axis so the blade spans wall-to-wall
+      if (type === 'axe') {
+        const wallN = c.gr - 1 < 0      || md.grid[c.gr - 1][c.gc] === 1;
+        const wallS = c.gr + 1 >= md.H  || md.grid[c.gr + 1][c.gc] === 1;
+        const wallE = c.gc + 1 >= md.W  || md.grid[c.gr][c.gc + 1] === 1;
+        const wallW = c.gc - 1 < 0      || md.grid[c.gr][c.gc - 1] === 1;
+        if (!(wallN && wallS) && !(wallE && wallW)) continue;
+      }
       const phase = Math.random() * Math.PI * 2;
       md.damageTraps.set(k, { type, phase });
       dmgPlaced++;
@@ -511,43 +534,78 @@
         obj.parts.pivot = pivot;
 
       } else if (trap.type === 'axe') {
-        // ── Ceiling pendulum axe — swings wall to wall ──
-        // Chain hangs from ceiling center
-        const chainGeo = new THREE.CylinderGeometry(0.025, 0.025, 1.4, 6);
-        const chain = new THREE.Mesh(chainGeo, matMetal);
-        chain.position.set(0, WALL_H - 0.7, 0);
-        group.add(chain);
+        // ── Ceiling pendulum axe — swings perpendicular to corridor ──
+        // Detect which axis has walls on BOTH sides — blade spans those two walls
+        const wallN = gr - 1 < 0    || md.grid[gr - 1][gc] === 1;
+        const wallS = gr + 1 >= md.H || md.grid[gr + 1][gc] === 1;
+        const wallE = gc + 1 >= md.W || md.grid[gr][gc + 1] === 1;
+        const wallW = gc - 1 < 0    || md.grid[gr][gc - 1] === 1;
+        // ewWalls → corridor N-S, blade wide on X, swings along Z (rotation.x)
+        // nsWalls → corridor E-W, blade wide on Z, swings along X (rotation.z)
+        const swingAxis = (wallE && wallW) ? 'x' : 'z';
+        obj.swingAxis = swingAxis;
+
+        // Chain links from ceiling
+        for (let i = 0; i < 4; i++) {
+          const link = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.018, 5, 7), matMetal);
+          link.position.y = WALL_H - 0.1 - i * 0.17;
+          if (i % 2 === 0) link.rotation.y = Math.PI / 2;
+          group.add(link);
+        }
 
         // Pivot at ceiling
         const pivot = new THREE.Group();
         pivot.position.set(0, WALL_H - 0.05, 0);
         group.add(pivot);
 
-        // Shaft hanging from pivot
-        const shaftGeo = new THREE.CylinderGeometry(0.03, 0.025, 1.5, 6);
+        // Thick wooden shaft
+        const shaftGeo = new THREE.CylinderGeometry(0.038, 0.030, 1.9, 8);
         const shaft = new THREE.Mesh(shaftGeo, matWood);
-        shaft.position.y = -0.75;
+        shaft.position.y = -0.95;
+        shaft.castShadow = true;
         pivot.add(shaft);
 
-        // Axe head at bottom of shaft — wide blade on Z axis
+        // Metal collar where shaft meets axe head
+        const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.12, 8), matMetal);
+        collar.position.y = -1.84;
+        pivot.add(collar);
+
+        // Axe head group at bottom of shaft
         const axeHead = new THREE.Group();
-        axeHead.position.y = -1.5;
+        axeHead.position.y = -1.9;
         pivot.add(axeHead);
 
-        // Main blade (crescent-like using a wide flat box)
-        const bladeMain = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.55, 0.65), matMetal);
-        bladeMain.position.set(0, 0, 0);
+        // Blade fills corridor width perpendicular to the walls
+        const bladeW = swingAxis === 'z' ? 0.10 : CELL * 0.82;
+        const bladeD = swingAxis === 'x' ? 0.10 : CELL * 0.82;
+
+        // Main blade body
+        const bladeMain = new THREE.Mesh(new THREE.BoxGeometry(bladeW, 0.72, bladeD), matMetal);
+        bladeMain.castShadow = true;
         axeHead.add(bladeMain);
 
+        // Thinner cutting-edge overlay (slightly recessed on one face for bevel look)
+        const bevelW = swingAxis === 'z' ? 0.04 : CELL * 0.78;
+        const bevelD = swingAxis === 'x' ? 0.04 : CELL * 0.78;
+        const bevel = new THREE.Mesh(new THREE.BoxGeometry(bevelW, 0.60, bevelD), matMetal);
+        bevel.position.y = 0.04;
+        axeHead.add(bevel);
+
+        // Decorative boss disc at center
+        const bossGeo = new THREE.CylinderGeometry(0.10, 0.10, swingAxis === 'z' ? bladeD + 0.01 : bladeW + 0.01, 8);
+        const boss = new THREE.Mesh(bossGeo, matMetal);
+        if (swingAxis === 'z') boss.rotation.z = Math.PI / 2;
+        axeHead.add(boss);
+
         // Top spike
-        const spikeTop = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.25, 5), matMetal);
-        spikeTop.position.y = 0.35;
+        const spikeTop = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.38, 5), matMetal);
+        spikeTop.position.y = 0.49;
         axeHead.add(spikeTop);
 
-        // Bottom spike
-        const spikeBot = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.20, 5), matMetal);
+        // Bottom hook spike
+        const spikeBot = new THREE.Mesh(new THREE.ConeGeometry(0.060, 0.30, 5), matMetal);
         spikeBot.rotation.z = Math.PI;
-        spikeBot.position.y = -0.35;
+        spikeBot.position.y = -0.49;
         axeHead.add(spikeBot);
 
         obj.parts.pivot = pivot;
@@ -1433,8 +1491,14 @@
         parts.pivot.rotation.y = Math.sin(t * 1.6 + phase) * (Math.PI / 2 + 0.15);
 
       } else if (type === 'axe') {
-        // Pendulum swings wall to wall on Z axis — natural gravity arc
-        parts.pivot.rotation.z = Math.sin(t * 1.5 + phase) * 0.72;
+        const arc = Math.sin(t * 1.5 + phase) * 0.72;
+        if (obj.swingAxis === 'x') {
+          parts.pivot.rotation.x = arc;
+          parts.pivot.rotation.z = 0;
+        } else {
+          parts.pivot.rotation.z = arc;
+          parts.pivot.rotation.x = 0;
+        }
 
       } else if (type === 'plate') {
         // Arrow logic handled in checkDamageTraps
@@ -1508,15 +1572,25 @@
       } else if (type === 'axe') {
         const tNow = Date.now() * 0.001;
         const angVel = Math.cos(tNow * 1.5 + obj.phase) * 0.72 * 1.5;
-        const axeX   = wx + Math.sin(parts.pivot.rotation.z) * 1.5;
-        const axeDist = Math.sqrt((px - axeX) ** 2 + (pz - wz) ** 2);
-        if (axeDist < 0.55 && distZ < 0.85) {
-          hit = true;
-          // Axe sweeps in X direction — push player along X by swing direction
-          const speed = Math.abs(angVel);
-          const dmgScale = 0.4 + 0.6 * speed / 1.08;
-          _swingHit = Math.round(DAMAGE_PER_HIT * dmgScale);
-          knockVX += Math.sign(angVel) * speed * 4.5;
+        // Blade fills corridor width — hit when player is within the cell and axe head passes through
+        if (obj.swingAxis === 'x') {
+          // Swings forward/back along Z; blade is wide on X (fills corridor)
+          const axeZ = wz + Math.sin(parts.pivot.rotation.x) * 1.9;
+          if (distX < CELL * 0.42 && Math.abs(pz - axeZ) < 0.38) {
+            hit = true;
+            const speed = Math.abs(angVel);
+            _swingHit = Math.round(DAMAGE_PER_HIT * (0.4 + 0.6 * speed / 1.08));
+            knockVZ += Math.sign(angVel) * speed * 4.5;
+          }
+        } else {
+          // Swings left/right along X; blade is wide on Z (fills corridor)
+          const axeX = wx + Math.sin(parts.pivot.rotation.z) * 1.9;
+          if (distZ < CELL * 0.42 && Math.abs(px - axeX) < 0.38) {
+            hit = true;
+            const speed = Math.abs(angVel);
+            _swingHit = Math.round(DAMAGE_PER_HIT * (0.4 + 0.6 * speed / 1.08));
+            knockVX += Math.sign(angVel) * speed * 4.5;
+          }
         }
 
       } else if (type === 'plate') {

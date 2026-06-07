@@ -57,6 +57,9 @@ window.Engine = {
 
   flashPlayer: (...args) => window.EngineCore.flashPlayer(...args),
   clearDynamic: (...args) => window.EngineCore.clearDynamic(...args),
+  reregisterLights: (...args) => window.EngineCore.reregisterLights(...args),
+  stashDungeonState: (...args) => window.EngineCore.stashDungeonState(...args),
+  installDungeonState: (...args) => window.EngineCore.installDungeonState(...args),
   updateAimFromMouse: (...args) => window.EngineCore.updateAimFromMouse(...args),
   getAimAngle: (...args) => window.EngineCore.getAimAngle(...args),
   setAimAngleDirect: (...args) => window.EngineCore.setAimAngleDirect(...args),

@@ -47,6 +47,11 @@ window.EngineCore = (() => {
   let _visibleTorchSet = new Set(); // indices currently marked visible
   let _visibleChestSet = new Set();
 
+  // Cached dungeon textures — generated once, reused across all floor loads
+  let _cachedBrickTex    = null;
+  let _cachedFloorTex    = null;
+  let _cachedBossFloorTex = null;
+
   function _buildGrid(items, getX, getZ) {
     if (!_dungeonBounds) return null;
     const { minX, maxX, minZ, maxZ } = _dungeonBounds;
@@ -127,14 +132,6 @@ window.EngineCore = (() => {
     }
     if (hemiLight)    { scene.remove(hemiLight);    hemiLight    = null; }
 
-    // One shadow-casting player light — gives real floor/wall shadows
-    // without hitting the InstancedMesh shadow-map limit
-    if (!torchLight) {
-      torchLight = new THREE.PointLight(0xffaa55, 4.5, 20);
-      torchLight.decay = 1;
-      torchLight.castShadow = false;
-      scene.add(torchLight);
-    }
 
     resize();
   }
@@ -470,22 +467,13 @@ window.EngineCore = (() => {
     const doorTx = dungeon.bossEntrance ? dungeon.bossEntrance.wallTx : -1;
     const doorTy = dungeon.bossEntrance ? dungeon.bossEntrance.wallTy : -1;
 
-    const brickTex = makeBrickTexture();
-    brickTex.wrapS = brickTex.wrapT = THREE.RepeatWrapping;
-    const wallMat  = new THREE.MeshLambertMaterial({ map: brickTex, color: 0x8a6a4a });
-
-    const floorTex = makeFloorTexture();
-    floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
-    const floorMat = new THREE.MeshLambertMaterial({ color: 0x6a5a48, map: floorTex });
-
-    const corridorTex = makeFloorTexture();
-    corridorTex.wrapS = corridorTex.wrapT = THREE.RepeatWrapping;
-    const corridorMat = new THREE.MeshLambertMaterial({ color: 0x4a3a2a, map: corridorTex });
-
-    const bossFloorMat = new THREE.MeshLambertMaterial({
-      color: 0x3a2a1a,
-      map: makeBossFloorTexture(),
-    });
+    if (!_cachedBrickTex) { _cachedBrickTex = makeBrickTexture(); _cachedBrickTex.wrapS = _cachedBrickTex.wrapT = THREE.RepeatWrapping; }
+    if (!_cachedFloorTex) { _cachedFloorTex = makeFloorTexture(); _cachedFloorTex.wrapS = _cachedFloorTex.wrapT = THREE.RepeatWrapping; }
+    if (!_cachedBossFloorTex) { _cachedBossFloorTex = makeBossFloorTexture(); _cachedBossFloorTex.wrapS = _cachedBossFloorTex.wrapT = THREE.RepeatWrapping; }
+    const wallMat      = new THREE.MeshLambertMaterial({ map: _cachedBrickTex,    color: 0x8a6a4a });
+    const floorMat     = new THREE.MeshLambertMaterial({ color: 0x6a5a48, map: _cachedFloorTex });
+    const corridorMat  = new THREE.MeshLambertMaterial({ color: 0x4a3a2a, map: _cachedFloorTex });
+    const bossFloorMat = new THREE.MeshLambertMaterial({ color: 0x3a2a1a, map: _cachedBossFloorTex });
 
     const BORDER_H      = 14;
     const wallGeo       = new THREE.BoxGeometry(TILE, WALL_H,   TILE);
@@ -591,16 +579,22 @@ window.EngineCore = (() => {
     const doorTx = dungeon.bossEntrance ? dungeon.bossEntrance.wallTx : -1;
     const doorTy = dungeon.bossEntrance ? dungeon.bossEntrance.wallTy : -1;
 
-    const brickTex = makeBrickTexture();
-    brickTex.wrapS = brickTex.wrapT = THREE.RepeatWrapping;
-    const wallMat  = new THREE.MeshLambertMaterial({ map: brickTex, color: 0x8a6a4a });
-    const floorTex = makeFloorTexture();
-    floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
-    const floorMat    = new THREE.MeshLambertMaterial({ color: 0x6a5a48, map: floorTex });
-    const corridorTex = makeFloorTexture();
-    corridorTex.wrapS = corridorTex.wrapT = THREE.RepeatWrapping;
-    const corridorMat = new THREE.MeshLambertMaterial({ color: 0x4a3a2a, map: corridorTex });
-    const bossFloorMat = new THREE.MeshLambertMaterial({ color: 0x3a2a1a, map: makeBossFloorTexture() });
+    if (!_cachedBrickTex) {
+      _cachedBrickTex = makeBrickTexture();
+      _cachedBrickTex.wrapS = _cachedBrickTex.wrapT = THREE.RepeatWrapping;
+    }
+    if (!_cachedFloorTex) {
+      _cachedFloorTex = makeFloorTexture();
+      _cachedFloorTex.wrapS = _cachedFloorTex.wrapT = THREE.RepeatWrapping;
+    }
+    if (!_cachedBossFloorTex) {
+      _cachedBossFloorTex = makeBossFloorTexture();
+      _cachedBossFloorTex.wrapS = _cachedBossFloorTex.wrapT = THREE.RepeatWrapping;
+    }
+    const wallMat      = new THREE.MeshLambertMaterial({ map: _cachedBrickTex, color: 0x8a6a4a });
+    const floorMat     = new THREE.MeshLambertMaterial({ color: 0x6a5a48, map: _cachedFloorTex });
+    const corridorMat  = new THREE.MeshLambertMaterial({ color: 0x4a3a2a, map: _cachedFloorTex });
+    const bossFloorMat = new THREE.MeshLambertMaterial({ color: 0x3a2a1a, map: _cachedBossFloorTex });
     const BORDER_H      = 14;
     const wallGeo       = new THREE.BoxGeometry(TILE, WALL_H,   TILE);
     const floorGeo      = new THREE.BoxGeometry(TILE, 0.25,     TILE);
@@ -3008,14 +3002,6 @@ function updateTorchInteractionAnimations(dt) {
     updateTorchInteractionAnimations(dt || 0.016);
     updateActiveLanternLights(player, dt || 0.016);
 
-    if (torchLight && playerMesh) {
-      // Light is always in front of player so shadows fall behind
-      torchLight.position.set(
-        player.x + Math.cos(aimAngle) * 0.7,
-        1.6,
-        player.z + Math.sin(aimAngle) * 0.7
-      );
-    }
     if (playerMesh) {
       const dy = player._descentY || 0;
       playerMesh.visible = dy < 1.2; // hide while inside arrival portal (y≈3.5), emerge below it
@@ -3354,6 +3340,74 @@ function buildSegmentedWing(r, h, mat, side) {
   }
   function setAimAngleDirect(a) { aimAngle = a; }
 
+  /* ── Dungeon state stash / install ───────────────
+     Allows pre-building a dungeon on the title screen
+     and swapping it in instantly on game start.
+  ─────────────────────────────────────────────────── */
+  function reregisterLights() {
+    if (typeof SpatialManager === 'undefined') return;
+    SpatialManager.clear('lights');
+    wallTorches.forEach((t, i) => SpatialManager.insert('lights', i, [t.x, t.z]));
+  }
+
+  function stashDungeonState() {
+    const snap = {
+      group:         dungeonGroup,
+      wallTorches:   wallTorches.slice(),
+      lanternLights: lanternLights.slice(),
+      cameraDungeon: _cameraDungeon,
+      dungeonBounds: _dungeonBounds,
+      tileRoomId:    _tileRoomId,
+      tileRoomCols:  _tileRoomCols,
+    };
+    if (dungeonGroup) scene.remove(dungeonGroup);
+    lanternLights.forEach(l => { if (l.parent) l.parent.remove(l); });
+    dungeonGroup   = null;
+    wallTorches    = [];
+    lanternLights  = [];
+    _cameraDungeon = null;
+    _dungeonBounds = null;
+    _tileRoomId    = null;
+    _tileRoomCols  = 0;
+    _torchGrid     = null;
+    _visibleTorchSet.clear();
+    _lastWallTorchCount   = 0;
+    _lastTorchFingerprint = 0;
+    _lastLanternPx  = null;
+    _lastLanternPz  = null;
+    _cachedRoomId   = undefined;
+    _scanRoomIds.clear();
+    return snap;
+  }
+
+  function installDungeonState(snap) {
+    if (dungeonGroup) scene.remove(dungeonGroup);
+    lanternLights.forEach(l => { if (l.parent) l.parent.remove(l); });
+    dungeonGroup   = snap.group;
+    wallTorches    = snap.wallTorches;
+    lanternLights  = snap.lanternLights;
+    _cameraDungeon = snap.cameraDungeon;
+    _dungeonBounds = snap.dungeonBounds;
+    _tileRoomId    = snap.tileRoomId;
+    _tileRoomCols  = snap.tileRoomCols;
+    _torchGrid     = null; // rebuilt lazily on first query
+    _visibleTorchSet.clear();
+    _lastWallTorchCount   = 0;
+    _lastTorchFingerprint = 0;
+    _lastLanternPx  = null;
+    _lastLanternPz  = null;
+    _cachedRoomId   = undefined;
+    _scanRoomIds.clear();
+    if (dungeonGroup) scene.add(dungeonGroup);
+    lanternLights.forEach(l => scene.add(l));
+    // Re-populate SpatialManager lights layer — SpatialManager.init() was called before
+    // this, wiping it, but we skip buildDungeonChunked so registerWallTorch never re-runs.
+    if (typeof SpatialManager !== 'undefined') {
+      SpatialManager.clear('lights');
+      wallTorches.forEach((t, i) => SpatialManager.insert('lights', i, [t.x, t.z]));
+    }
+  }
+
   return {
     init, resize,
     buildDungeon, buildDungeonChunked,
@@ -3377,6 +3431,7 @@ function buildSegmentedWing(r, h, mat, side) {
     getAimAngle: () => aimAngle,
     setAimAngleDirect,
     isPointerLocked,
+    reregisterLights, stashDungeonState, installDungeonState,
     get chestMeshes() { return chestMeshes; },
     scene, camera, renderer, clock,
   };

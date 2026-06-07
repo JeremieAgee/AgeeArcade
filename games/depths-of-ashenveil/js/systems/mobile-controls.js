@@ -25,9 +25,10 @@
   overlay.innerHTML = `
     <div id="joyRing"><div id="joyNub"></div></div>
     <div id="mobileRight">
-      <button id="mBtnBlink"    class="mob-btn" aria-label="Blink">✦</button>
-      <button id="mBtnInteract" class="mob-btn" aria-label="Interact">E</button>
-      <button id="mBtnAttack"   class="mob-btn atk" aria-label="Attack">⚔</button>
+      <button id="mBtnBlink"     class="mob-btn" aria-label="Blink">✦</button>
+      <button id="mBtnInteract"  class="mob-btn" aria-label="Interact">E</button>
+      <button id="mBtnAttack"    class="mob-btn atk" aria-label="Attack">⚔</button>
+      <button id="mBtnInventory" class="mob-btn" aria-label="Inventory">📦</button>
     </div>
     <button id="mBtnPause" aria-label="Pause">❙❙</button>
     <div id="joyZone"></div>
@@ -141,6 +142,21 @@
   wireBtn('mBtnInteract', 'interactPending');
   wireBtn('mBtnBlink',    'blinkPending');
   wireBtn('mBtnPause',    'pausePending');
+
+  const invBtn = document.getElementById('mBtnInventory');
+  if (invBtn) {
+    invBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof UI !== 'undefined' && UI.togglePanel) UI.togglePanel('inv');
+      invBtn.classList.add('mob-pressed');
+    }, { passive: false });
+    invBtn.addEventListener('touchend', e => {
+      e.preventDefault();
+      invBtn.classList.remove('mob-pressed');
+    }, { passive: false });
+    invBtn.addEventListener('touchcancel', () => invBtn.classList.remove('mob-pressed'));
+  }
 
   /* ── Pause / contextual visibility ──────────────── */
   // Cache DOM refs once — querying by ID every 100ms is unnecessary overhead

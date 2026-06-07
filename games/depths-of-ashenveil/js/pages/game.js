@@ -29,6 +29,13 @@ const Game = (() => {
 
   const _isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
+  function toRoman(n) {
+    const vals = [10,9,5,4,1], syms = ['X','IX','V','IV','I'];
+    let r = '';
+    for (let i = 0; i < vals.length; i++) while (n >= vals[i]) { r += syms[i]; n -= vals[i]; }
+    return r || String(n);
+  }
+
   /* ── State ───────────────────────────────────── */
   let player  = null;
   let dungeon = null;
@@ -219,6 +226,7 @@ const Game = (() => {
 
   // Pre-built game state prepared while title/death screen is showing
   let _prebuilt = null;
+  let _prebuiltContinue = null; // pre-built geometry for a saved run, stashed on title screen
   // Incremented on every start() call — cancels stale warmup RAF chains
   let _startGen = 0;
   // Incremented on every preload() call and on start() — cancels stale preload async chains
@@ -476,6 +484,7 @@ const Game = (() => {
   // Geometry is built in start() during the entry cinematic.
   function preload() {
     _prebuilt = null;
+    _prebuiltContinue = null;
     refreshSaveMeta();
     updateTitleStartLabel();
 
@@ -504,12 +513,13 @@ const Game = (() => {
         null, // no spawn-ready callback needed on title screen
         () => {
           if (_preloadGen !== myGen) return;
-          // Snap lanterns now — they're all registered
           Engine.snapLanternsToPlayer(p.x, p.z);
           _prebuilt = { player: p, dungeon: d, geometryReady: true };
           if (btn) btn.disabled = false;
           updateTitleStartLabel();
           if (loadEl) loadEl.style.opacity = '0';
+          // After floor 1 is done, pre-build continue floor geometry off-screen
+          _prebuildContinueFloor(p, d, myGen);
         }
       );
     }).catch(err => {
@@ -541,13 +551,46 @@ const Game = (() => {
     });
   }
 
+  /* ── Pre-build continue floor geometry on title screen ── */
+  function _prebuildContinueFloor(floor1Player, floor1Dungeon, myGen) {
+    _prebuiltContinue = null;
+    const saved = loadSavedRun();
+    if (!saved) return;
+    try {
+      const cd = reviveDungeon(saved.dungeon);
+      const cp = saved.player;
+      if (typeof SpatialManager !== 'undefined') SpatialManager.init(cd);
+      // Stash floor 1 state — it stays off-scene while we build the continue floor
+      const floor1Snap = Engine.stashDungeonState();
+      Engine.buildDungeonChunked(cd, null, () => {
+        if (_preloadGen !== myGen) {
+          // Preload was cancelled — restore floor 1 and discard
+          Engine.stashDungeonState();
+          Engine.installDungeonState(floor1Snap);
+          Engine.snapLanternsToPlayer(floor1Player.x, floor1Player.z);
+          return;
+        }
+        Engine.snapLanternsToPlayer(cp.x, cp.z);
+        const continueSnap = Engine.stashDungeonState();
+        _prebuiltContinue = { player: cp, dungeon: cd, dungeonState: continueSnap, geometryReady: true };
+        // Restore floor 1 as the visible title screen background
+        if (typeof SpatialManager !== 'undefined') SpatialManager.init(floor1Dungeon);
+        Engine.installDungeonState(floor1Snap);
+        Engine.snapLanternsToPlayer(floor1Player.x, floor1Player.z);
+      });
+    } catch (err) {
+      console.warn('[Depths] continue preload failed', err);
+    }
+  }
+
   /* ── Entry cinematic ─────────────────────────── */
   function showEntryCinematic(gen, snap, onReveal) {
     const el = document.getElementById('entryCinematic');
     if (!el) return;
     el.style.display = 'flex';
     setStartupStatus('Entering the dungeon...');
-    requestAnimationFrame(() => el.classList.add('ec-visible'));
+    void el.offsetHeight; // force reflow so the transition starts this frame
+    el.classList.add('ec-visible');
     const MIN_MS = snap && snap.geometryReady ? 1800 : 2400;
     const MAX_MS = 3900;
     const t0 = Date.now();
@@ -609,6 +652,18 @@ const Game = (() => {
     const snap = _prebuilt;
     _prebuilt = null; // consumed — will be rebuilt when player dies or quits (die/goToTitle call preload)
 
+    // Show cinematic immediately so the button click feels instant.
+    // loop() is deferred to onReveal so the 3D render loop doesn't compete
+    // with the CSS animations and cause mid-cinematic jank.
+    if (rafId) cancelAnimationFrame(rafId);
+    const gen = ++_startGen;
+    UI.hideTitleAndDeath();
+    showEntryCinematic(gen, snap, () => {
+      refreshSaveMeta(Save.recordRunStart());
+      persistActiveRun(true);
+      loop();
+    });
+
     _pendingUpdates = null; _pendingEvents = null; _pendingDead = null;
     _aiTickInFlight = false;
     if (_aiWorker) _aiWorker.postMessage({ type: 'reset' });
@@ -618,6 +673,8 @@ const Game = (() => {
       dungeon = snap.dungeon;
       if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
       Engine.init();
+      // SpatialManager.init wiped the lights layer; re-register so torches activate
+      Engine.reregisterLights();
       setTimeout(pregenNextFloor, 800);
     } else {
       // Fallback: geometry not ready, build now
@@ -654,16 +711,6 @@ const Game = (() => {
     UI.setFloor(floor);
     refreshSaveMeta(Save.recordFloorReached(floor, player.level));
     UI.addMsg('You descend into the dungeon...', 'warn');
-
-    if (rafId) cancelAnimationFrame(rafId);
-    const gen = ++_startGen;
-
-    UI.hideTitleAndDeath();
-    loop();
-    showEntryCinematic(gen, snap, () => {
-      refreshSaveMeta(Save.recordRunStart());
-      persistActiveRun(true);
-    });
   }
 
   /* ── Next floor ──────────────────────────────── */
@@ -715,11 +762,19 @@ const Game = (() => {
       Engine.init();
       Engine.clearDynamic();
       if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
-      // Chunked build — spawn area ready quickly, rest fills in while player moves
-      Engine.buildDungeonChunked(dungeon,
-        null,
-        () => { Engine.snapLanternsToPlayer(player.x, player.z); pregenNextFloor(); }
-      );
+      if (_prebuiltContinue && _prebuiltContinue.dungeonState) {
+        // Geometry was pre-built on the title screen — instant swap, no build during cinematic
+        Engine.installDungeonState(_prebuiltContinue.dungeonState);
+        Engine.snapLanternsToPlayer(player.x, player.z);
+        setTimeout(pregenNextFloor, 800);
+      } else {
+        // Fallback: build during cinematic
+        Engine.buildDungeonChunked(dungeon,
+          null,
+          () => { Engine.snapLanternsToPlayer(player.x, player.z); pregenNextFloor(); }
+        );
+      }
+      _prebuiltContinue = null; // consumed
       Engine.buildPlayerMesh(player);
 
       if (_aiWorker) {
@@ -732,12 +787,22 @@ const Game = (() => {
       UI.refresh(player);
       UI.setFloor(floor);
       UI.addMsg('Run restored.', 'level');
-      UI.hideTitleAndDeath();
+
       if (rafId) cancelAnimationFrame(rafId);
-      ++_startGen;
-      loop();
-      // Start N+1 pre-generation after restore settles
-      setTimeout(pregenNextFloor, 1000);
+      const gen = ++_startGen;
+      UI.hideTitleAndDeath();
+
+      // Update cinematic floor text for continue
+      const ecFloor = document.querySelector('#entryCinematic .ec-floor');
+      if (ecFloor) ecFloor.textContent = `FLOOR ${toRoman(floor)} — CONTINUING YOUR DESCENT`;
+      showEntryCinematic(gen, null, () => {
+        persistActiveRun(true);
+        // restore floor text for future new runs
+        if (ecFloor) ecFloor.textContent = 'FLOOR I — YOUR DESCENT BEGINS';
+        loop();
+        setTimeout(pregenNextFloor, 1000);
+      });
+
       persistActiveRun(true);
       return true;
     } catch (err) {
