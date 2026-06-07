@@ -27,8 +27,8 @@
     <div id="mobileRight">
       <button id="mBtnBlink"     class="mob-btn" aria-label="Blink">✦</button>
       <button id="mBtnInteract"  class="mob-btn" aria-label="Interact">E</button>
-      <button id="mBtnAttack"    class="mob-btn atk" aria-label="Attack">⚔</button>
       <button id="mBtnInventory" class="mob-btn" aria-label="Inventory">📦</button>
+      <button id="mBtnAttack"    class="mob-btn atk" aria-label="Attack">⚔</button>
     </div>
     <button id="mBtnPause" aria-label="Pause">❙❙</button>
     <div id="joyZone"></div>
