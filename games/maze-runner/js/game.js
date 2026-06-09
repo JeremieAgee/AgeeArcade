@@ -523,8 +523,8 @@
         const wallS = gr + 1 >= md.H || md.grid[gr + 1][gc] === 1;
         const wallE = gc + 1 >= md.W || md.grid[gr][gc + 1] === 1;
         const wallW = gc - 1 < 0    || md.grid[gr][gc - 1] === 1;
-        // ewWalls → corridor N-S, blade wide on X, swings along Z (rotation.x)
-        // nsWalls → corridor E-W, blade wide on Z, swings along X (rotation.z)
+        // ewWalls → corridor N-S, blade wide on X, swings in X (rotation.z = wall to wall)
+        // nsWalls → corridor E-W, blade wide on Z, swings in Z (rotation.x = wall to wall)
         const swingAxis = (wallE && wallW) ? 'x' : 'z';
         obj.swingAxis = swingAxis;
 
@@ -541,16 +541,16 @@
         pivot.position.set(0, WALL_H - 0.05, 0);
         group.add(pivot);
 
-        // Thick wooden shaft
-        const shaftGeo = new THREE.CylinderGeometry(0.038, 0.030, 1.9, 8);
+        // Thick wooden shaft — ends at blade top (axeHead y=-1.9, blade half-height=0.36 → top at -1.54)
+        const shaftGeo = new THREE.CylinderGeometry(0.038, 0.030, 1.54, 8);
         const shaft = new THREE.Mesh(shaftGeo, matWood);
-        shaft.position.y = -0.95;
+        shaft.position.y = -0.77;
         shaft.castShadow = true;
         pivot.add(shaft);
 
         // Metal collar where shaft meets axe head
         const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.12, 8), matMetal);
-        collar.position.y = -1.84;
+        collar.position.y = -1.60;
         pivot.add(collar);
 
         // Axe head group at bottom of shaft
@@ -575,9 +575,10 @@
         axeHead.add(bevel);
 
         // Decorative boss disc at center
-        const bossGeo = new THREE.CylinderGeometry(0.10, 0.10, swingAxis === 'z' ? bladeD + 0.01 : bladeW + 0.01, 8);
+        const bossGeo = new THREE.CylinderGeometry(0.10, 0.10, swingAxis === 'x' ? bladeW + 0.01 : bladeD + 0.01, 8);
         const boss = new THREE.Mesh(bossGeo, matMetal);
-        if (swingAxis === 'z') boss.rotation.z = Math.PI / 2;
+        if (swingAxis === 'x') boss.rotation.z = Math.PI / 2;  // disc runs along X axis
+        else boss.rotation.x = Math.PI / 2;                    // disc runs along Z axis
         axeHead.add(boss);
 
         // Top spike
@@ -1545,11 +1546,11 @@
       } else if (type === 'axe') {
         const arc = Math.sin(t * 1.5 + phase) * 0.72;
         if (obj.swingAxis === 'x') {
-          parts.pivot.rotation.x = arc;
-          parts.pivot.rotation.z = 0;
-        } else {
-          parts.pivot.rotation.z = arc;
+          parts.pivot.rotation.z = arc;  // blade wide on X → swing tip in X (wall to wall)
           parts.pivot.rotation.x = 0;
+        } else {
+          parts.pivot.rotation.x = arc;  // blade wide on Z → swing tip in Z (wall to wall)
+          parts.pivot.rotation.z = 0;
         }
 
       } else if (type === 'plate') {
@@ -1626,22 +1627,22 @@
         const angVel = Math.cos(tNow * 1.5 + obj.phase) * 0.72 * 1.5;
         // Blade fills corridor width — hit when player is within the cell and axe head passes through
         if (obj.swingAxis === 'x') {
-          // Swings forward/back along Z; blade is wide on X (fills corridor)
-          const axeZ = wz + Math.sin(parts.pivot.rotation.x) * 1.9;
-          if (distX < CELL * 0.42 && Math.abs(pz - axeZ) < 0.38) {
-            hit = true;
-            const speed = Math.abs(angVel);
-            _swingHit = Math.round(DAMAGE_PER_HIT * (0.4 + 0.6 * speed / 1.08));
-            knockVZ += Math.sign(angVel) * speed * 4.5;
-          }
-        } else {
-          // Swings left/right along X; blade is wide on Z (fills corridor)
+          // Blade wide on X, swings in X direction (wall to wall across N-S corridor)
           const axeX = wx + Math.sin(parts.pivot.rotation.z) * 1.9;
           if (distZ < CELL * 0.42 && Math.abs(px - axeX) < 0.38) {
             hit = true;
             const speed = Math.abs(angVel);
             _swingHit = Math.round(DAMAGE_PER_HIT * (0.4 + 0.6 * speed / 1.08));
             knockVX += Math.sign(angVel) * speed * 4.5;
+          }
+        } else {
+          // Blade wide on Z, swings in Z direction (wall to wall across E-W corridor)
+          const axeZ = wz + Math.sin(parts.pivot.rotation.x) * 1.9;
+          if (distX < CELL * 0.42 && Math.abs(pz - axeZ) < 0.38) {
+            hit = true;
+            const speed = Math.abs(angVel);
+            _swingHit = Math.round(DAMAGE_PER_HIT * (0.4 + 0.6 * speed / 1.08));
+            knockVZ += Math.sign(angVel) * speed * 4.5;
           }
         }
 
