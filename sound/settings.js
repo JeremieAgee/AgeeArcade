@@ -176,17 +176,15 @@ window.ArcadeSoundSettings = (() => {
       }
       @media (max-width: 640px) {
         .arcade-sound-settings {
-          left: 50%;
-          bottom: 10px;
-          transform: translateX(-50%);
+          left: 14px;
+          bottom: 14px;
         }
         .arcade-sound-toggle {
           width: 42px;
           height: 42px;
         }
         .arcade-sound-panel {
-          left: 50%;
-          transform: translateX(-50%);
+          left: 0;
         }
       }
     `;

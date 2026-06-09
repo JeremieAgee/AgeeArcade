@@ -13,9 +13,9 @@ const games = [
         title: "Maze Runner",
         description: "Endless procedurally generated 3D mazes. Dodge instant-death traps, collect loot, and survive as many floors as you can.",
         genre: ["Arcade", "Roguelike"],
-        thumbnail: "./games/maze-runner/thumb.jpg",
-        url: "./games/maze-runner/",
-        leaderboardUrl: "./games/maze-runner/leaderboard/",
+        thumbnail: "/AgeeArcade/games/maze-runner/thumb.jpg",
+        url: "/AgeeArcade/games/maze-runner/",
+        leaderboardUrl: "/AgeeArcade/games/maze-runner/leaderboard/",
         status: "live"
     },
     {
@@ -23,9 +23,19 @@ const games = [
         title: "Depths of Ashenveil",
         description: "A 3D browser dungeon crawler. Explore the depths, battle enemies, and uncover the secrets of Ashenveil.",
         genre: ["RPG", "Dungeon Crawler"],
-        thumbnail: "./games/depths-of-ashenveil/thumb.jpg",
-        url: "./games/depths-of-ashenveil/",
-        leaderboardUrl: "./games/depths-of-ashenveil/leaderboard/",
+        thumbnail: "/AgeeArcade/games/depths-of-ashenveil/thumb.jpg",
+        url: "/AgeeArcade/games/depths-of-ashenveil/",
+        leaderboardUrl: "/AgeeArcade/games/depths-of-ashenveil/leaderboard/",
+        status: "live"
+    },
+    {
+        id: "blacktide-bastion",
+        title: "Blacktide Bastion",
+        description: "A pirate defense game. Hold the fort against waves of enemy ships in a swashbuckling battle for the seas.",
+        genre: ["Arcade", "Defense"],
+        thumbnail: "/AgeeArcade/games/blacktide-bastion/thumb.jpg",
+        url: "/AgeeArcade/games/blacktide-bastion/",
+        leaderboardUrl: "/AgeeArcade/games/blacktide-bastion/leaderboard/",
         status: "live"
     }
 ];

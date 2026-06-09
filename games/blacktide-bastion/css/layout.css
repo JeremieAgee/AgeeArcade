@@ -1,0 +1,207 @@
+/* layout.css — page shell, game column, responsive layout */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: #08101e;
+  color: #c8a04a;
+  font-family: 'IM Fell English', serif;
+}
+
+/* ── TOP BRAND BAR ───────────────────────────────── */
+#topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 20px;
+  background: linear-gradient(180deg, #1a2e4a, #0d1a2e);
+  border-bottom: 2px solid #1a4a7a;
+  height: 38px;
+}
+#brandName {
+  font-family: 'Cinzel', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #c8a04a;
+  letter-spacing: 3px;
+  text-shadow: 0 0 20px #00aaff44;
+}
+#topTagline {
+  font-size: 12px;
+  color: #7a9ab2;
+  font-style: italic;
+}
+
+/* ── PAGE SHELL ──────────────────────────────────── */
+#pageShell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#mainRow {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 10px 0 10px;
+  width: 100%;
+  max-width: 1260px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── GAME COLUMN ─────────────────────────────────── */
+#gameColumn {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+/* Three.js canvas mount */
+#canvasMount {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  background: #050c16;
+  position: relative;
+  overflow: hidden;
+}
+#canvasMount canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  cursor: crosshair;
+}
+
+/* ── RIGHT SIDEBAR ───────────────────────────────── */
+#adSidebar {
+  flex: 0 0 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding-top: 4px;
+}
+
+.arcade-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 14px;
+  height: 100%;
+  background: linear-gradient(160deg, #1a2e4a 60%, #0d1a2e);
+  border: 1px solid #1a4a7a;
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.arcade-sidebar:hover { background: linear-gradient(160deg, #1e3860 60%, #0f2038); border-color: #c8a04a; }
+.arcade-sidebar-glyph { font-size: 32px; color: #c8a04a; text-shadow: 0 0 18px #00aaff44; }
+.arcade-sidebar-title {
+  font-family: 'Cinzel', serif;
+  font-size: 13px; font-weight: 700;
+  color: #c8a04a; letter-spacing: 4px; text-align: center;
+}
+.arcade-sidebar-divider {
+  width: 60px; height: 1px;
+  background: linear-gradient(90deg, transparent, #1a4a7a, transparent);
+}
+.arcade-sidebar-body {
+  font-family: 'IM Fell English', serif;
+  font-style: italic; font-size: 11px;
+  color: #7a9ab2; text-align: center; line-height: 1.6;
+}
+.arcade-sidebar-cta {
+  font-family: 'Cinzel', serif;
+  font-size: 10px; letter-spacing: 2px;
+  color: #3a6a8a; margin-top: 4px; transition: color 0.2s;
+}
+.arcade-sidebar:hover .arcade-sidebar-cta { color: #c8a04a; }
+
+/* ── BOTTOM BANNER ───────────────────────────────── */
+#adBanner {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 10px 0;
+  width: 100%;
+}
+.arcade-banner {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 24px;
+  background: linear-gradient(90deg, #1a2e4a, #0d1a2e, #1a2e4a);
+  border: 1px solid #0d2a4a;
+  text-decoration: none; max-width: 728px; width: 100%;
+  transition: border-color 0.2s;
+}
+.arcade-banner:hover { border-color: #c8a04a; }
+.arcade-banner-icon  { font-size: 20px; color: #c8a04a; flex-shrink: 0; }
+.arcade-banner-text  {
+  font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700;
+  letter-spacing: 3px; color: #c8a04a; white-space: nowrap;
+}
+.arcade-banner-divider { color: #1a3a5a; font-size: 18px; }
+.arcade-banner-sub  {
+  font-family: 'IM Fell English', serif;
+  font-style: italic; font-size: 12px; color: #7a9ab2; flex: 1;
+}
+.arcade-banner-cta  {
+  font-family: 'Cinzel', serif; font-size: 10px;
+  letter-spacing: 2px; color: #2a5a7a; white-space: nowrap;
+  flex-shrink: 0; transition: color 0.2s;
+}
+.arcade-banner:hover .arcade-banner-cta { color: #c8a04a; }
+
+/* ── OVERLAY LAYER ───────────────────────────────── */
+#overlayLayer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+#overlayLayer > * { pointer-events: all; }
+
+/* ── DAMAGE FLASH ────────────────────────────────── */
+#damageFlash {
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(200,0,0,0.0) 30%, rgba(200,0,0,0.55) 100%);
+  opacity: 0; pointer-events: none; z-index: 150;
+  transition: opacity 0.05s;
+}
+
+/* ── SCORE POPS ──────────────────────────────────── */
+.score-pop {
+  position: fixed;
+  font-family: 'Cinzel', serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #f0d060;
+  text-shadow: 0 1px 4px #000;
+  pointer-events: none;
+  z-index: 170;
+  transform: translateX(-50%);
+  animation: scorePop 0.9s ease-out forwards;
+}
+@keyframes scorePop {
+  from { opacity: 1; transform: translateX(-50%) translateY(0);   }
+  to   { opacity: 0; transform: translateX(-50%) translateY(-38px); }
+}
+
+/* ── RESPONSIVE ──────────────────────────────────── */
+@media (max-width: 1000px) {
+  #adSidebar { display: none; }
+  .arcade-banner { max-width: 100%; }
+  #mainRow { padding: 6px; gap: 0; }
+}
+@media (max-width: 760px) {
+  #adBanner   { display: none; }
+  #topTagline { display: none; }
+}
