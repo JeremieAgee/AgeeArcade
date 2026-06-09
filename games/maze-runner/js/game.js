@@ -70,11 +70,14 @@
 
   // Camera (fixed angle, yaw-only orbit removed)
   let camYaw   = 0;
-  let camPitch = 1.32; // ~76° (closer to top-down)
+  let camPitch = 1.13; // ~65° — dungeon angle
 
   let MAT = {};
   let mmCanvas, mmCtx;
   let visited = null;
+
+  // Analog joystick values from mobile d-pad (-1..+1)
+  let _joyAx = 0, _joyAy = 0;
 
   // ─── Helpers ───────────────────────────────────────
   function cellKey(gr, gc) { return gr * 10000 + gc; }
@@ -99,15 +102,9 @@
 
   // ─── Materials (created once) ──────────────────────
   function buildMaterials() {
-    MAT.wall = new THREE.MeshStandardMaterial({
-      color: 0x1c2b3a, roughness: 0.82, metalness: 0.12,
-    });
-    MAT.wallTop = new THREE.MeshStandardMaterial({
-      color: 0x243344, roughness: 0.9, metalness: 0.05,
-    });
-    MAT.floor = new THREE.MeshStandardMaterial({
-      color: 0x0b0b16, roughness: 0.98, metalness: 0.0,
-    });
+    MAT.wall    = new THREE.MeshLambertMaterial({ color: 0x4a5e72 });
+    MAT.wallTop = new THREE.MeshLambertMaterial({ color: 0x566880 });
+    MAT.floor   = new THREE.MeshLambertMaterial({ color: 0x282840 });
 
     // Lava: deep glowing pool
     MAT.lava = new THREE.MeshStandardMaterial({
@@ -155,47 +152,33 @@
   function initRenderer() {
     const canvas = document.getElementById('gameCanvas');
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0x02020a);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
-    renderer.toneMapping       = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled   = false;
+    renderer.outputEncoding      = THREE.sRGBEncoding;
+    renderer.toneMapping         = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
 
     scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x02020a, 0.038);
+    scene.fog = new THREE.FogExp2(0x02020a, 0.025);
 
     camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 120);
     clock  = new THREE.Clock();
 
-    // Sky/ground ambient
-    const hemi = new THREE.HemisphereLight(0x1a2244, 0x100800, 1.0);
-    scene.add(hemi);
+    // Flat ambient — dim base so deep-dungeon corners stay dark
+    scene.add(new THREE.AmbientLight(0x4a5870, 0.6));
 
-    // Directional (moonlike cool light with shadows)
-    const sun = new THREE.DirectionalLight(0xaabbee, 1.4);
-    sun.position.set(6, 24, 10);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
-    sun.shadow.camera.near   = 1;
-    sun.shadow.camera.far    = 80;
-    sun.shadow.camera.left   = sun.shadow.camera.bottom = -30;
-    sun.shadow.camera.right  = sun.shadow.camera.top    =  30;
-    sun.shadow.bias = -0.0015;
-    scene.add(sun);
-
-    // Torch light — warm orange, follows player hand
-    playerLight = new THREE.PointLight(0xff9933, 4.0, 11);
+    // Torch — warm point light that follows the player
+    playerLight = new THREE.PointLight(0xffaa44, 4.0, 18);
     scene.add(playerLight);
 
-    // Exit portal light
-    exitLight = new THREE.PointLight(0x00ff88, 3.5, 15);
-    exitLight.visible = false;
+    // Exit portal light — starts at 0, enabled when exit is placed
+    exitLight = new THREE.PointLight(0x00ff88, 0.0, 20);
     scene.add(exitLight);
 
-    // Lava ambient glow (follows player, only intense when near lava)
-    lavaLight = new THREE.PointLight(0xff4400, 0.0, 14);
+    // Lava glow — starts at 0, enabled near lava tiles
+    lavaLight = new THREE.PointLight(0xff4400, 0.0, 18);
     scene.add(lavaLight);
   }
 
@@ -249,7 +232,7 @@
     if (lootGroup)   { scene.remove(lootGroup);   lootGroup   = null; }
     if (playerGroup) { scene.remove(playerGroup); playerGroup = null; }
     if (jumpShadow)  { scene.remove(jumpShadow);  jumpShadow  = null; }
-    exitLight.visible = false;
+    exitLight.intensity = 0;
     lavaLight.intensity = 0;
     deathAnim = null;
     playerParts = {};
@@ -684,7 +667,7 @@
     exitMesh.rotation.x = Math.PI / 2;
     scene.add(exitMesh);
     exitLight.position.set(wx, 2, wz);
-    exitLight.visible = true;
+    exitLight.intensity = 4.5;
   }
 
   // ─── Loot chests ───────────────────────────────────
@@ -1727,7 +1710,7 @@
       const pulse = 1 + 0.14 * Math.sin(exitAngle * 1.9);
       exitMesh.scale.setScalar(pulse);
     }
-    if (exitLight.visible) {
+    if (exitLight.intensity > 0) {
       exitLight.intensity = 3.0 + 1.0 * Math.sin(t * 3.0);
     }
 
@@ -1766,7 +1749,10 @@
       if (playerParts.shinR) playerParts.shinR.rotation.x =  0.8;
     }
 
-    // Torch flicker — flame size, position, and light intensity
+    // Torch light always flickers — not gated on playerParts so it works from frame 1
+    playerLight.intensity = 3.5 + 0.7 * Math.sin(t * 11.5) + 0.4 * Math.sin(t * 6.9);
+
+    // Flame mesh animation — only when the player torch exists
     if (playerParts.flame && playerParts.flameMat) {
       const flicker  = 0.85 + 0.18 * Math.sin(t * 14.3) + 0.10 * Math.sin(t * 9.1) + 0.07 * Math.sin(t * 23.7);
       playerParts.flame.scale.setScalar(flicker);
@@ -1775,8 +1761,6 @@
       if (playerParts.tipMat) {
         playerParts.tipMat.emissiveIntensity = 4.0 + 2.5 * Math.sin(t * 15.0);
       }
-      // Torch light flickers with the flame
-      playerLight.intensity = 3.5 + 2.0 * Math.sin(t * 11.5) + 1.0 * Math.sin(t * 6.9);
     }
   }
 
@@ -1826,7 +1810,6 @@
     const DPAD_DEAD = 10; // px dead zone
     const DPAD_MAX  = 52; // max nub travel px
     let dpadTouchId = null;
-    let _joyAx = 0, _joyAy = 0; // analog joystick values -1..+1
 
     function dpadUpdate(cx, cy) {
       const rect = dpad.getBoundingClientRect();
