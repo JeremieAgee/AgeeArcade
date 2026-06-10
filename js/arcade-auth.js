@@ -264,6 +264,12 @@ const ArcadeAuth = (() => {
   function getEmail()   { return _user?.email ?? null; }
   function isLoggedIn() { return !!_user; }
 
+  async function getAccessToken() {
+    if (!_client) return null;
+    const { data } = await _client.auth.getSession();
+    return data?.session?.access_token ?? null;
+  }
+
   /* ── Styles ─────────────────────────────────── */
   function _injectStyles() {
     const s = document.createElement('style');
@@ -377,5 +383,5 @@ const ArcadeAuth = (() => {
     init();
   }
 
-  return { show, hide, signIn, signUp, signOut, getUser, getUserId, getEmail, isLoggedIn, isAdmin: _isAdmin };
+  return { show, hide, signIn, signUp, signOut, getUser, getUserId, getEmail, isLoggedIn, isAdmin: _isAdmin, getAccessToken };
 })();
