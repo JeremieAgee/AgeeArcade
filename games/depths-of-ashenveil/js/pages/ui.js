@@ -273,6 +273,11 @@ const UI = (() => {
     if (!prompt || !input || typeof Save === 'undefined') return;
 
     pendingLeaderboardScore = { floor, level };
+    if (window.AgeeLeaderboard && AgeeLeaderboard.isLoggedIn && AgeeLeaderboard.isLoggedIn()) {
+      submitLeaderboardNickname();
+      return;
+    }
+
     prompt.hidden = false;
     input.value = '';
     input.onkeydown = event => {

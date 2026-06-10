@@ -24,7 +24,12 @@
     `).join('');
   }
 
-  document.addEventListener('DOMContentLoaded', renderLeaderboard);
+  document.addEventListener('DOMContentLoaded', () => {
+    renderLeaderboard();
+    if (window.Save && Save.ready && typeof Save.ready.then === 'function') {
+      Save.ready.then(renderLeaderboard).catch(() => {});
+    }
+  });
   document.addEventListener('depths-save-change', event => {
     if (!event.detail || event.detail.kind === 'leaderboard' || event.detail.kind === 'all') {
       renderLeaderboard();

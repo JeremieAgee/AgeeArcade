@@ -60,6 +60,8 @@ const Game = (() => {
   const S = { TITLE:0, PLAYING:1, REELING:2, OVER:3 };
   let gs = S.TITLE, score = 0, timer = 90, wt = 0;
   let hi = +(localStorage.getItem('sf_hi') || 0);
+  const LB_KEY = 'spear_fisher_lb';
+  const LB_SYNC_KEY = 'spear_fisher_lb.synced.v1';
 
   // ── 3D context (shared arcade engine) ──────────────────
   let gfx, renderer, scene, camera, clock;
@@ -658,6 +660,91 @@ const Game = (() => {
     updateHUD();
   }
 
+  function loadLeaderboardScores() {
+    try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; }
+    catch (_) { return []; }
+  }
+
+  function leaderboardPayload(entry) {
+    const dateMs = Number(entry.date) || Date.now();
+    return {
+      player_id: window.AgeeLeaderboard ? AgeeLeaderboard.playerId() : 'guest-player',
+      nickname: window.AgeeLeaderboard
+        ? AgeeLeaderboard.cleanName(entry.name, 'FISHER')
+        : String(entry.name || 'FISHER').trim().substring(0, 16),
+      score: Number(entry.score) || 0,
+      created_at: new Date(dateMs).toISOString(),
+    };
+  }
+
+  function syncLocalLeaderboard() {
+    if (!window.AgeeLeaderboard || !AgeeLeaderboard.syncLocal) return;
+    AgeeLeaderboard.syncLocal(
+      'spear_fisher_leaderboard',
+      loadLeaderboardScores(),
+      leaderboardPayload,
+      { syncKey: LB_SYNC_KEY }
+    ).then(result => {
+      if (result && result.failed) console.warn('[Spear Fisher leaderboard] Local sync failed for some rows.', result);
+    });
+  }
+
+  function saveLeaderboardScore(name) {
+    const nick = window.AgeeLeaderboard && AgeeLeaderboard.submissionName
+      ? AgeeLeaderboard.submissionName(name, 'FISHER')
+      : String(name || 'FISHER').trim().substring(0, 16);
+    const date = Date.now();
+    const rows = loadLeaderboardScores();
+    const entry = {
+      name: nick,
+      score: Number(score) || 0,
+      date,
+    };
+    rows.push(entry);
+    rows.sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0) || (Number(a.date) || 0) - (Number(b.date) || 0));
+    rows.splice(20);
+    localStorage.setItem(LB_KEY, JSON.stringify(rows));
+
+    if (window.AgeeLeaderboard && AgeeLeaderboard.insert) {
+      AgeeLeaderboard.insert('spear_fisher_leaderboard', leaderboardPayload(entry), { syncKey: LB_SYNC_KEY }).then(result => {
+        if (result && result.error) console.warn('[Spear Fisher leaderboard] Supabase insert failed.', result.error);
+      });
+    }
+  }
+
+  function triggerLeaderboardPrompt() {
+    const prompt = document.getElementById('leaderboardPrompt');
+    const rows = loadLeaderboardScores();
+    const qualifies = rows.length < 20 || score > (Number(rows[rows.length - 1]?.score) || 0);
+    if (!qualifies) {
+      if (prompt) prompt.style.display = 'none';
+      return;
+    }
+
+    if (window.AgeeLeaderboard && AgeeLeaderboard.isLoggedIn && AgeeLeaderboard.isLoggedIn()) {
+      saveLeaderboardScore('');
+      if (prompt) prompt.style.display = 'none';
+      return;
+    }
+
+    if (prompt) prompt.style.display = 'block';
+    const saveBtn = document.getElementById('lbSaveBtn');
+    const input = document.getElementById('lbNickname');
+    if (input) {
+      input.value = '';
+      setTimeout(() => input.focus(), 0);
+      input.onkeydown = event => {
+        if (event.key === 'Enter' && saveBtn) saveBtn.click();
+      };
+    }
+    if (saveBtn) {
+      saveBtn.onclick = () => {
+        saveLeaderboardScore(input ? input.value : 'FISHER');
+        if (prompt) prompt.style.display = 'none';
+      };
+    }
+  }
+
   function endGame() {
     gs = S.OVER;
     SFX.once('sf_gameover');
@@ -667,6 +754,7 @@ const Game = (() => {
     const msgs = ['Good haul!', 'The sea provides!', 'A worthy catch!', 'The ocean remembers.', 'You are one with the water.'];
     document.getElementById('finalMsg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
     document.getElementById('gameoverScreen').classList.add('active');
+    triggerLeaderboardPrompt();
   }
 
   function dst(ax, ay, bx, by) { const dx = ax - bx, dy = ay - by; return Math.sqrt(dx * dx + dy * dy); }
@@ -837,6 +925,7 @@ const Game = (() => {
   // ── Init ───────────────────────────────────────────────
   function init() {
     buildScene();
+    setTimeout(syncLocalLeaderboard, 0);
     window.addEventListener('pointerdown', () => SFX.init(), { once: true });
     window.addEventListener('keydown',     () => SFX.init(), { once: true });
     const el = renderer.domElement;

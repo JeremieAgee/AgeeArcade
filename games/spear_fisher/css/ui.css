@@ -125,6 +125,68 @@ h1 {
   align-items: center;
   gap: 6px;
 }
+
+.leaderboard-prompt {
+  width: min(360px, 100%);
+  margin: 10px auto 0;
+  padding: 12px;
+  background: rgba(6, 18, 30, 0.86);
+  border: 1px solid rgba(110, 190, 230, 0.35);
+}
+
+.leaderboard-prompt-title {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  color: #f0d060;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.leaderboard-prompt label {
+  display: block;
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  color: #86c9e8;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.leaderboard-prompt-row {
+  display: flex;
+  gap: 8px;
+}
+
+.leaderboard-prompt input {
+  flex: 1;
+  min-width: 0;
+  background: #04121f;
+  border: 1px solid rgba(110, 190, 230, 0.45);
+  color: #f0d060;
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  padding: 8px 10px;
+}
+
+.leaderboard-prompt input:focus {
+  outline: none;
+  border-color: #86c9e8;
+}
+
+.mini-btn {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  color: #051018;
+  background: #f0d060;
+  border: 1px solid #fff1a8;
+  padding: 8px 14px;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+
+.mini-btn:hover {
+  background: #fff1a8;
+}
 .score-row {
   font-family: 'Cinzel', serif;
   font-size: 18px;

@@ -114,6 +114,14 @@
           <div class="score-row">SCORE &nbsp;<span id="finalScore">0</span></div>
           <div class="score-row best-row">BEST &nbsp;&nbsp;<span id="finalHigh">0</span></div>
         </div>
+        <div id="leaderboardPrompt" class="leaderboard-prompt" style="display:none">
+          <div class="leaderboard-prompt-title">Save to Leaderboard</div>
+          <label for="lbNickname">Nickname</label>
+          <div class="leaderboard-prompt-row">
+            <input id="lbNickname" type="text" maxlength="16" autocomplete="off" placeholder="FISHER" />
+            <button class="mini-btn" id="lbSaveBtn">Save</button>
+          </div>
+        </div>
         <button class="big-btn" id="restartBtn">FISH AGAIN</button>
         <a class="big-btn secondary" href="../../">ARCADE</a>
       </div>
@@ -122,7 +130,10 @@
   </div><!-- /overlayLayer -->
 
   <script>window.AGEE_GAME_ID = 'spear_fisher';</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous" defer></script>
   <script src="../../js/analytics.js" defer></script>
+  <script src="../../js/arcade-auth.js" defer></script>
+  <script src="../../js/leaderboard-utils.js" defer></script>
 
   <!-- Three.js r128 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous" defer></script>

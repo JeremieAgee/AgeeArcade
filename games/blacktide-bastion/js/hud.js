@@ -6,7 +6,7 @@ const HUD = (() => {
 
   // ── INIT ──────────────────────────────────────────────────────
   function init() {
-    // Nothing to pre-build; all elements exist in HTML
+    setTimeout(syncLocalLeaderboard, 0);
   }
 
   // ── SCREEN MANAGEMENT ─────────────────────────────────────────
@@ -177,30 +177,78 @@ const HUD = (() => {
 
   // ── LEADERBOARD ───────────────────────────────────────────────
   const LB_KEY = 'blacktide_bastion_lb';
+  const LB_SYNC_KEY = 'blacktide_bastion_lb.synced.v1';
 
   function _getScores() {
     try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; }
     catch { return []; }
   }
 
+  function _scorePayload(entry) {
+    const dateMs = Number(entry.date) || Date.now();
+    return {
+      player_id: window.AgeeLeaderboard ? AgeeLeaderboard.playerId() : 'guest-player',
+      nickname: window.AgeeLeaderboard
+        ? AgeeLeaderboard.cleanName(entry.name, 'SAILOR')
+        : String(entry.name || 'SAILOR').trim().substring(0, 16),
+      score: Number(entry.score) || 0,
+      wave: Number(entry.wave) || 0,
+      created_at: new Date(dateMs).toISOString(),
+    };
+  }
+
+  function syncLocalLeaderboard() {
+    if (!window.AgeeLeaderboard || !AgeeLeaderboard.syncLocal) return;
+    AgeeLeaderboard.syncLocal(
+      'blacktide_bastion_leaderboard',
+      _getScores(),
+      _scorePayload,
+      { syncKey: LB_SYNC_KEY }
+    ).then(result => {
+      if (result && result.failed) console.warn('[Blacktide leaderboard] Local sync failed for some rows.', result);
+    });
+  }
+
   function saveScore(name, score, wave) {
+    const nick = window.AgeeLeaderboard && AgeeLeaderboard.submissionName
+      ? AgeeLeaderboard.submissionName(name, 'SAILOR')
+      : String(name || 'SAILOR').trim().substring(0, 16);
+    const date = Date.now();
     const scores = _getScores();
-    scores.push({
-      name: name.substring(0, 16),
+    const entry = {
+      name: nick,
       score: Number(score) || 0,
       wave: Number(wave) || 0,
-      date: Date.now(),
-    });
+      date,
+    };
+    scores.push(entry);
     scores.sort((a, b) => (b.score - a.score) || (b.wave - a.wave) || (a.date - b.date));
     scores.splice(20);
     localStorage.setItem(LB_KEY, JSON.stringify(scores));
+
+    if (window.AgeeLeaderboard && AgeeLeaderboard.insert) {
+      AgeeLeaderboard.insert('blacktide_bastion_leaderboard', _scorePayload(entry), { syncKey: LB_SYNC_KEY }).then(result => {
+        if (result && result.error) console.warn('[Blacktide leaderboard] Supabase insert failed.', result.error);
+      });
+    }
   }
 
   function _triggerLeaderboardPrompt(gs) {
     const prompt = $('leaderboardPrompt');
     const scores = _getScores();
     const qualifies = scores.length < 20 || gs.score > (scores[scores.length - 1]?.score || 0);
-    if (prompt) prompt.style.display = qualifies ? 'block' : 'none';
+    if (!qualifies) {
+      if (prompt) prompt.style.display = 'none';
+      return;
+    }
+
+    if (window.AgeeLeaderboard && AgeeLeaderboard.isLoggedIn && AgeeLeaderboard.isLoggedIn()) {
+      saveScore('', gs.score, gs.wave);
+      if (prompt) prompt.style.display = 'none';
+      return;
+    }
+
+    if (prompt) prompt.style.display = 'block';
 
     const saveBtn = $('lbSaveBtn');
     if (saveBtn) {
