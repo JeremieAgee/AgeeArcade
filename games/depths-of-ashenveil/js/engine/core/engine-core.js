@@ -104,14 +104,23 @@ window.EngineCore = (() => {
 
     if (!renderer) {
       const _mobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      renderer = new THREE.WebGLRenderer({ antialias: !_mobile });
-      renderer.setPixelRatio(_mobile ? Math.min(window.devicePixelRatio, 1.5) : window.devicePixelRatio);
-      renderer.shadowMap.enabled = false;
-      renderer.outputEncoding     = THREE.sRGBEncoding;
-      renderer.toneMapping        = THREE.ReinhardToneMapping;
-      renderer.toneMappingExposure = 1.15;
-      renderer.setClearColor(0x000000, 0.25);
-      mount.appendChild(renderer.domElement);
+      // Shared arcade engine builds the renderer/scene/camera; we keep our own
+      // resize() (also called externally), so autoResize is off.
+      const g = ArcadeEngine.create3D({
+        mount,
+        antialias: !_mobile,
+        pixelRatioCap: _mobile ? 1.5 : window.devicePixelRatio,
+        clearColor: 0x000000,
+        clearColorAlpha: 0.25,
+        toneMapping: 'reinhard',
+        exposure: 1.15,
+        fov: 60, near: 0.1, far: 100,
+        fog: { type: 'exp2', color: 0x090604, density: 0.0045 },
+        autoResize: false,
+      });
+      renderer = g.renderer;
+      if (!scene)  scene  = g.scene;
+      if (!camera) camera = g.camera;
       window.addEventListener('resize', resize);
     }
 

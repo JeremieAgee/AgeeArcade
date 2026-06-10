@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leaderboard — Blacktide Bastion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/layout.css" />
+  <link rel="stylesheet" href="../css/ui.css" />
+  <style>
+    html, body { overflow: auto; height: auto; }
+    body { background: #08101e; }
+  </style>
+</head>
+<body class="leaderboard-page">
+<html class="leaderboard-document">
+
+<div class="leaderboard-shell">
+  <div class="leaderboard-panel">
+    <div class="leaderboard-kicker">AGEE ARCADE</div>
+    <h1>BLACKTIDE BASTION</h1>
+    <p class="leaderboard-subtitle">— Captains who held the line —</p>
+
+    <div class="leaderboard-actions">
+      <a class="big-btn title-link-btn leaderboard-play" href="../">RETURN TO GAME</a>
+      <a class="big-btn secondary title-link-btn leaderboard-arcade" href="../../../">THE ARCADE</a>
+    </div>
+
+    <div class="leaderboard-table-wrap">
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Captain</th>
+            <th>Score</th>
+            <th>Wave</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="lbBody">
+          <tr><td colspan="5" class="leaderboard-empty">Loading scores...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const LB_KEY = 'blacktide_bastion_lb';
+  const body   = document.getElementById('lbBody');
+
+  function load() {
+    let scores;
+    try { scores = JSON.parse(localStorage.getItem(LB_KEY)) || []; }
+    catch { scores = []; }
+
+    if (!scores.length) {
+      body.innerHTML = '<tr><td colspan="5" class="leaderboard-empty">No runs yet — be the first to defend the harbor!</td></tr>';
+      return;
+    }
+
+    scores.sort((a, b) => b.score - a.score);
+    body.innerHTML = scores.slice(0, 20).map((s, i) => {
+      const rank  = i + 1;
+      const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+      const date  = new Date(s.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      return `<tr>
+        <td class="rank-cell">${medal}</td>
+        <td>${escHtml(s.name)}</td>
+        <td><b style="color:#f0d060">${(s.score||0).toLocaleString()}</b></td>
+        <td>${s.wave || '—'}</td>
+        <td style="color:#4a8ab2;font-size:12px">${date}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  load();
+})();
+</script>
+<footer style="padding:1.25rem;text-align:center;font:12px system-ui,sans-serif;color:#4a8ab2;background:#08101e;border-top:1px solid rgba(255,255,255,0.1);">
+  &copy; 2026 ageegaming.com &mdash; Built by Jeremie Agee &mdash; <a href="../../../../privacy.html" style="color:inherit;text-decoration:underline;">Privacy Policy</a>
+</footer>
+</body>
+</html>

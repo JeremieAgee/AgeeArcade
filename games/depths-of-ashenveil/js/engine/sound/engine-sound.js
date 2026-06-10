@@ -1,6 +1,6 @@
 /**
  * EngineSound — Depths of Ashenveil sound adapter.
- * Delegates everything to the shared ArcadeSound engine (/sound/engine.js).
+ * Delegates everything to the shared ArcadeSound engine (/engine/sound/engine.js).
  * Preserves the existing API surface so Engine.* calls need no changes.
  */
 window.EngineSound = (() => {

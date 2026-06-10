@@ -38,6 +38,15 @@ function setFooterYear() {
     if (el) el.textContent = new Date().getFullYear();
 }
 
+function renderGameThumb(game, loading) {
+    if (game.thumbnail) {
+        return '<img src="' + escapeHtml(game.thumbnail) + '" alt="' + escapeHtml(game.title) + '" loading="' + loading + '" onerror="this.replaceWith(this.nextElementSibling)">' +
+            '<div class="game-thumb-fallback" aria-hidden="true">' + escapeHtml(game.title) + '</div>';
+    }
+
+    return '<div class="game-thumb-fallback" aria-hidden="true">' + escapeHtml(game.title) + '</div>';
+}
+
 // ─── Featured Game ────────────────────────────────────────────────────────────
 
 function renderFeaturedGame() {
@@ -58,7 +67,7 @@ function renderFeaturedGame() {
     container.innerHTML =
         '<div class="featured-game">' +
             '<div class="featured-game__thumb">' +
-                '<img src="' + escapeHtml(game.thumbnail) + '" alt="' + escapeHtml(game.title) + '" loading="eager" onerror="this.style.display=\'none\'">' +
+                renderGameThumb(game, 'eager') +
             '</div>' +
             '<div class="featured-game__body">' +
                 '<div class="genre-tags">' + genreTags + '</div>' +
@@ -91,7 +100,7 @@ function renderGameGrid() {
         var card =
             '<article class="game-card" data-id="' + escapeHtml(game.id) + '" data-status="' + escapeHtml(game.status) + '">' +
                 '<div class="game-card__thumb">' +
-                    '<img src="' + escapeHtml(game.thumbnail) + '" alt="' + escapeHtml(game.title) + '" loading="lazy" onerror="this.style.display=\'none\'">' +
+                    renderGameThumb(game, 'lazy') +
                     '<span class="status-badge ' + badgeClass + '">' + badgeLabel + '</span>' +
                 '</div>' +
                 '<div class="game-card__body">' +

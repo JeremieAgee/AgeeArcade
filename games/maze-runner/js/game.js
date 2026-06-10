@@ -148,23 +148,21 @@
     };
   }
 
-  // ─── Renderer & Scene ─────────────────────────────
+  // ─── Renderer & Scene — built by the shared arcade engine ──
   function initRenderer() {
-    const canvas = document.getElementById('gameCanvas');
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0x02020a);
-    renderer.shadowMap.enabled   = false;
-    renderer.outputEncoding      = THREE.sRGBEncoding;
-    renderer.toneMapping         = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
-
-    scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x02020a, 0.025);
-
-    camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 120);
-    clock  = new THREE.Clock();
+    const g = ArcadeEngine.create3D({
+      canvas: '#gameCanvas',
+      pixelRatioCap: 1.25,
+      clearColor: 0x02020a,
+      toneMapping: 'aces',
+      exposure: 1.0,
+      fov: 72, near: 0.1, far: 120,
+      fog: { type: 'exp2', color: 0x02020a, density: 0.025 },
+    });
+    renderer = g.renderer;
+    scene    = g.scene;
+    camera   = g.camera;
+    clock    = g.clock;
 
     // Flat ambient — dim base so deep-dungeon corners stay dark
     scene.add(new THREE.AmbientLight(0x4a5870, 0.6));
@@ -1898,11 +1896,7 @@
       });
     }
 
-    window.addEventListener('resize', () => {
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-    });
+    // Window resize is handled by ArcadeEngine.create3D
   }
 
   // ─── Bootstrap ─────────────────────────────────────

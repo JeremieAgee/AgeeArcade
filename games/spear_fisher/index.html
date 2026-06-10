@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Spear Fisher — A top-down spearfishing game by Agee Gaming LLC. Aim, throw, and reel in your catch!" />
+  <title>Spear Fisher — Agee Arcade</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="./css/layout.css" />
+  <link rel="stylesheet" href="./css/ui.css" />
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9709866738532619"
+       crossorigin="anonymous"></script>
+</head>
+<body>
+
+  <div id="pageShell">
+
+    <!-- TOP BAR -->
+    <header id="topBar">
+      <span id="brandName">~ SPEAR FISHER</span>
+      <span id="topTagline">Ancient Hunt, Open Waters</span>
+    </header>
+
+    <!-- MAIN ROW -->
+    <div id="mainRow">
+
+      <!-- GAME COLUMN -->
+      <div id="gameColumn">
+
+        <!-- HUD TOP -->
+        <div id="hud">
+          <div class="hud-left">
+            <span class="hud-stat">SCORE <b id="hudScore">0</b></span>
+            <span class="hud-stat">BEST <b id="hudHigh">0</b></span>
+          </div>
+          <div class="hud-center">
+            <span class="hud-stat" id="hudStatus">Aim &amp; Throw</span>
+          </div>
+          <div class="hud-right">
+            <span class="hud-stat">TIME <b id="hudTime">90</b>s</span>
+          </div>
+        </div>
+
+        <!-- CANVAS -->
+        <div id="canvasMount">
+          <canvas id="gameCanvas"></canvas>
+        </div>
+
+        <!-- BOTTOM HUD -->
+        <div id="bottomHud">
+          <div id="reelPrompt"></div>
+          <div id="controls">Mouse &middot; Aim &nbsp;&nbsp; Left Click &middot; Throw Spear &nbsp;&nbsp; Click to Reel In Fish</div>
+        </div>
+
+      </div><!-- /gameColumn -->
+
+      <!-- RIGHT SIDEBAR -->
+      <aside id="adSidebar">
+        <a class="arcade-sidebar" href="../../" rel="noopener">
+          <div class="arcade-sidebar-glyph">&#9654;</div>
+          <div class="arcade-sidebar-title">MORE GAMES</div>
+          <div class="arcade-sidebar-divider"></div>
+          <div class="arcade-sidebar-body">Dozens of free games live in the Arcade. Dungeon crawlers, strategy, puzzles &amp; more.</div>
+          <div class="arcade-sidebar-cta">ENTER THE ARCADE &#8594;</div>
+        </a>
+      </aside>
+
+    </div><!-- /mainRow -->
+
+    <!-- BOTTOM BANNER -->
+    <div id="adBanner">
+      <a class="arcade-banner" href="../../" rel="noopener">
+        <span class="arcade-banner-icon">&#9654;</span>
+        <span class="arcade-banner-text">LOOKING FOR MORE GAMES?</span>
+        <span class="arcade-banner-divider">|</span>
+        <span class="arcade-banner-sub">Visit the Arcade — free to play, no sign-up needed</span>
+        <span class="arcade-banner-cta">PLAY NOW &#8594;</span>
+      </a>
+    </div>
+
+  </div><!-- /pageShell -->
+
+  <!-- OVERLAY LAYER -->
+  <div id="overlayLayer">
+
+    <!-- TITLE SCREEN -->
+    <div id="titleScreen" class="screen active">
+      <div class="title-inner">
+        <h1 id="titleText">SPEAR FISHER</h1>
+        <p class="title-sub">&#8212; Aim. Throw. Reel. &#8212;</p>
+        <div class="score-display" id="titleBest" style="display:none;">
+          <div class="score-row best-row">BEST &nbsp;<span id="titleHi">0</span></div>
+        </div>
+        <div class="key-hints">
+          Mouse &middot; Aim &nbsp;|&nbsp; Click &middot; Throw &nbsp;|&nbsp; Click &middot; Reel<br/>
+          Bigger fish = more points, more pulls to land
+        </div>
+        <button class="big-btn" id="titleStartBtn">CAST OFF</button>
+      </div>
+    </div>
+
+    <!-- GAME OVER SCREEN -->
+    <div id="gameoverScreen" class="screen">
+      <div class="title-inner">
+        <h1 class="over-title">TIME'S UP!</h1>
+        <p class="title-sub" id="finalMsg">Good haul!</p>
+        <div class="score-display">
+          <div class="score-row">SCORE &nbsp;<span id="finalScore">0</span></div>
+          <div class="score-row best-row">BEST &nbsp;&nbsp;<span id="finalHigh">0</span></div>
+        </div>
+        <button class="big-btn" id="restartBtn">FISH AGAIN</button>
+        <a class="big-btn secondary" href="../../">ARCADE</a>
+      </div>
+    </div>
+
+  </div><!-- /overlayLayer -->
+
+  <script>window.AGEE_GAME_ID = 'spear_fisher';</script>
+  <script src="../../js/analytics.js" defer></script>
+
+  <!-- Three.js r128 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous" defer></script>
+
+  <!-- Shared arcade engine (graphics + sound) -->
+  <script src="../../engine/sound/engine.js"   defer></script>
+  <script src="../../engine/sound/settings.js" defer></script>
+  <script src="../../engine/sound/tuner.js"    defer></script>
+  <script src="../../engine/arcade-engine.js"  defer></script>
+
+  <script src="./js/sounds.js" defer></script>
+  <script src="./js/game.js" defer></script>
+  <footer style="padding:1.25rem;text-align:center;font:12px system-ui,sans-serif;color:#8888aa;background:#0a0a0f;border-top:1px solid rgba(255,255,255,0.1);">
+    &copy; 2026 ageegaming.com &mdash; Built by Jeremie Agee &mdash; <a href="../../../privacy.html" style="color:inherit;text-decoration:underline;">Privacy Policy</a>
+  </footer>
+</body>
+</html>

@@ -290,6 +290,11 @@
     });
   </script>
   <script src="./js/systems/save.js"                              defer></script>
+  <!-- Shared arcade engine (graphics + sound) -->
+  <script src="../../engine/sound/engine.js"                      defer></script>
+  <script src="../../engine/sound/settings.js"                    defer></script>
+  <script src="../../engine/sound/tuner.js"                       defer></script>
+  <script src="../../engine/arcade-engine.js"                     defer></script>
   <script src="./js/engine/core/engine-state.js"                  defer></script>
   <script src="./js/engine/core/engine-core.js"                   defer></script>
   <script src="./js/engine/dungeon/engine-dungeon-renderer.js"    defer></script>
@@ -297,9 +302,6 @@
   <script src="./js/engine/interactables/engine-interactables.js" defer></script>
   <script src="./js/engine/effects/engine-effects.js"             defer></script>
   <script src="./js/engine/lighting/engine-lighting.js"           defer></script>
-  <script src="../../sound/engine.js"                              defer></script>
-  <script src="../../sound/settings.js"                            defer></script>
-  <script src="../../sound/tuner.js"                               defer></script>
   <script src="./js/engine/sound/engine-sound.js"                 defer></script>
   <script src="./js/engine/engine.js"                             defer></script>
   <script src="./js/pages/ui.js"                                  defer></script>
@@ -327,6 +329,8 @@
       }
     })();
   </script>
-
+  <footer style="padding:1.25rem;text-align:center;font:12px system-ui,sans-serif;color:#8888aa;background:#0a0a0f;border-top:1px solid rgba(255,255,255,0.1);">
+    &copy; 2026 ageegaming.com &mdash; Built by Jeremie Agee &mdash; <a href="../../../privacy.html" style="color:inherit;text-decoration:underline;">Privacy Policy</a>
+  </footer>
 </body>
 </html>

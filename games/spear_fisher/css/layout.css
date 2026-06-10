@@ -1,0 +1,228 @@
+/* ═══════════════════════════════════════════════════
+   layout.css  —  Page shell, sidebar, responsive
+   Ocean theme adapted from Agee Arcade standard
+═══════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: #00111f;
+  color: #88ccff;
+  font-family: 'IM Fell English', serif;
+}
+
+/* ── TOP BRAND BAR ───────────────────────────────── */
+#topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 20px;
+  background: linear-gradient(180deg, #003055, #001830);
+  border-bottom: 2px solid #0d4a77;
+  height: 38px;
+}
+#brandName {
+  font-family: 'Cinzel', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #44b8e8;
+  letter-spacing: 3px;
+  text-shadow: 0 0 22px #0099ff88;
+}
+#topTagline {
+  font-size: 12px;
+  color: #3a6e8a;
+  font-style: italic;
+}
+
+/* ── PAGE SHELL ──────────────────────────────────── */
+#pageShell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── MAIN ROW ────────────────────────────────────── */
+#mainRow {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 10px 0 10px;
+  width: 100%;
+  max-width: 1260px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── GAME COLUMN ─────────────────────────────────── */
+#gameColumn {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+/* Canvas mount */
+#canvasMount {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  background: #000d1a;
+  position: relative;
+  overflow: hidden;
+}
+#canvasMount canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ── RIGHT SIDEBAR ───────────────────────────────── */
+#adSidebar {
+  flex: 0 0 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding-top: 4px;
+}
+
+/* ── BOTTOM BANNER ───────────────────────────────── */
+#adBanner {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 10px 0;
+  width: 100%;
+}
+
+/* ── ARCADE SIDEBAR LINK ─────────────────────────── */
+.arcade-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 14px;
+  height: 100%;
+  background: linear-gradient(160deg, #002244 60%, #001122);
+  border: 1px solid #0d4a77;
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.arcade-sidebar:hover {
+  background: linear-gradient(160deg, #003366 60%, #001833);
+  border-color: #44b8e8;
+}
+.arcade-sidebar-glyph {
+  font-size: 28px;
+  color: #44b8e8;
+  text-shadow: 0 0 18px #0088ff66;
+}
+.arcade-sidebar-title {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #44b8e8;
+  letter-spacing: 4px;
+  text-align: center;
+}
+.arcade-sidebar-divider {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #1a5a88, transparent);
+}
+.arcade-sidebar-body {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 11px;
+  color: #3a7aaa;
+  text-align: center;
+  line-height: 1.6;
+}
+.arcade-sidebar-cta {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #1a5a88;
+  margin-top: 4px;
+  transition: color 0.2s;
+}
+.arcade-sidebar:hover .arcade-sidebar-cta { color: #44b8e8; }
+
+/* ── ARCADE BANNER LINK ──────────────────────────── */
+.arcade-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 24px;
+  background: linear-gradient(90deg, #002244, #001122, #002244);
+  border: 1px solid #0d3a55;
+  text-decoration: none;
+  max-width: 728px;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+.arcade-banner:hover { border-color: #44b8e8; }
+.arcade-banner-icon {
+  font-size: 18px;
+  color: #44b8e8;
+  flex-shrink: 0;
+}
+.arcade-banner-text {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #44b8e8;
+  white-space: nowrap;
+}
+.arcade-banner-divider {
+  color: #0d3a55;
+  font-size: 18px;
+}
+.arcade-banner-sub {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 12px;
+  color: #3a7aaa;
+  flex: 1;
+}
+.arcade-banner-cta {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #1a5a88;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+.arcade-banner:hover .arcade-banner-cta { color: #44b8e8; }
+
+/* ── OVERLAY LAYER ───────────────────────────────── */
+#overlayLayer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+#overlayLayer > * {
+  pointer-events: all;
+}
+
+/* ── RESPONSIVE ──────────────────────────────────── */
+@media (max-width: 1000px) {
+  #adSidebar { display: none; }
+  .arcade-banner { max-width: 100%; }
+  #mainRow { padding: 6px; gap: 0; }
+}
+@media (max-width: 760px) {
+  #adBanner { display: none; }
+  #topTagline { display: none; }
+}

@@ -1,0 +1,173 @@
+/* ═══════════════════════════════════════════════════
+   ui.css  —  HUD, overlays, buttons, prompts
+═══════════════════════════════════════════════════ */
+
+/* ── HUD TOP ─────────────────────────────────────── */
+#hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 14px;
+  background: linear-gradient(180deg, #001e38, #001228);
+  border-bottom: 1px solid #0d3a5a;
+  height: 34px;
+  flex-shrink: 0;
+}
+.hud-left,
+.hud-right { display: flex; gap: 18px; align-items: center; }
+.hud-center { display: flex; gap: 10px; align-items: center; }
+
+.hud-stat {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #3a7aaa;
+}
+.hud-stat b {
+  color: #44b8e8;
+  font-size: 13px;
+}
+
+/* ── BOTTOM HUD ──────────────────────────────────── */
+#bottomHud {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  background: linear-gradient(0deg, #001228, #001e38);
+  border-top: 1px solid #0d3a5a;
+  min-height: 44px;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+#reelPrompt {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  letter-spacing: 3px;
+  color: #ffcc44;
+  text-shadow: 0 0 16px #ffaa0077;
+  min-height: 18px;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+
+#controls {
+  font-size: 11px;
+  color: #244e66;
+  letter-spacing: 1px;
+  font-family: 'IM Fell English', serif;
+}
+
+/* ── SCREEN OVERLAYS ─────────────────────────────── */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 10, 22, 0.90);
+  backdrop-filter: blur(2px);
+  z-index: 210;
+}
+.screen.active {
+  display: flex;
+}
+
+.title-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  padding: 40px 36px;
+  background: linear-gradient(160deg, #00264a, #001228);
+  border: 1px solid #0d4a77;
+  box-shadow: 0 0 60px rgba(0, 100, 180, 0.25);
+  max-width: 440px;
+  width: 90%;
+}
+
+h1 {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(26px, 6vw, 50px);
+  font-weight: 700;
+  color: #44b8e8;
+  letter-spacing: 6px;
+  text-shadow: 0 0 30px #0099ffaa, 0 0 70px #005599;
+}
+
+.over-title {
+  color: #44d4e8 !important;
+  text-shadow: 0 0 30px #00ccffaa, 0 0 70px #0077aa !important;
+}
+
+.title-sub {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: #2d7aaa;
+}
+
+.key-hints {
+  font-size: 11px;
+  color: #244e66;
+  font-family: 'IM Fell English', serif;
+  letter-spacing: 1px;
+  line-height: 2;
+}
+
+/* ── SCORE DISPLAY ───────────────────────────────── */
+.score-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.score-row {
+  font-family: 'Cinzel', serif;
+  font-size: 18px;
+  letter-spacing: 4px;
+  color: #6ab0cc;
+}
+.score-row span {
+  color: #ffcc44;
+  font-size: 26px;
+}
+.best-row span {
+  color: #44b8e8;
+  font-size: 26px;
+}
+
+/* ── BUTTONS ─────────────────────────────────────── */
+.big-btn {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  color: #44b8e8;
+  padding: 12px 32px;
+  background: linear-gradient(160deg, #002f5a, #001630);
+  border: 1px solid #0d4a77;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-decoration: none;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+.big-btn:hover {
+  background: linear-gradient(160deg, #003f77, #001e44);
+  border-color: #44b8e8;
+  color: #88ddff;
+  text-shadow: 0 0 12px #0099ff88;
+}
+.big-btn.secondary {
+  color: #2d7aaa;
+  border-color: #0d3a55;
+}
+.big-btn.secondary:hover {
+  color: #88ccff;
+  border-color: #2d7aaa;
+}

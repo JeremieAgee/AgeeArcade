@@ -37,6 +37,16 @@ const games = [
         url: "/AgeeArcade/games/blacktide-bastion/",
         leaderboardUrl: "/AgeeArcade/games/blacktide-bastion/leaderboard/",
         status: "live"
+    },
+    {
+        id: "spear_fisher",
+        title: "Spear Fisher",
+        description: "A 3D spearfishing arcade game. Aim from the boat, throw your spear, and reel in the biggest catch before time runs out.",
+        genre: ["Arcade", "Fishing"],
+        thumbnail: "",
+        url: "/AgeeArcade/games/spear_fisher/",
+        leaderboardUrl: "",
+        status: "live"
     }
 ];
 

@@ -1,6 +1,6 @@
 /**
  * SFX — Maze Runner sound adapter.
- * Delegates to the shared ArcadeSound engine (/sound/engine.js).
+ * Delegates to the shared ArcadeSound engine (/engine/sound/engine.js).
  * Registers Maze Runner-specific SFX that aren't in the shared set.
  */
 window.SFX = (() => {
