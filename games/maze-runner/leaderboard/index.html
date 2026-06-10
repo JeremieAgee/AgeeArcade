@@ -114,17 +114,29 @@
         const { data, error } = await client
           .from('maze_runner_runs')
           .select('user_id, floors, score, time_ms')
-          .order('score', { ascending: false })
-          .limit(20);
+          .limit(50);
 
         if (error) throw error;
 
-        if (!data || data.length === 0) {
+        const rows = (data || []).map(row => ({
+          user_id: String(row.user_id || 'guest'),
+          floors: Number(row.floors) || 0,
+          score: Number(row.score) || 0,
+          time_ms: Number(row.time_ms) || 0,
+        }));
+
+        rows.sort((a, b) =>
+          (b.score - a.score) ||
+          (b.floors - a.floors) ||
+          (a.time_ms - b.time_ms)
+        );
+
+        if (!rows.length) {
           body.innerHTML = '<tr><td colspan="5" id="lbEmpty">No scores yet — play and be first!</td></tr>';
           return;
         }
 
-        body.innerHTML = data.map((row, i) => `
+        body.innerHTML = rows.slice(0, 20).map((row, i) => `
           <tr>
             <td class="td-rank">${i + 1}</td>
             <td class="td-name">${row.user_id.slice(0, 8)}…</td>

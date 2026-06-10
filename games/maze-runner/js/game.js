@@ -1399,19 +1399,24 @@
         .from('maze_runner_runs')
         .select('user_id, floors, score, time_ms')
         .order('score', { ascending: false })
+        .order('floors', { ascending: false })
         .limit(10);
       if (error) throw error;
       if (!data || data.length === 0) {
         el.innerHTML = '<tr><td colspan="4" style="text-align:center;opacity:.5">No scores yet. Be the first!</td></tr>';
         return;
       }
-      el.innerHTML = data.map((row, i) => `
+      el.innerHTML = data.map((row, i) => {
+        const score = Number(row.score) || 0;
+        const floors = Number(row.floors) || 0;
+        return `
         <tr>
           <td>${i + 1}</td>
-          <td class="lb-name">${row.user_id.slice(0, 8)}…</td>
-          <td>${row.score}</td>
-          <td>Floor ${row.floors}</td>
-        </tr>`).join('');
+          <td class="lb-name">${String(row.user_id || 'guest').slice(0, 8)}…</td>
+          <td>${score.toLocaleString()}</td>
+          <td>Floor ${floors}</td>
+        </tr>`;
+      }).join('');
     } catch (e) {
       el.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#f44">Could not load leaderboard</td></tr>';
     }

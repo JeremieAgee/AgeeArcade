@@ -185,8 +185,13 @@ const HUD = (() => {
 
   function saveScore(name, score, wave) {
     const scores = _getScores();
-    scores.push({ name: name.substring(0, 16), score, wave, date: Date.now() });
-    scores.sort((a, b) => b.score - a.score);
+    scores.push({
+      name: name.substring(0, 16),
+      score: Number(score) || 0,
+      wave: Number(wave) || 0,
+      date: Date.now(),
+    });
+    scores.sort((a, b) => (b.score - a.score) || (b.wave - a.wave) || (a.date - b.date));
     scores.splice(20);
     localStorage.setItem(LB_KEY, JSON.stringify(scores));
   }

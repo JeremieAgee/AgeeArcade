@@ -33,7 +33,7 @@ const games = [
         title: "Blacktide Bastion",
         description: "A pirate defense game. Hold the fort against waves of enemy ships in a swashbuckling battle for the seas.",
         genre: ["Arcade", "Defense"],
-        thumbnail: "/AgeeArcade/games/blacktide-bastion/thumb.jpg",
+        thumbnail: "/AgeeArcade/games/blacktide-bastion/thumb.png",
         url: "/AgeeArcade/games/blacktide-bastion/",
         leaderboardUrl: "/AgeeArcade/games/blacktide-bastion/leaderboard/",
         status: "live"

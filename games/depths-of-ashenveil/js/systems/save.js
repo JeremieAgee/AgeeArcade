@@ -127,7 +127,13 @@ window.Save = (() => {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     };
-    const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, { ...options, headers });
+
+    const url = new URL(`${supabaseUrl}/rest/v1/${path}`);
+    if (!url.searchParams.has('apikey')) {
+      url.searchParams.set('apikey', supabaseAnonKey);
+    }
+
+    const response = await fetch(url.toString(), { ...options, headers });
     if (!response.ok) throw new Error(`Supabase ${response.status}: ${await response.text()}`);
     if (response.status === 204) return null;
     const text = await response.text();
