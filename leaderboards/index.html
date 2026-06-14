@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -9,17 +9,23 @@
       script-src  'self' 'unsafe-inline'
                   https://cdnjs.cloudflare.com
                   https://cdn.jsdelivr.net
-                  https://pagead2.googlesyndication.com;
+                  https://pagead2.googlesyndication.com
+                  https://ep2.adtrafficquality.google;
       style-src   'self' 'unsafe-inline'
                   https://fonts.googleapis.com;
       font-src    'self'
                   https://fonts.gstatic.com;
       connect-src 'self'
                   https://xdvrgeaivfqpcsmuqeyi.supabase.co
-                  wss://xdvrgeaivfqpcsmuqeyi.supabase.co;
+                  wss://xdvrgeaivfqpcsmuqeyi.supabase.co
+                  https://pagead2.googlesyndication.com
+                  https://googleads.g.doubleclick.net
+                  https://ep1.adtrafficquality.google;
       img-src     'self' data: blob:
-                  https://www.googletagmanager.com;
-      frame-src   'none';
+                  https://www.googletagmanager.com
+                  https://pagead2.googlesyndication.com
+                  https://googleads.g.doubleclick.net;
+      frame-src   https://googleads.g.doubleclick.net;
       object-src  'none';
       base-uri    'self';
       form-action 'self';
@@ -69,11 +75,11 @@
                 <div class="leaderboards-table-wrap">
                     <table class="leaderboards-table">
                         <thead>
-                            <tr>
+                            <tr id="leaderboardHead">
                                 <th>Rank</th>
                                 <th>Nickname</th>
-                                <th>Highest Level</th>
-                                <th>Floor</th>
+                                <th>Score</th>
+                                <th>Detail</th>
                             </tr>
                         </thead>
                         <tbody id="leaderboardRows"></tbody>
@@ -85,7 +91,7 @@
     </main>
 
     <footer class="site-footer">
-        <p>&copy; 2026 ageegaming.com &mdash; Built by Jeremie Agee &mdash; <a href="../../privacy.html">Privacy Policy</a></p>
+        <p>&copy; <span id="footer-year"></span> Created By Jeremie Agee. All rights reserved.</p>
     </footer>
 
     <!-- Fixed bottom ad banner -->
@@ -96,17 +102,19 @@
              data-ad-slot="7421345542"
              data-ad-format="auto"
              data-full-width-responsive="true"></ins>
-        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+        <script>
+            window.addEventListener('load', function () {
+                var slot = document.querySelector('.ad-bottom-strip .adsbygoogle');
+                if (!slot || slot.offsetWidth <= 0) return;
+                (adsbygoogle = window.adsbygoogle || []).push({});
+            });
+        </script>
     </div>
 
     <script src="../js/games.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="../js/arcade-auth.js"></script>
-    <script src="../js/leaderboard-utils.js"></script>
-    <script src="../games/depths-of-ashenveil/js/config/supabase-config.js"></script>
-    <script src="../games/depths-of-ashenveil/js/systems/save.js"></script>
     <script src="../js/leaderboards.js"></script>
     <script src="../js/analytics.js"></script>
     <script>if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('leaderboard_opened');</script>
 </body>
 </html>
+
