@@ -1,0 +1,708 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+    style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src    'self' https://fonts.gstatic.com;
+    connect-src 'self'
+                https://xdvrgeaivfqpcsmuqeyi.supabase.co
+                wss://xdvrgeaivfqpcsmuqeyi.supabase.co;
+    img-src     'self' data: blob: https:;
+    frame-src   'none'; object-src 'none'; base-uri 'self'; form-action 'self';
+  ">
+  <title>Ad Admin â€” Agee Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="../../css/main.css">
+  <style>
+    /* â”€â”€ Admin shell â”€â”€ */
+    body { background: #060412; color: #c8b0f0; }
+
+    #login-gate {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    }
+    #login-gate form {
+      background: #0c0820; border: 1px solid rgba(100,50,180,0.35); border-radius: 8px;
+      padding: 2.5rem; width: 320px; display: flex; flex-direction: column; gap: 12px;
+    }
+    #login-gate h2 { margin: 0 0 8px; color: #e0c0ff; font-size: 1.1rem; }
+    #login-gate input {
+      background: rgba(10,5,25,0.9); border: 1px solid rgba(80,40,140,0.5);
+      border-radius: 4px; padding: 9px 12px; color: #d0b0ff; font-size: 14px; outline: none;
+    }
+    #login-gate button {
+      padding: 10px; background: linear-gradient(135deg,#7730d0,#4a1880);
+      color: #fff; border: 1px solid rgba(160,80,255,0.5); border-radius: 4px;
+      cursor: pointer; font-weight: bold; letter-spacing: 1px;
+    }
+    #login-err { color: rgba(255,100,100,0.8); font-size: 12px; display: none; }
+    #admin-shell { display: none; }
+
+    /* Tabs */
+    .tab-bar {
+      display: flex; gap: 4px; padding: 1rem 1.5rem 0;
+      border-bottom: 1px solid rgba(80,40,140,0.3);
+      background: rgba(10,5,25,0.6);
+    }
+    .tab-btn {
+      padding: 8px 18px; border: none; background: transparent;
+      color: rgba(160,120,220,0.6); cursor: pointer; border-radius: 4px 4px 0 0;
+      font-family: 'Courier New', monospace; font-size: 12px; letter-spacing: 1px;
+      border-bottom: 2px solid transparent; transition: all 0.15s;
+    }
+    .tab-btn.active { color: #d0b0ff; border-bottom-color: #9944ff; background: rgba(60,20,120,0.3); }
+    .tab-btn:hover  { color: #c090ff; }
+
+    .tab-panel { display: none; padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
+    .tab-panel.active { display: block; }
+
+    /* Section cards */
+    .admin-card {
+      background: rgba(15,8,32,0.7); border: 1px solid rgba(80,40,140,0.3);
+      border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;
+    }
+    .admin-card h3 {
+      margin: 0 0 1rem; font-size: 14px; letter-spacing: 2px;
+      color: #b090e0; font-family: 'Courier New', monospace;
+      border-bottom: 1px solid rgba(80,40,140,0.25); padding-bottom: 8px;
+    }
+
+    /* Form rows */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media(max-width:600px) { .form-row { grid-template-columns: 1fr; } }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label {
+      font-size: 11px; letter-spacing: 1px; color: rgba(160,100,255,0.7);
+      text-transform: uppercase; font-family: 'Courier New', monospace;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      background: rgba(10,5,25,0.9); border: 1px solid rgba(80,40,140,0.45);
+      border-radius: 4px; padding: 8px 10px; color: #d0b0ff;
+      font-size: 13px; font-family: inherit; outline: none;
+    }
+    .form-group textarea { min-height: 80px; resize: vertical; }
+
+    /* Buttons */
+    .btn { padding: 8px 18px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; letter-spacing: 0.5px; transition: opacity 0.15s; border: none; }
+    .btn:hover { opacity: 0.82; }
+    .btn-primary { background: linear-gradient(135deg,#7730d0,#4a1880); color: #fff; border: 1px solid rgba(160,80,255,0.4); }
+    .btn-danger  { background: rgba(180,30,30,0.7); color: #ffc0c0; border: 1px solid rgba(200,50,50,0.4); }
+    .btn-sm { padding: 4px 12px; font-size: 11px; }
+    .btn-group { display: flex; gap: 8px; margin-top: 1rem; flex-wrap: wrap; }
+
+    /* Tables */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .data-table th {
+      text-align: left; padding: 8px 10px;
+      color: rgba(140,100,200,0.7); font-family: 'Courier New', monospace;
+      font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+      border-bottom: 1px solid rgba(80,40,140,0.3);
+    }
+    .data-table td { padding: 9px 10px; border-bottom: 1px solid rgba(40,20,80,0.5); vertical-align: middle; }
+    .data-table tr:hover td { background: rgba(60,20,100,0.15); }
+
+    /* Status badges */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-family: 'Courier New', monospace; letter-spacing: 1px; }
+    .badge-active   { background: rgba(30,120,60,0.3); color: #80e080; border: 1px solid rgba(40,150,80,0.3); }
+    .badge-inactive { background: rgba(80,40,40,0.4); color: #c08080; border: 1px solid rgba(120,50,50,0.3); }
+    .badge-house    { background: rgba(40,60,120,0.4); color: #80a0e0; border: 1px solid rgba(60,80,160,0.3); }
+    .badge-direct   { background: rgba(80,40,120,0.4); color: #c080ff; border: 1px solid rgba(100,50,160,0.3); }
+
+    /* KPI row */
+    .kpi-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+    .kpi-card {
+      background: rgba(20,10,40,0.6); border: 1px solid rgba(80,40,140,0.3);
+      border-radius: 6px; padding: 1rem 1.5rem; min-width: 130px; text-align: center;
+    }
+    .kpi-val { font-family: 'Orbitron', monospace; font-size: 1.5rem; font-weight: 900; color: #c080ff; }
+    .kpi-label { font-size: 11px; color: rgba(160,130,200,0.6); margin-top: 4px; }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 999;
+      background: rgba(60,20,120,0.95); border: 1px solid rgba(160,80,255,0.4);
+      color: #e0c0ff; padding: 10px 20px; border-radius: 6px;
+      font-size: 13px; display: none; max-width: 320px;
+    }
+
+    .msg-inline { font-size: 12px; margin-top: 8px; display: none; }
+    .msg-inline.ok    { color: rgba(100,220,120,0.9); }
+    .msg-inline.error { color: rgba(255,100,100,0.9); }
+  </style>
+</head>
+<body>
+
+<!-- â”€â”€ Login gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div id="login-gate">
+  <form id="login-form">
+    <h2>Ad Admin â€” Agee Arcade</h2>
+    <input type="email"    id="lg-email" placeholder="Admin email" required>
+    <input type="password" id="lg-pass"  placeholder="Password"    required>
+    <button type="submit">Sign In</button>
+    <span id="login-err">Invalid credentials or not an admin.</span>
+  </form>
+</div>
+
+<!-- â”€â”€ Admin shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div id="admin-shell">
+
+  <header class="site-header">
+    <a class="logo" href="../../">AGEE ARCADE</a>
+    <nav class="site-nav">
+      <a href="../">Analytics</a>
+      <a href="./" style="color:#c080ff">Ad Admin</a>
+      <button id="logout-btn" class="btn btn-sm" style="background:transparent;color:rgba(200,150,255,0.5);border:1px solid rgba(100,50,180,0.3)">Sign Out</button>
+    </nav>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="reports">Reports</button>
+    <button class="tab-btn" data-tab="campaigns">Campaigns</button>
+    <button class="tab-btn" data-tab="sponsors">Sponsors</button>
+    <button class="tab-btn" data-tab="leads">Leads</button>
+  </div>
+
+  <!-- â•â• REPORTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <div class="tab-panel active" id="tab-reports">
+
+    <div class="admin-card">
+      <h3>Overall Metrics</h3>
+      <div class="kpi-row" id="kpi-row">
+        <div class="kpi-card"><div class="kpi-val" id="kpi-served">â€”</div><div class="kpi-label">Served</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="kpi-views">â€”</div><div class="kpi-label">Qualified Views</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="kpi-clicks">â€”</div><div class="kpi-label">Clicks</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="kpi-ctr">â€”</div><div class="kpi-label">CTR</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="kpi-rewards">â€”</div><div class="kpi-label">Rewards Granted</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="kpi-leads">â€”</div><div class="kpi-label">Sponsor Leads</div></div>
+      </div>
+    </div>
+
+    <div class="admin-card">
+      <h3>Campaign Performance</h3>
+      <table class="data-table" id="report-table">
+        <thead>
+          <tr>
+            <th>Campaign</th><th>Sponsor</th><th>Placement</th>
+            <th>Served</th><th>Qual. Views</th><th>Clicks</th>
+            <th>CTR</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="report-tbody"><tr><td colspan="8" style="color:rgba(160,130,200,0.4);padding:1rem">Loadingâ€¦</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="admin-card">
+      <h3>Recent Ad Events <span style="font-size:10px;color:rgba(140,100,200,0.5);margin-left:8px">last 50</span></h3>
+      <table class="data-table">
+        <thead><tr><th>Time</th><th>Event</th><th>Placement</th><th>Game</th><th>Campaign</th></tr></thead>
+        <tbody id="events-tbody"><tr><td colspan="5" style="color:rgba(160,130,200,0.4);padding:1rem">Loadingâ€¦</td></tr></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- â•â• CAMPAIGNS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <div class="tab-panel" id="tab-campaigns">
+
+    <div class="admin-card">
+      <h3>Create Campaign</h3>
+      <form id="camp-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Sponsor</label>
+            <select id="camp-sponsor"><option value="">â€” None (House Ad) â€”</option></select>
+          </div>
+          <div class="form-group">
+            <label>Placement *</label>
+            <select id="camp-placement" required></select>
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:12px">
+          <div class="form-group">
+            <label>Title *</label>
+            <input type="text" id="camp-title" required placeholder="Sponsored by Acme">
+          </div>
+          <div class="form-group">
+            <label>Click URL</label>
+            <input type="url" id="camp-click" placeholder="https://sponsor.com">
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:12px">
+          <div class="form-group">
+            <label>Image URL</label>
+            <input type="url" id="camp-img" placeholder="/ads/sponsor-banner.png">
+          </div>
+          <div class="form-group">
+            <label>Video URL (optional)</label>
+            <input type="url" id="camp-video" placeholder="/ads/sponsor-video.mp4">
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:12px">
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="datetime-local" id="camp-start">
+          </div>
+          <div class="form-group">
+            <label>End Date</label>
+            <input type="datetime-local" id="camp-end">
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:12px">
+          <div class="form-group">
+            <label>Priority (higher = preferred)</label>
+            <input type="number" id="camp-priority" value="0" min="-100" max="100">
+          </div>
+          <div class="form-group">
+            <label>Max Impressions (blank = unlimited)</label>
+            <input type="number" id="camp-max-imp" placeholder="10000" min="0">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:12px">
+          <label>Description</label>
+          <textarea id="camp-desc" placeholder="Optional internal notes or ad copy"></textarea>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:13px">
+            <input type="checkbox" id="camp-house"> House Ad (fallback, no sponsor)
+          </label>
+        </div>
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary">Create Campaign</button>
+        </div>
+        <p class="msg-inline" id="camp-msg"></p>
+      </form>
+    </div>
+
+    <div class="admin-card">
+      <h3>All Campaigns</h3>
+      <table class="data-table">
+        <thead><tr><th>Title</th><th>Placement</th><th>Sponsor</th><th>Priority</th><th>Impressions</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="camp-tbody"><tr><td colspan="7" style="color:rgba(160,130,200,0.4);padding:1rem">Loadingâ€¦</td></tr></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- â•â• SPONSORS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <div class="tab-panel" id="tab-sponsors">
+
+    <div class="admin-card">
+      <h3>Add Sponsor</h3>
+      <form id="sponsor-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name *</label>
+            <input type="text" id="sp-name" required placeholder="Acme Corp">
+          </div>
+          <div class="form-group">
+            <label>Contact Email</label>
+            <input type="email" id="sp-email" placeholder="contact@acme.com">
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:12px">
+          <div class="form-group">
+            <label>Website URL</label>
+            <input type="url" id="sp-website" placeholder="https://acme.com">
+          </div>
+          <div class="form-group">
+            <label>Logo URL</label>
+            <input type="url" id="sp-logo" placeholder="/sponsors/acme-logo.png">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:12px">
+          <label>Notes</label>
+          <textarea id="sp-notes" placeholder="Internal notes about this sponsor"></textarea>
+        </div>
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary">Add Sponsor</button>
+        </div>
+        <p class="msg-inline" id="sp-msg"></p>
+      </form>
+    </div>
+
+    <div class="admin-card">
+      <h3>Sponsors</h3>
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Website</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="sponsor-tbody"><tr><td colspan="5" style="color:rgba(160,130,200,0.4);padding:1rem">Loadingâ€¦</td></tr></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- â•â• LEADS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <div class="tab-panel" id="tab-leads">
+    <div class="admin-card">
+      <h3>Sponsor Leads (from /advertise contact form)</h3>
+      <table class="data-table">
+        <thead><tr><th>Date</th><th>Name</th><th>Business</th><th>Email</th><th>Package</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="leads-tbody"><tr><td colspan="7" style="color:rgba(160,130,200,0.4);padding:1rem">Loadingâ€¦</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /admin-shell -->
+
+<div id="toast"></div>
+
+<script src="../../js/vendor/supabase.min.js"></script>
+<script>
+(async () => {
+  'use strict';
+
+  const SB_URL = 'https://xdvrgeaivfqpcsmuqeyi.supabase.co';
+  const SB_KEY = 'sb_publishable_1UoSYMFfHQerkvlvHvbpRQ_JGIYH14O';
+  const sb = window.supabase.createClient(SB_URL, SB_KEY);
+
+  // â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const toastEl = document.getElementById('toast');
+  function toast(msg, ms = 3000) {
+    toastEl.textContent = msg;
+    toastEl.style.display = 'block';
+    setTimeout(() => { toastEl.style.display = 'none'; }, ms);
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function fmt(n) { return Number(n || 0).toLocaleString(); }
+  function pct(a, b) { return b ? (a / b * 100).toFixed(2) + '%' : '0%'; }
+  function relDate(d) {
+    const s = Math.floor((Date.now() - new Date(d)) / 1000);
+    if (s < 60)   return s + 's ago';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    return new Date(d).toLocaleDateString();
+  }
+
+  // â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  let _session = null;
+
+  async function checkAuth() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) { _session = session; showAdmin(); }
+  }
+
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('lg-email').value.trim();
+    const pass  = document.getElementById('lg-pass').value;
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error || !data.session) {
+      document.getElementById('login-err').style.display = 'block';
+      return;
+    }
+    _session = data.session;
+    showAdmin();
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    location.reload();
+  });
+
+  function showAdmin() {
+    document.getElementById('login-gate').style.display = 'none';
+    document.getElementById('admin-shell').style.display = 'block';
+    loadAll();
+  }
+
+  // â”€â”€ Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // â”€â”€ Load all data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  let _sponsors  = [];
+  let _placements = [];
+  let _campaigns = [];
+
+  async function loadAll() {
+    await Promise.all([loadSponsors(), loadPlacements(), loadCampaigns(), loadReports(), loadEvents(), loadLeads()]);
+  }
+
+  // â”€â”€ Sponsors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  async function loadSponsors() {
+    const { data } = await sb.from('sponsors').select('*').order('created_at', { ascending: false });
+    _sponsors = data || [];
+    renderSponsors();
+    populateSponsorSelect();
+  }
+
+  function renderSponsors() {
+    const tbody = document.getElementById('sponsor-tbody');
+    if (!_sponsors.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:rgba(160,130,200,0.4);padding:1rem">No sponsors yet.</td></tr>'; return; }
+    tbody.innerHTML = _sponsors.map(s => `
+      <tr>
+        <td>${esc(s.name)}</td>
+        <td>${esc(s.contact_email || 'â€”')}</td>
+        <td>${s.website_url ? `<a href="${esc(s.website_url)}" target="_blank" rel="noopener" style="color:#9960e0">${esc(s.website_url)}</a>` : 'â€”'}</td>
+        <td><span class="badge ${s.active ? 'badge-active' : 'badge-inactive'}">${s.active ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <button class="btn btn-sm btn-danger" onclick="toggleSponsor('${s.id}',${s.active})">
+            ${s.active ? 'Deactivate' : 'Activate'}
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function populateSponsorSelect() {
+    const sel = document.getElementById('camp-sponsor');
+    sel.innerHTML = '<option value="">â€” None (House Ad) â€”</option>';
+    _sponsors.filter(s => s.active).forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id; o.textContent = s.name;
+      sel.appendChild(o);
+    });
+  }
+
+  window.toggleSponsor = async (id, currentActive) => {
+    await sb.from('sponsors').update({ active: !currentActive }).eq('id', id);
+    toast(currentActive ? 'Sponsor deactivated.' : 'Sponsor activated.');
+    loadSponsors();
+  };
+
+  document.getElementById('sponsor-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('sp-msg');
+    msg.style.display = 'none';
+    const name = document.getElementById('sp-name').value.trim();
+    if (!name) return;
+    const { error } = await sb.from('sponsors').insert({
+      name,
+      contact_email: document.getElementById('sp-email').value.trim() || null,
+      website_url:   document.getElementById('sp-website').value.trim() || null,
+      logo_url:      document.getElementById('sp-logo').value.trim() || null,
+      notes:         document.getElementById('sp-notes').value.trim() || null,
+    });
+    if (error) { msg.textContent = 'Error: ' + error.message; msg.className = 'msg-inline error'; msg.style.display = 'block'; return; }
+    msg.textContent = 'âœ“ Sponsor added!'; msg.className = 'msg-inline ok'; msg.style.display = 'block';
+    document.getElementById('sponsor-form').reset();
+    loadSponsors();
+  });
+
+  // â”€â”€ Placements â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  async function loadPlacements() {
+    const { data } = await sb.from('ad_placements').select('key, name').order('name');
+    _placements = data || [];
+    const sel = document.getElementById('camp-placement');
+    sel.innerHTML = '<option value="">â€” Select â€”</option>';
+    _placements.forEach(p => {
+      const o = document.createElement('option'); o.value = p.key; o.textContent = p.name;
+      sel.appendChild(o);
+    });
+  }
+
+  // â”€â”€ Campaigns â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  async function loadCampaigns() {
+    const { data } = await sb.from('campaigns')
+      .select('*, sponsors(name)')
+      .order('created_at', { ascending: false });
+    _campaigns = data || [];
+    renderCampaigns();
+  }
+
+  function renderCampaigns() {
+    const tbody = document.getElementById('camp-tbody');
+    if (!_campaigns.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:rgba(160,130,200,0.4);padding:1rem">No campaigns yet.</td></tr>'; return; }
+    tbody.innerHTML = _campaigns.map(c => `
+      <tr>
+        <td>${esc(c.title)}</td>
+        <td style="font-size:11px;color:rgba(160,130,200,0.6)">${esc(c.placement_key)}</td>
+        <td>${c.sponsors ? esc(c.sponsors.name) : '<span class="badge badge-house">House</span>'}</td>
+        <td>${c.priority}</td>
+        <td>${fmt(c.current_impressions)}${c.max_impressions ? ' / ' + fmt(c.max_impressions) : ''}</td>
+        <td><span class="badge ${c.active ? 'badge-active' : 'badge-inactive'}">${c.active ? 'Active' : 'Off'}</span>
+            ${c.is_house_ad ? '<span class="badge badge-house" style="margin-left:4px">House</span>' : ''}</td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-danger" onclick="toggleCampaign('${c.id}',${c.active})">
+            ${c.active ? 'Pause' : 'Resume'}
+          </button>
+          <button class="btn btn-sm" style="background:rgba(80,30,130,0.5);color:#c080ff;border:1px solid rgba(100,50,160,0.3)"
+                  onclick="deleteCampaign('${c.id}')">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  window.toggleCampaign = async (id, current) => {
+    await sb.from('campaigns').update({ active: !current }).eq('id', id);
+    toast(current ? 'Campaign paused.' : 'Campaign resumed.');
+    loadCampaigns();
+  };
+
+  window.deleteCampaign = async (id) => {
+    if (!confirm('Delete this campaign? This cannot be undone.')) return;
+    await sb.from('campaigns').delete().eq('id', id);
+    toast('Campaign deleted.');
+    loadCampaigns();
+    loadReports();
+  };
+
+  document.getElementById('camp-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('camp-msg');
+    msg.style.display = 'none';
+    const title     = document.getElementById('camp-title').value.trim();
+    const placement = document.getElementById('camp-placement').value;
+    if (!title || !placement) { msg.textContent = 'Title and placement are required.'; msg.className = 'msg-inline error'; msg.style.display = 'block'; return; }
+
+    const sponsorId  = document.getElementById('camp-sponsor').value || null;
+    const clickUrl   = document.getElementById('camp-click').value.trim() || null;
+    const imageUrl   = document.getElementById('camp-img').value.trim()   || null;
+    const videoUrl   = document.getElementById('camp-video').value.trim() || null;
+    const startRaw   = document.getElementById('camp-start').value;
+    const endRaw     = document.getElementById('camp-end').value;
+    const priority   = parseInt(document.getElementById('camp-priority').value) || 0;
+    const maxImp     = parseInt(document.getElementById('camp-max-imp').value) || null;
+    const desc       = document.getElementById('camp-desc').value.trim() || null;
+    const isHouse    = document.getElementById('camp-house').checked;
+
+    const { error } = await sb.from('campaigns').insert({
+      sponsor_id:    sponsorId,
+      placement_key: placement,
+      title, description: desc,
+      image_url: imageUrl, video_url: videoUrl, click_url: clickUrl,
+      start_date:    startRaw ? new Date(startRaw).toISOString() : null,
+      end_date:      endRaw   ? new Date(endRaw).toISOString()   : null,
+      priority, max_impressions: maxImp,
+      active: true, is_house_ad: isHouse,
+    });
+
+    if (error) { msg.textContent = 'Error: ' + error.message; msg.className = 'msg-inline error'; msg.style.display = 'block'; return; }
+    msg.textContent = 'âœ“ Campaign created!'; msg.className = 'msg-inline ok'; msg.style.display = 'block';
+    document.getElementById('camp-form').reset();
+    loadCampaigns(); loadReports();
+  });
+
+  // â”€â”€ Reports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  async function loadReports() {
+    // Overall KPIs from ad_events
+    const { data: evts } = await sb.from('ad_events').select('event_type, campaign_id');
+    const served  = evts ? evts.filter(e => e.event_type === 'served').length              : 0;
+    const views   = evts ? evts.filter(e => e.event_type === 'visible_2_seconds').length   : 0;
+    const clicks  = evts ? evts.filter(e => e.event_type === 'click').length               : 0;
+    const rewards = evts ? evts.filter(e => e.event_type === 'reward_granted').length      : 0;
+
+    document.getElementById('kpi-served').textContent  = fmt(served);
+    document.getElementById('kpi-views').textContent   = fmt(views);
+    document.getElementById('kpi-clicks').textContent  = fmt(clicks);
+    document.getElementById('kpi-ctr').textContent     = pct(clicks, served);
+    document.getElementById('kpi-rewards').textContent = fmt(rewards);
+
+    const { count } = await sb.from('sponsor_leads').select('id', { count: 'exact', head: true });
+    document.getElementById('kpi-leads').textContent = fmt(count || 0);
+
+    // Per-campaign report
+    const { data: camps } = await sb.from('campaigns')
+      .select('id, title, placement_key, current_impressions, current_clicks, is_house_ad, active, sponsors(name)')
+      .order('current_impressions', { ascending: false });
+
+    // Map event counts per campaign
+    const v2sCounts  = {};
+    const clickMap   = {};
+    if (evts) {
+      evts.forEach(e => {
+        if (e.campaign_id) {
+          if (e.event_type === 'visible_2_seconds') v2sCounts[e.campaign_id]  = (v2sCounts[e.campaign_id]  || 0) + 1;
+          if (e.event_type === 'click')             clickMap[e.campaign_id]   = (clickMap[e.campaign_id]   || 0) + 1;
+        }
+      });
+    }
+
+    const tbody = document.getElementById('report-tbody');
+    if (!camps || !camps.length) { tbody.innerHTML = '<tr><td colspan="8" style="color:rgba(160,130,200,0.4);padding:1rem">No campaigns.</td></tr>'; return; }
+    tbody.innerHTML = camps.map(c => `
+      <tr>
+        <td>${esc(c.title)}</td>
+        <td>${c.sponsors ? esc(c.sponsors.name) : 'â€”'}</td>
+        <td style="font-size:11px;color:rgba(140,100,200,0.6)">${esc(c.placement_key)}</td>
+        <td>${fmt(c.current_impressions)}</td>
+        <td>${fmt(v2sCounts[c.id] || 0)}</td>
+        <td>${fmt(clickMap[c.id]  || 0)}</td>
+        <td>${pct(clickMap[c.id] || 0, c.current_impressions)}</td>
+        <td>
+          <span class="badge ${c.active ? 'badge-active' : 'badge-inactive'}">${c.active ? 'Active' : 'Off'}</span>
+          ${c.is_house_ad ? '<span class="badge badge-house" style="margin-left:4px">House</span>' : ''}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // â”€â”€ Events feed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  async function loadEvents() {
+    const { data } = await sb.from('ad_events')
+      .select('created_at, event_type, placement_key, game_id, campaign_id')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    const tbody = document.getElementById('events-tbody');
+    if (!data || !data.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:rgba(160,130,200,0.4);padding:1rem">No events yet.</td></tr>'; return; }
+    tbody.innerHTML = data.map(e => `
+      <tr>
+        <td style="font-size:11px;color:rgba(140,110,180,0.7)">${relDate(e.created_at)}</td>
+        <td><span class="badge badge-${e.event_type.includes('click') ? 'direct' : e.event_type.includes('reward') ? 'active' : 'house'}">${esc(e.event_type)}</span></td>
+        <td style="font-size:11px">${esc(e.placement_key)}</td>
+        <td style="font-size:11px;color:rgba(140,110,180,0.7)">${esc(e.game_id || 'â€”')}</td>
+        <td style="font-size:10px;color:rgba(120,90,160,0.5);font-family:'Courier New',monospace">${e.campaign_id ? e.campaign_id.slice(0,8) + 'â€¦' : 'â€”'}</td>
+      </tr>
+    `).join('');
+  }
+
+  // â”€â”€ Leads â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  async function loadLeads() {
+    const { data } = await sb.from('sponsor_leads')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    const tbody = document.getElementById('leads-tbody');
+    if (!data || !data.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:rgba(160,130,200,0.4);padding:1rem">No leads yet.</td></tr>'; return; }
+    tbody.innerHTML = data.map(l => `
+      <tr>
+        <td style="font-size:11px;color:rgba(140,110,180,0.7)">${relDate(l.created_at)}</td>
+        <td>${esc(l.name)}</td>
+        <td>${esc(l.business_name || 'â€”')}</td>
+        <td><a href="mailto:${esc(l.email)}" style="color:#9060d0">${esc(l.email)}</a></td>
+        <td>${esc(l.desired_package || 'â€”')}</td>
+        <td>
+          <select class="lead-status-sel" data-id="${l.id}" style="background:rgba(10,5,25,0.9);border:1px solid rgba(80,40,140,0.4);border-radius:3px;padding:3px 6px;color:#d0b0ff;font-size:11px">
+            <option ${l.status==='new'       ?'selected':''} value="new">New</option>
+            <option ${l.status==='contacted' ?'selected':''} value="contacted">Contacted</option>
+            <option ${l.status==='closed'    ?'selected':''} value="closed">Closed</option>
+            <option ${l.status==='rejected'  ?'selected':''} value="rejected">Rejected</option>
+          </select>
+        </td>
+        <td>${l.message ? `<span title="${esc(l.message)}" style="cursor:help;color:rgba(140,100,200,0.6);font-size:11px">View â„¹</span>` : 'â€”'}</td>
+      </tr>
+    `).join('');
+
+    document.querySelectorAll('.lead-status-sel').forEach(sel => {
+      sel.addEventListener('change', async () => {
+        await sb.from('sponsor_leads').update({ status: sel.value }).eq('id', sel.dataset.id);
+        toast('Status updated.');
+      });
+    });
+  }
+
+  // â”€â”€ Boot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  await checkAuth();
+})();
+</script>
+
+</body>
+</html>
+

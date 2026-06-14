@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -16,7 +16,7 @@
     frame-src   'none';
     object-src  'none';
   ">
-  <title>Analytics — Agee Arcade Admin</title>
+  <title>Analytics â€” Agee Arcade Admin</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -43,7 +43,7 @@
     body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
     a { color: var(--accent); text-decoration: none; }
 
-    /* ── Auth gate ── */
+    /* â”€â”€ Auth gate â”€â”€ */
     #authGate { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; }
     .auth-box {
       background: var(--surface); border: 1px solid var(--border-2);
@@ -66,10 +66,10 @@
     .auth-btn:hover { background: #8a5aff; }
     #authError { color: var(--red); font-size: 13px; margin-top: 0.75rem; display: none; }
 
-    /* ── Dashboard ── */
+    /* â”€â”€ Dashboard â”€â”€ */
     #dashboard { display: none; }
 
-    /* ── Header ── */
+    /* â”€â”€ Header â”€â”€ */
     .dash-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 2rem; height: 60px;
@@ -96,13 +96,13 @@
     }
     .sign-out-btn:hover { color: var(--red); border-color: var(--red); }
 
-    /* ── Loading bar ── */
+    /* â”€â”€ Loading bar â”€â”€ */
     #loadingBar {
       height: 3px; background: var(--accent); width: 0%;
       transition: width 0.3s; position: fixed; top: 60px; left: 0; right: 0; z-index: 100;
     }
 
-    /* ── View label ── */
+    /* â”€â”€ View label â”€â”€ */
     .view-label {
       font-family: 'Orbitron', sans-serif; font-size: 10px; letter-spacing: 2px;
       color: var(--muted); text-transform: uppercase;
@@ -110,10 +110,10 @@
       border-bottom: 1px solid var(--border);
     }
 
-    /* ── Body ── */
+    /* â”€â”€ Body â”€â”€ */
     .dash-body { padding: 2rem; max-width: 1400px; margin: 0 auto; }
 
-    /* ── Stat cards ── */
+    /* â”€â”€ Stat cards â”€â”€ */
     .stat-row {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 1rem; margin-bottom: 2rem;
@@ -129,14 +129,14 @@
     .c-orange { color: var(--accent3); } .c-blue   { color: var(--accent4); }
     .c-red    { color: var(--red); }     .c-muted  { color: var(--muted); }
 
-    /* ── Grid layouts ── */
+    /* â”€â”€ Grid layouts â”€â”€ */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
     .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
     @media (max-width: 900px)  { .grid-2 { grid-template-columns: 1fr; } }
     @media (max-width: 1100px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 700px)  { .grid-3 { grid-template-columns: 1fr; } }
 
-    /* ── Panel ── */
+    /* â”€â”€ Panel â”€â”€ */
     .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1.5rem; }
     .panel-head {
       display: flex; align-items: center; justify-content: space-between;
@@ -145,7 +145,7 @@
     .panel-head h2 { font-family: 'Orbitron', sans-serif; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; }
     .panel-head-count { font-size: 12px; color: var(--muted); }
 
-    /* ── Bar chart ── */
+    /* â”€â”€ Bar chart â”€â”€ */
     .bar-chart { padding: 1rem 1.25rem; }
     .bar-row { display: flex; align-items: center; gap: .75rem; margin-bottom: .6rem; }
     .bar-row:last-child { margin-bottom: 0; }
@@ -154,7 +154,7 @@
     .bar-fill  { height: 100%; border-radius: 3px; background: var(--accent); transition: width 0.5s ease; }
     .bar-val   { font-size: 12px; color: var(--muted); width: 40px; text-align: right; flex-shrink: 0; }
 
-    /* ── Funnel ── */
+    /* â”€â”€ Funnel â”€â”€ */
     .funnel { padding: 1rem 1.25rem; }
     .funnel-step { display: flex; align-items: center; gap: 1rem; margin-bottom: .75rem; position: relative; }
     .funnel-step:not(:last-child)::after {
@@ -169,7 +169,7 @@
     .funnel-track { width: 100px; height: 4px; background: var(--surface-3); border-radius: 2px; overflow: hidden; }
     .funnel-bar   { height: 100%; border-radius: 2px; background: var(--accent2); transition: width 0.5s ease; }
 
-    /* ── Table ── */
+    /* â”€â”€ Table â”€â”€ */
     .data-table { width: 100%; border-collapse: collapse; }
     .data-table th {
       font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted);
@@ -184,7 +184,7 @@
     .badge-orange { background: rgba(255,153,34,.12);  color: var(--accent3); }
     .badge-blue   { background: rgba(34,170,255,.12);  color: var(--accent4); }
 
-    /* ── Activity feed ── */
+    /* â”€â”€ Activity feed â”€â”€ */
     .feed { padding: 0; max-height: 340px; overflow-y: auto; }
     .feed-item { display: flex; align-items: flex-start; gap: .75rem; padding: .7rem 1.25rem; border-bottom: 1px solid var(--border); font-size: 12px; }
     .feed-item:last-child { border-bottom: none; }
@@ -194,7 +194,7 @@
     .feed-text { flex: 1; color: var(--text); line-height: 1.5; }
     .feed-time { color: var(--muted); flex-shrink: 0; }
 
-    /* ── Context nav ── */
+    /* â”€â”€ Context nav â”€â”€ */
     .ctx-nav {
       display: flex; align-items: stretch; gap: .75rem;
       margin-bottom: 2rem; flex-wrap: wrap;
@@ -211,10 +211,10 @@
     .ctx-btn__icon  { font-size: 20px; line-height: 1; }
     .ctx-btn__label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap; }
 
-    /* ── Empty / error ── */
+    /* â”€â”€ Empty / error â”€â”€ */
     .empty { padding: 2rem 1.25rem; text-align: center; color: var(--muted); font-size: 13px; }
 
-    /* ── Scrollbar ── */
+    /* â”€â”€ Scrollbar â”€â”€ */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: var(--surface); }
     ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
@@ -222,21 +222,21 @@
 </head>
 <body>
 
-<!-- ── Auth Gate ──────────────────────────────────────── -->
+<!-- â”€â”€ Auth Gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div id="authGate">
   <div class="auth-box">
     <h1>AGEE ARCADE</h1>
-    <p>Analytics dashboard — sign in with your admin account.</p>
+    <p>Analytics dashboard â€” sign in with your admin account.</p>
     <label for="emailInput">Email</label>
     <input id="emailInput" type="email" placeholder="you@example.com" autocomplete="email" />
     <label for="passInput">Password</label>
-    <input id="passInput" type="password" placeholder="••••••••" autocomplete="current-password" />
+    <input id="passInput" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password" />
     <button class="auth-btn" onclick="Admin.login()">SIGN IN</button>
     <p id="authError">Sign-in failed. Check your credentials or confirm your account has admin access.</p>
   </div>
 </div>
 
-<!-- ── Dashboard ─────────────────────────────────────── -->
+<!-- â”€â”€ Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div id="dashboard">
 
   <div id="loadingBar"></div>
@@ -259,7 +259,7 @@
 
   <div class="dash-body">
 
-    <!-- ── Context nav: Arcade + each game ── -->
+    <!-- â”€â”€ Context nav: Arcade + each game â”€â”€ -->
     <div class="ctx-nav" id="ctxNav">
       <button class="ctx-btn ctx-btn--active" data-view="arcade" onclick="Admin.switchView('arcade')">
         <span class="ctx-btn__icon">&#x1F3AE;</span>
@@ -273,14 +273,22 @@
         <span class="ctx-btn__icon">&#x1F7E9;</span>
         <span class="ctx-btn__label">Maze Runner</span>
       </button>
+      <button class="ctx-btn" data-view="blacktide-bastion" onclick="Admin.switchView('blacktide-bastion')">
+        <span class="ctx-btn__icon">&#x2693;</span>
+        <span class="ctx-btn__label">Blacktide Bastion</span>
+      </button>
+      <button class="ctx-btn" data-view="spear_fisher" onclick="Admin.switchView('spear_fisher')">
+        <span class="ctx-btn__icon">&#x1F3A3;</span>
+        <span class="ctx-btn__label">Spear Fisher</span>
+      </button>
     </div>
 
-    <!-- ── KPI row — swapped by view ── -->
+    <!-- â”€â”€ KPI row â€” swapped by view â”€â”€ -->
     <div class="stat-row" id="kpiRow"></div>
 
-    <!-- ════════════════════════════════════════
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
          ARCADE VIEW
-    ════════════════════════════════════════ -->
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="arcade-view">
 
       <div class="grid-2">
@@ -309,18 +317,18 @@
 
     </div><!-- /arcade-view -->
 
-    <!-- ════════════════════════════════════════
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
          GAME VIEW
-    ════════════════════════════════════════ -->
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="game-view" hidden>
 
       <div class="grid-3">
         <div class="panel">
-          <div class="panel-head"><h2>Floor Progression</h2></div>
+          <div class="panel-head"><h2 id="progressChartTitle">Floor Progression</h2></div>
           <div class="bar-chart" id="floorChart"><div class="empty">Loading...</div></div>
         </div>
         <div class="panel">
-          <div class="panel-head"><h2>Deaths by Floor</h2></div>
+          <div class="panel-head"><h2 id="deathChartTitle">Deaths by Floor</h2></div>
           <div class="bar-chart" id="deathChart"><div class="empty">Loading...</div></div>
         </div>
         <div class="panel">
@@ -333,7 +341,7 @@
         <div class="panel">
           <div class="panel-head"><h2>Recent Game Sessions</h2><span class="panel-head-count" id="gsCount"></span></div>
           <table class="data-table">
-            <thead><tr><th>Source</th><th>Floor</th><th>Level</th><th>Duration</th><th>End</th><th>Time</th></tr></thead>
+            <thead><tr><th>Source</th><th id="sessionProgressHead">Floor</th><th id="sessionScoreHead">Level</th><th>Duration</th><th>End</th><th>Time</th></tr></thead>
             <tbody id="gsBody"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
           </table>
         </div>
@@ -358,7 +366,7 @@
 
     </div><!-- /game-view -->
 
-    <!-- ── Comments — shared across all views, filtered by active context ── -->
+    <!-- â”€â”€ Comments â€” shared across all views, filtered by active context â”€â”€ -->
     <div class="panel" style="margin-top:1.5rem;">
       <div class="panel-head">
         <h2>Comments</h2>
@@ -373,7 +381,7 @@
   </div><!-- /dash-body -->
 </div><!-- /dashboard -->
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+<script src="../js/vendor/supabase.min.js"></script>
 <script>
 const Admin = (() => {
   'use strict';
@@ -383,7 +391,7 @@ const Admin = (() => {
 
   const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  /* ── Inactivity timeout (30 min) ── */
+  /* â”€â”€ Inactivity timeout (30 min) â”€â”€ */
   let _inactiveTimer = null;
   function _resetTimer() { clearTimeout(_inactiveTimer); _inactiveTimer = setTimeout(signOut, 30 * 60 * 1000); }
   function _startInactivityWatch() {
@@ -391,7 +399,7 @@ const Admin = (() => {
     _resetTimer();
   }
 
-  /* ── Auth ── */
+  /* â”€â”€ Auth â”€â”€ */
   async function login() {
     const email = document.getElementById('emailInput').value.trim();
     const pass  = document.getElementById('passInput').value;
@@ -416,9 +424,25 @@ const Admin = (() => {
     reload();
   }
 
-  /* ── View switcher ── */
+  /* â”€â”€ View switcher â”€â”€ */
+  const GAME_DEFS = {
+    'depths-of-ashenveil': { label: 'Depths of Ashenveil', ids: ['depths-of-ashenveil', 'depths_of_ashenveil'], comments: 'depths-of-ashenveil', metaTable: 'depths_player_meta', progress: 'Floor', score: 'Level' },
+    'maze-runner': { label: 'Maze Runner', ids: ['maze-runner', 'maze_runner'], comments: 'maze-runner', progress: 'Floor', score: 'Score' },
+    'blacktide-bastion': { label: 'Blacktide Bastion', ids: ['blacktide-bastion', 'blacktide_bastion'], comments: 'blacktide-bastion', progress: 'Wave', score: 'Score' },
+    spear_fisher: { label: 'Spear Fisher', ids: ['spear_fisher', 'spear-fisher'], comments: 'spear_fisher', progress: 'Round', score: 'Score' },
+  };
+
   let _activeView = 'arcade';
   function _currentView() { return _activeView; }
+  function _currentGame() { return GAME_DEFS[_currentView()] || null; }
+  function _gameName() { return (_currentGame() && _currentGame().label) || 'Game'; }
+  function _gameIds() { return (_currentGame() && _currentGame().ids) || [_currentView()]; }
+  function _progressLabel() { return (_currentGame() && _currentGame().progress) || 'Floor'; }
+  function _scoreLabel() { return (_currentGame() && _currentGame().score) || 'Level'; }
+  function _filterGame(q, column) {
+    const ids = _gameIds();
+    return ids.length > 1 ? q.in(column || 'game_id', ids) : q.eq(column || 'game_id', ids[0]);
+  }
 
   function switchView(view) {
     _activeView = view || 'arcade';
@@ -429,24 +453,38 @@ const Admin = (() => {
     const isGame = _activeView !== 'arcade';
     document.getElementById('arcade-view').hidden = isGame;
     document.getElementById('game-view').hidden   = !isGame;
+    if (isGame) updateGameLabels();
     reload();
   }
 
-  /* ── Date range ── */
+  function updateGameLabels() {
+    const progress = _progressLabel();
+    const score = _scoreLabel();
+    const progressTitle = document.getElementById('progressChartTitle');
+    const deathTitle = document.getElementById('deathChartTitle');
+    const progressHead = document.getElementById('sessionProgressHead');
+    const scoreHead = document.getElementById('sessionScoreHead');
+    if (progressTitle) progressTitle.textContent = progress + ' Progression';
+    if (deathTitle) deathTitle.textContent = 'Deaths by ' + progress;
+    if (progressHead) progressHead.textContent = progress;
+    if (scoreHead) scoreHead.textContent = score;
+  }
+
+  /* â”€â”€ Date range â”€â”€ */
   function _since() {
     const days = parseInt(document.getElementById('rangeSelect').value, 10);
     if (!days) return null;
     const d = new Date(); d.setDate(d.getDate() - days); return d.toISOString();
   }
 
-  /* ── Loading bar ── */
+  /* â”€â”€ Loading bar â”€â”€ */
   let _loadPct = 0;
   function _startLoad() { _loadPct = 10; _setLoad(); }
   function _tickLoad()  { _loadPct = Math.min(_loadPct + 10, 90); _setLoad(); }
   function _doneLoad()  { _loadPct = 100; _setLoad(); setTimeout(() => { _loadPct = 0; _setLoad(); }, 400); }
   function _setLoad()   { document.getElementById('loadingBar').style.width = _loadPct + '%'; }
 
-  /* ── Reload ── */
+  /* â”€â”€ Reload â”€â”€ */
   async function reload() {
     _startLoad();
     if (_currentView() === 'arcade') {
@@ -473,10 +511,10 @@ const Admin = (() => {
     _doneLoad();
   }
 
-  /* ── Helpers ── */
+  /* â”€â”€ Helpers â”€â”€ */
   function _fmt(n)  { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n); }
   function _fmtDur(secs) {
-    if (!secs || secs <= 0) return '—';
+    if (!secs || secs <= 0) return 'â€”';
     if (secs < 60) return secs + 's';
     return Math.floor(secs / 60) + 'm ' + (secs % 60) + 's';
   }
@@ -507,9 +545,9 @@ const Admin = (() => {
   const SOURCE_LABELS = { linkedin:'LinkedIn', facebook:'Facebook', google:'Google', github_pages:'GitHub Pages', direct:'Direct', other:'Other' };
   const SOURCE_CLASS  = { linkedin:'badge-blue', direct:'badge-green', github_pages:'badge-purple' };
 
-  /* ══════════════════════════════════════════
+  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      ARCADE VIEW LOADERS
-  ══════════════════════════════════════════ */
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
   async function loadArcadeKPIs() {
     const since = _since();
@@ -605,7 +643,8 @@ const Admin = (() => {
       .select('id, page_id, display_name, content, created_at, user_id')
       .order('created_at', { ascending: false })
       .limit(50);
-    q = q.eq('page_id', view);
+    if (view === 'arcade') q = q.eq('page_id', 'arcade');
+    else q = q.eq('page_id', (_currentGame() && _currentGame().comments) || view);
     const { data, error } = await q;
     const tbody = document.getElementById('commentsBody');
     const count = document.getElementById('commentsCount');
@@ -616,7 +655,13 @@ const Admin = (() => {
     const rows = data || [];
     count.textContent = rows.length + ' total';
     if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No comments yet</td></tr>'; _tickLoad(); return; }
-    const PAGE_LABELS = { arcade: 'Arcade', 'depths-of-ashenveil': 'Depths of Ashenveil', 'maze-runner': 'Maze Runner' };
+    const PAGE_LABELS = {
+      arcade: 'Arcade',
+      'depths-of-ashenveil': 'Depths of Ashenveil',
+      'maze-runner': 'Maze Runner',
+      'blacktide-bastion': 'Blacktide Bastion',
+      spear_fisher: 'Spear Fisher',
+    };
     tbody.innerHTML = rows.map(r => {
       const preview = r.content.length > 100 ? r.content.slice(0,100) + '...' : r.content;
       return `<tr>
@@ -643,18 +688,18 @@ const Admin = (() => {
     if (!error) loadComments();
   }
 
-  /* ══════════════════════════════════════════
+  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      GAME VIEW LOADERS
-  ══════════════════════════════════════════ */
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
   async function loadGameKPIs() {
     const since = _since();
-    let gsQ = _sb.from('arcade_game_sessions').select('duration_seconds, max_floor', { count: 'exact', head: false });
+    let gsQ = _filterGame(_sb.from('arcade_game_sessions').select('duration_seconds, max_floor', { count: 'exact', head: false }));
     if (since) gsQ = gsQ.gte('started_at', since);
     const { data: gameSess, count: gsCount } = await gsQ;
 
     async function countEvent(type) {
-      let q = _sb.from('arcade_events').select('id',{count:'exact',head:true}).eq('event_type', type);
+      let q = _filterGame(_sb.from('arcade_events').select('id',{count:'exact',head:true}).eq('event_type', type));
       if (since) q = q.gte('created_at', since);
       const { count } = await q; return count || 0;
     }
@@ -663,18 +708,18 @@ const Admin = (() => {
     const durations = (gameSess||[]).map(g => g.duration_seconds||0).filter(d => d > 30);
     const avgPlay   = durations.length ? Math.round(durations.reduce((a,b) => a+b, 0) / durations.length) : 0;
     const maxFloor  = Math.max(0, ...(gameSess||[]).map(g => g.max_floor||1));
-    const gameName  = { 'depths-of-ashenveil': 'Depths of Ashenveil', 'maze-runner': 'Maze Runner' }[_currentView()] || 'Game';
+    const gameName  = _gameName();
 
     document.getElementById('kpiRow').innerHTML = `
       <div class="stat-card"><div class="stat-card__label">Game Starts</div><div class="stat-card__value c-purple">${_fmt(gsCount||0)}</div><div class="stat-card__sub">${_escHtml(gameName)}</div></div>
       <div class="stat-card"><div class="stat-card__label">Avg Play Time</div><div class="stat-card__value c-green">${_fmtDur(avgPlay)}</div><div class="stat-card__sub">sessions &gt; 30s</div></div>
-      <div class="stat-card"><div class="stat-card__label">Best Floor</div><div class="stat-card__value c-orange">${maxFloor||'—'}</div><div class="stat-card__sub">all time highest</div></div>
+      <div class="stat-card"><div class="stat-card__label">Best Floor</div><div class="stat-card__value c-orange">${maxFloor||'â€”'}</div><div class="stat-card__sub">all time highest</div></div>
       <div class="stat-card"><div class="stat-card__label">Total Deaths</div><div class="stat-card__value c-red">${_fmt(deaths)}</div><div class="stat-card__sub">player_died events</div></div>`;
     _tickLoad();
   }
 
   async function loadFloorChart() {
-    let q = _sb.from('arcade_game_sessions').select('max_floor');
+    let q = _filterGame(_sb.from('arcade_game_sessions').select('max_floor'));
     if (_since()) q = q.gte('started_at', _since());
     const { data } = await q;
     const counts = {};
@@ -684,7 +729,7 @@ const Admin = (() => {
   }
 
   async function loadDeathChart() {
-    let q = _sb.from('arcade_events').select('event_data').eq('event_type','player_died');
+    let q = _filterGame(_sb.from('arcade_events').select('event_data').eq('event_type','player_died'));
     if (_since()) q = q.gte('created_at', _since());
     const { data } = await q;
     const counts = {};
@@ -694,7 +739,7 @@ const Admin = (() => {
   }
 
   async function loadEventsChart() {
-    let q = _sb.from('arcade_events').select('event_type');
+    let q = _filterGame(_sb.from('arcade_events').select('event_type'));
     if (_since()) q = q.gte('created_at', _since());
     const { data } = await q;
     const counts = {};
@@ -704,9 +749,9 @@ const Admin = (() => {
   }
 
   async function loadGameSessions() {
-    let q = _sb.from('arcade_game_sessions')
+    let q = _filterGame(_sb.from('arcade_game_sessions')
       .select('started_at, max_floor, max_level, duration_seconds, end_reason, session_id')
-      .order('started_at', { ascending: false }).limit(20);
+      .order('started_at', { ascending: false }).limit(20));
     if (_since()) q = q.gte('started_at', _since());
     const { data } = await q;
 
@@ -729,7 +774,7 @@ const Admin = (() => {
         <td><span class="badge ${sc}">${_escHtml(SOURCE_LABELS[src]||src)}</span></td>
         <td>${r.max_floor||1}</td><td>${r.max_level||1}</td>
         <td>${_fmtDur(r.duration_seconds)}</td>
-        <td><span class="badge ${rc}">${_escHtml(r.end_reason||'—')}</span></td>
+        <td><span class="badge ${rc}">${_escHtml(r.end_reason||'â€”')}</span></td>
         <td style="color:var(--muted)">${_timeAgo(r.started_at)}</td>
       </tr>`;
     }).join('');
@@ -737,7 +782,16 @@ const Admin = (() => {
   }
 
   async function loadPlayerMeta() {
-    const { data, error } = await _sb.from('depths_player_meta')
+    const game = _currentGame();
+    if (!game || !game.metaTable) {
+      document.getElementById('playerMetaHead').innerHTML = '';
+      document.getElementById('playerMetaBody').innerHTML = '<tr><td class="empty">No player meta table for ' + _escHtml(_gameName()) + ' yet</td></tr>';
+      document.getElementById('playerMetaCount').textContent = '0 rows';
+      _tickLoad();
+      return;
+    }
+
+    const { data, error } = await _sb.from(game.metaTable)
       .select('*').order('updated_at', { ascending: false, nullsFirst: false }).limit(100);
     const thead = document.getElementById('playerMetaHead');
     const tbody = document.getElementById('playerMetaBody');
@@ -757,7 +811,7 @@ const Admin = (() => {
     thead.innerHTML = '<tr>' + cols.map(c => `<th>${_escHtml(c.replace(/_/g,' '))}</th>`).join('') + '</tr>';
     tbody.innerHTML  = data.map(row => '<tr>' + cols.map(c => {
       const val = row[c];
-      if (val === null || val === undefined) return '<td style="color:var(--muted)">—</td>';
+      if (val === null || val === undefined) return '<td style="color:var(--muted)">â€”</td>';
       if (typeof val === 'object') return `<td style="font-family:monospace;font-size:11px">${_escHtml(JSON.stringify(val))}</td>`;
       if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val))
         return `<td style="color:var(--muted);font-size:12px" title="${_escHtml(val)}">${_timeAgo(val)}</td>`;
@@ -766,12 +820,13 @@ const Admin = (() => {
     _tickLoad();
   }
 
-  /* ── Event feed (shared, rendered into separate containers per view) ── */
+  /* â”€â”€ Event feed (shared, rendered into separate containers per view) â”€â”€ */
   async function loadEventFeed(view) {
     const containerId = view === 'arcade' ? 'eventFeedArcade' : 'eventFeedGame';
     let q = _sb.from('arcade_events')
       .select('event_type, event_data, created_at')
       .order('created_at', { ascending: false }).limit(50);
+    if (view === 'game') q = _filterGame(q);
     if (_since()) q = q.gte('created_at', _since());
     const { data } = await q;
     const el = document.getElementById(containerId);
@@ -791,7 +846,7 @@ const Admin = (() => {
     el.innerHTML = data.map(e => {
       const info   = ICONS[e.event_type] || { dot: '', text: e.event_type.replace(/_/g,' ') };
       const detail = e.event_data && Object.keys(e.event_data).length
-        ? ' — ' + Object.entries(e.event_data).map(([k,v]) => k+': '+v).join(', ') : '';
+        ? ' â€” ' + Object.entries(e.event_data).map(([k,v]) => k+': '+v).join(', ') : '';
       return `<div class="feed-item">
         <div class="feed-dot ${info.dot}"></div>
         <span class="feed-text">${_escHtml(info.text)}${_escHtml(detail)}</span>
@@ -801,7 +856,7 @@ const Admin = (() => {
     _tickLoad();
   }
 
-  /* ── Init ── */
+  /* â”€â”€ Init â”€â”€ */
   (async function init() {
     const { data: { session } } = await _sb.auth.getSession();
     if (session && session.user?.app_metadata?.role === 'admin') { showDashboard(); return; }
@@ -813,8 +868,6 @@ const Admin = (() => {
 })();
 </script>
 
-<footer style="padding:1.25rem;text-align:center;font:12px system-ui,sans-serif;color:#8888aa;background:#0a0a0f;border-top:1px solid rgba(255,255,255,0.1);">
-  &copy; 2026 ageegaming.com &mdash; Built by Jeremie Agee &mdash; <a href="../../privacy.html" style="color:inherit;text-decoration:underline;">Privacy Policy</a>
-</footer>
 </body>
 </html>
+

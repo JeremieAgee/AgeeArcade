@@ -1,0 +1,443 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Advertise on Agee Arcade â€” sponsor wall billboards, loading commercials, and more inside a 3D browser arcade.">
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' 'unsafe-inline'
+                https://cdn.jsdelivr.net;
+    style-src   'self' 'unsafe-inline'
+                https://fonts.googleapis.com;
+    font-src    'self' https://fonts.gstatic.com;
+    connect-src 'self'
+                https://xdvrgeaivfqpcsmuqeyi.supabase.co
+                wss://xdvrgeaivfqpcsmuqeyi.supabase.co;
+    img-src     'self' data: blob:;
+    frame-src   'none';
+    object-src  'none';
+    base-uri    'self';
+    form-action 'self';
+  ">
+  <title>Advertise â€” Agee Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    /* â”€â”€ Advertise page â”€â”€ */
+    .adv-hero {
+      text-align: center;
+      padding: 4rem 1rem 2rem;
+      background: radial-gradient(ellipse at 50% 0%, rgba(120,60,200,0.12) 0%, transparent 70%);
+    }
+    .adv-hero__eyebrow {
+      font-family: 'Orbitron', 'Courier New', monospace;
+      font-size: 11px; letter-spacing: 4px;
+      color: rgba(160,80,255,0.7); text-transform: uppercase;
+      margin: 0 0 12px;
+    }
+    .adv-hero__title {
+      font-family: 'Orbitron', 'Courier New', monospace;
+      font-size: clamp(1.6rem, 4vw, 2.8rem); font-weight: 900;
+      color: #e0c0ff; margin: 0 0 16px;
+      text-shadow: 0 0 40px rgba(160,80,255,0.4);
+    }
+    .adv-hero__sub {
+      max-width: 560px; margin: 0 auto 2rem;
+      font-size: 1rem; color: rgba(200,180,255,0.65); line-height: 1.6;
+    }
+
+    .adv-section {
+      max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem;
+    }
+    .adv-section h2 {
+      font-family: 'Orbitron', 'Courier New', monospace;
+      font-size: 1.1rem; font-weight: 700; letter-spacing: 2px;
+      color: #c090ff; margin: 0 0 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(120,60,200,0.3);
+    }
+
+    /* Placement grid */
+    .placement-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem; margin-bottom: 3rem;
+    }
+    .placement-card {
+      background: rgba(20,10,40,0.6);
+      border: 1px solid rgba(100,50,180,0.3);
+      border-radius: 6px; padding: 1.25rem;
+    }
+    .placement-card__badge {
+      display: inline-block;
+      font-size: 10px; letter-spacing: 1.5px; font-family: 'Courier New', monospace;
+      color: rgba(160,100,255,0.8); background: rgba(80,30,150,0.25);
+      border: 1px solid rgba(100,50,180,0.3);
+      border-radius: 3px; padding: 2px 8px; margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    .placement-card__name { font-weight: 700; color: #d0b0ff; margin: 0 0 6px; font-size: 0.95rem; }
+    .placement-card__desc { font-size: 0.82rem; color: rgba(180,160,220,0.6); line-height: 1.5; margin: 0 0 10px; }
+    .placement-card__size { font-family: 'Courier New', monospace; font-size: 11px; color: rgba(140,100,200,0.6); }
+
+    /* Packages */
+    .pkg-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem; margin-bottom: 3rem;
+    }
+    .pkg-card {
+      background: rgba(20,10,40,0.7);
+      border: 1px solid rgba(100,50,180,0.4);
+      border-radius: 8px; padding: 1.5rem 1.25rem;
+      text-align: center;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .pkg-card:hover {
+      border-color: rgba(160,80,255,0.6);
+      box-shadow: 0 0 20px rgba(120,60,200,0.2);
+    }
+    .pkg-card--featured {
+      border-color: rgba(160,80,255,0.5);
+      background: rgba(40,15,80,0.7);
+    }
+    .pkg-card__icon { font-size: 2rem; margin-bottom: 10px; }
+    .pkg-card__name { font-family: 'Orbitron', monospace; font-size: 13px; font-weight: 700; color: #d0b0ff; margin: 0 0 8px; }
+    .pkg-card__includes { font-size: 12px; color: rgba(180,160,220,0.6); line-height: 1.7; margin: 0 0 14px; }
+    .pkg-card__price {
+      font-family: 'Courier New', monospace; font-size: 11px;
+      color: rgba(140,100,200,0.7); letter-spacing: 1px;
+    }
+
+    /* Contact form */
+    .adv-form {
+      background: rgba(15,8,32,0.8);
+      border: 1px solid rgba(100,50,180,0.3);
+      border-radius: 8px; padding: 2rem; max-width: 620px;
+    }
+    .adv-form label {
+      display: block; font-size: 11px; letter-spacing: 1px;
+      color: rgba(160,100,255,0.7); text-transform: uppercase;
+      margin-bottom: 5px; margin-top: 16px;
+      font-family: 'Courier New', monospace;
+    }
+    .adv-form input,
+    .adv-form select,
+    .adv-form textarea {
+      width: 100%; box-sizing: border-box;
+      background: rgba(10,5,25,0.9);
+      border: 1px solid rgba(80,40,140,0.5);
+      border-radius: 4px; padding: 9px 12px;
+      color: #d0b0ff; font-size: 14px;
+      font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .adv-form input:focus,
+    .adv-form select:focus,
+    .adv-form textarea:focus { border-color: rgba(160,80,255,0.6); }
+    .adv-form select option { background: #0c0820; }
+    .adv-form textarea { min-height: 120px; resize: vertical; }
+    .adv-form__submit {
+      margin-top: 24px;
+      padding: 12px 32px;
+      background: linear-gradient(135deg, #7730d0, #4a1880);
+      color: #fff; border: 1px solid rgba(160,80,255,0.5);
+      border-radius: 4px; cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 13px; font-weight: bold; letter-spacing: 1px;
+      transition: opacity 0.15s;
+    }
+    .adv-form__submit:hover { opacity: 0.85; }
+    .adv-form__submit:disabled { opacity: 0.4; cursor: default; }
+
+    #adv-form-msg {
+      margin-top: 16px; font-size: 13px;
+      color: rgba(160,200,100,0.9); display: none;
+    }
+    #adv-form-msg.error { color: rgba(255,100,100,0.9); }
+
+    /* Stats banner */
+    .adv-stats {
+      display: flex; flex-wrap: wrap; gap: 1.5rem;
+      justify-content: center; margin-bottom: 3rem;
+    }
+    .adv-stat {
+      text-align: center;
+      background: rgba(20,10,40,0.5);
+      border: 1px solid rgba(100,50,180,0.25);
+      border-radius: 6px; padding: 1rem 1.5rem; min-width: 120px;
+    }
+    .adv-stat__val {
+      font-family: 'Orbitron', monospace; font-size: 1.6rem;
+      font-weight: 900; color: #c080ff;
+    }
+    .adv-stat__label { font-size: 11px; color: rgba(160,130,220,0.6); margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="logo" href="../">AGEE ARCADE</a>
+    <nav class="site-nav">
+      <span>Created By Jeremie Agee</span>
+      <a href="../leaderboards/">Leaderboards</a>
+      <a href="../about/">About</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- Hero -->
+    <section class="adv-hero">
+      <p class="adv-hero__eyebrow">Sponsor Opportunities</p>
+      <h1 class="adv-hero__title">Advertise Inside a 3D Web Arcade</h1>
+      <p class="adv-hero__sub">
+        Put your brand in front of players inside an immersive 3D browser arcade.
+        Wall billboards, loading commercials, rewarded ads, leaderboard sponsorships, and more.
+        Founding sponsor packages available.
+      </p>
+    </section>
+
+    <!-- Audience stats -->
+    <section class="adv-section">
+      <h2>Audience</h2>
+      <div class="adv-stats">
+        <div class="adv-stat"><div class="adv-stat__val">3D</div><div class="adv-stat__label">Web Arcade</div></div>
+        <div class="adv-stat"><div class="adv-stat__val">Free</div><div class="adv-stat__label">To Play</div></div>
+        <div class="adv-stat"><div class="adv-stat__val">PC + Mobile</div><div class="adv-stat__label">Supported</div></div>
+        <div class="adv-stat"><div class="adv-stat__val">Growing</div><div class="adv-stat__label">Player Base</div></div>
+      </div>
+    </section>
+
+    <!-- Placements -->
+    <section class="adv-section">
+      <h2>Available Ad Placements</h2>
+      <div class="placement-grid">
+
+        <div class="placement-card">
+          <span class="placement-card__badge">3D Billboard</span>
+          <p class="placement-card__name">Left Wall Billboard 1 &amp; 2</p>
+          <p class="placement-card__desc">Full-size sponsor image displayed on the left wall of the 3D arcade lobby. Seen by every player who enters.</p>
+          <span class="placement-card__size">1024 Ã— 512 Â· 3D Â· Clickable</span>
+        </div>
+
+        <div class="placement-card">
+          <span class="placement-card__badge">3D Billboard</span>
+          <p class="placement-card__name">Right Wall Billboard</p>
+          <p class="placement-card__desc">Full-size sponsor image on the right wall. Premium position as players walk toward the game cabinets.</p>
+          <span class="placement-card__size">1024 Ã— 512 Â· 3D Â· Clickable</span>
+        </div>
+
+        <div class="placement-card">
+          <span class="placement-card__badge">Loading Commercial</span>
+          <p class="placement-card__name">Game Loading Commercial</p>
+          <p class="placement-card__desc">Full-screen sponsor image or video shown for 5 seconds before every game loads. High-attention placement.</p>
+          <span class="placement-card__size">1280 Ã— 720 Â· Overlay Â· 5s</span>
+        </div>
+
+        <div class="placement-card">
+          <span class="placement-card__badge">Interstitial</span>
+          <p class="placement-card__name">Game Over Interstitial</p>
+          <p class="placement-card__desc">Shown at natural game-over moments. Players see it between rounds, not mid-play.</p>
+          <span class="placement-card__size">1280 Ã— 720 Â· Overlay Â· 5s skip</span>
+        </div>
+
+        <div class="placement-card">
+          <span class="placement-card__badge">Rewarded</span>
+          <p class="placement-card__name">Rewarded Revive / Continue</p>
+          <p class="placement-card__desc">Player opts in to watch a sponsor message in exchange for a game reward (revive, continue, double coins). High engagement.</p>
+          <span class="placement-card__size">Opt-in Â· 15s Â· High CTR</span>
+        </div>
+
+        <div class="placement-card">
+          <span class="placement-card__badge">Leaderboard</span>
+          <p class="placement-card__name">Leaderboard Sponsor</p>
+          <p class="placement-card__desc">Your brand next to the top player scores. Prominent placement on the leaderboard page.</p>
+          <span class="placement-card__size">728 Ã— 90 Â· Banner</span>
+        </div>
+
+        <div class="placement-card">
+          <span class="placement-card__badge">Homepage</span>
+          <p class="placement-card__name">Home Top Banner</p>
+          <p class="placement-card__desc">Top banner on the arcade homepage. First thing visitors see when landing on the site.</p>
+          <span class="placement-card__size">970 Ã— 250 Â· Banner</span>
+        </div>
+
+        <div class="placement-card">
+          <span class="placement-card__badge">Pause Banner</span>
+          <p class="placement-card__name">Pause Menu Banner</p>
+          <p class="placement-card__desc">Shown in the pause overlay when players pause the game. Dwell time is naturally high.</p>
+          <span class="placement-card__size">728 Ã— 90 Â· DOM overlay</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Packages -->
+    <section class="adv-section">
+      <h2>Founding Sponsor Packages</h2>
+      <div class="pkg-grid">
+
+        <div class="pkg-card">
+          <div class="pkg-card__icon">ðŸ“‹</div>
+          <p class="pkg-card__name">Wall Billboard</p>
+          <p class="pkg-card__includes">
+            1 Ã— 3D wall billboard<br>
+            Image / logo placement<br>
+            Click-through tracking<br>
+            Monthly impressions report
+          </p>
+          <p class="pkg-card__price">Contact for pricing</p>
+        </div>
+
+        <div class="pkg-card pkg-card--featured">
+          <div class="pkg-card__icon">ðŸŽ®</div>
+          <p class="pkg-card__name">Game Sponsor</p>
+          <p class="pkg-card__includes">
+            Loading commercial (all games)<br>
+            Game-over interstitial<br>
+            1 Ã— wall billboard<br>
+            Priority placement
+          </p>
+          <p class="pkg-card__price">Contact for pricing</p>
+        </div>
+
+        <div class="pkg-card">
+          <div class="pkg-card__icon">ðŸ†</div>
+          <p class="pkg-card__name">Leaderboard Sponsor</p>
+          <p class="pkg-card__includes">
+            Leaderboard banner<br>
+            "Sponsored by [Brand]" label<br>
+            Click-through to your site<br>
+            Monthly report
+          </p>
+          <p class="pkg-card__price">Contact for pricing</p>
+        </div>
+
+        <div class="pkg-card pkg-card--featured">
+          <div class="pkg-card__icon">ðŸ•¹ï¸</div>
+          <p class="pkg-card__name">Full Arcade Sponsor</p>
+          <p class="pkg-card__includes">
+            All 3 wall billboards<br>
+            Loading commercials<br>
+            Game-over interstitials<br>
+            Leaderboard + homepage<br>
+            Priority + exclusive options
+          </p>
+          <p class="pkg-card__price">Contact for pricing</p>
+        </div>
+
+      </div>
+      <p style="font-size:13px;color:rgba(160,130,220,0.5);margin-top:-1rem">
+        Founding sponsors receive first-mover rates while the arcade grows. Packages are month-to-month.
+      </p>
+    </section>
+
+    <!-- Contact form -->
+    <section class="adv-section">
+      <h2>Get In Touch</h2>
+      <form class="adv-form" id="adv-form" novalidate>
+        <label for="adv-name">Your Name *</label>
+        <input type="text" id="adv-name" name="name" required placeholder="Jane Smith">
+
+        <label for="adv-biz">Business / Brand Name</label>
+        <input type="text" id="adv-biz" name="business_name" placeholder="Acme Corp">
+
+        <label for="adv-email">Email Address *</label>
+        <input type="email" id="adv-email" name="email" required placeholder="jane@example.com">
+
+        <label for="adv-website">Website</label>
+        <input type="url" id="adv-website" name="website" placeholder="https://example.com">
+
+        <label for="adv-package">Interested Package</label>
+        <select id="adv-package" name="desired_package">
+          <option value="">â€” Select a package â€”</option>
+          <option value="wall_billboard">Wall Billboard</option>
+          <option value="game_sponsor">Game Sponsor</option>
+          <option value="leaderboard_sponsor">Leaderboard Sponsor</option>
+          <option value="full_arcade_sponsor">Full Arcade Sponsor</option>
+          <option value="custom">Custom / Other</option>
+        </select>
+
+        <label for="adv-message">Message</label>
+        <textarea id="adv-message" name="message" placeholder="Tell us about your brand and goalsâ€¦"></textarea>
+
+        <button type="submit" class="adv-form__submit" id="adv-submit">Send Inquiry</button>
+        <p id="adv-form-msg"></p>
+      </form>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-links">
+      <a href="../">Arcade</a>
+      <a href="../leaderboards/">Leaderboards</a>
+      <a href="../about/">About</a>
+      <a href="../advertise/">Advertise</a>
+    </div>
+    <p class="footer-copy">&copy; <span id="footer-year"></span> Agee Arcade. All rights reserved.</p>
+  </footer>
+
+  <script src="../js/vendor/supabase.min.js"></script>
+  <script>
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+    // â”€â”€ Supabase client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const _sb = window.supabase.createClient(
+      'https://xdvrgeaivfqpcsmuqeyi.supabase.co',
+      'sb_publishable_1UoSYMFfHQerkvlvHvbpRQ_JGIYH14O'
+    );
+
+    // â”€â”€ Contact form submission â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const form    = document.getElementById('adv-form');
+    const submitBtn = document.getElementById('adv-submit');
+    const msgEl   = document.getElementById('adv-form-msg');
+
+    function showMsg(text, isError) {
+      msgEl.textContent = text;
+      msgEl.className   = isError ? 'error' : '';
+      msgEl.style.display = 'block';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msgEl.style.display = 'none';
+
+      const name  = document.getElementById('adv-name').value.trim();
+      const email = document.getElementById('adv-email').value.trim();
+
+      if (!name)  { showMsg('Please enter your name.', true); return; }
+      if (!email || !email.includes('@')) { showMsg('Please enter a valid email.', true); return; }
+
+      submitBtn.disabled    = true;
+      submitBtn.textContent = 'Sendingâ€¦';
+
+      const payload = {
+        name,
+        business_name:   document.getElementById('adv-biz').value.trim()     || null,
+        email,
+        website:         document.getElementById('adv-website').value.trim()  || null,
+        desired_package: document.getElementById('adv-package').value         || null,
+        message:         document.getElementById('adv-message').value.trim()  || null,
+      };
+
+      const { error } = await _sb.from('sponsor_leads').insert(payload);
+
+      submitBtn.disabled    = false;
+      submitBtn.textContent = 'Send Inquiry';
+
+      if (error) {
+        showMsg('Something went wrong â€” please email us directly at ageegamingLLC@gmail.com', true);
+      } else {
+        showMsg('âœ“ Inquiry sent! We\'ll be in touch within 1â€“2 business days.', false);
+        form.reset();
+      }
+    });
+  </script>
+
+</body>
+</html>
+
