@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Background gradient: Tech blue to cyan -->
+  <defs>
+    <linearGradient id="techBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a1628;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1a3a52;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d2438;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Glow gradient for paths -->
+    <linearGradient id="pathGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0099cc;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Exit glow (warm accent) -->
+    <radialGradient id="exitGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#ffb700;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#ff6b00;stop-opacity:0" />
+    </radialGradient>
+
+    <!-- Grid effect -->
+    <pattern id="techGrid" x="40" y="40" width="40" height="40" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="40" height="40" fill="none" stroke="#1a5f8f" stroke-width="0.5" opacity="0.3"/>
+    </pattern>
+
+    <!-- Motion blur filter for speed effect -->
+    <filter id="motionBlur">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" />
+    </filter>
+  </defs>
+
+  <!-- Main background -->
+  <rect width="1024" height="1024" fill="url(#techBg)"/>
+
+  <!-- Tech grid pattern -->
+  <rect width="1024" height="1024" fill="url(#techGrid)"/>
+
+  <!-- Subtle corner glow (tech aesthetic) -->
+  <circle cx="0" cy="0" r="300" fill="#00d4ff" opacity="0.05"/>
+  <circle cx="1024" cy="1024" r="300" fill="#00d4ff" opacity="0.05"/>
+
+  <!-- 3D Maze structure (isometric perspective) -->
+  <g id="maze">
+    <!-- Back wall sections (dark) -->
+    <rect x="200" y="250" width="180" height="200" fill="#0a2940" stroke="#00d4ff" stroke-width="3" opacity="0.8"/>
+    <rect x="640" y="280" width="160" height="180" fill="#0a2940" stroke="#00d4ff" stroke-width="3" opacity="0.8"/>
+
+    <!-- Vertical maze walls (isometric) -->
+    <!-- Left walls -->
+    <rect x="220" y="300" width="40" height="300" fill="#1a5f8f" stroke="#00d4ff" stroke-width="2"/>
+    <rect x="290" y="320" width="40" height="280" fill="#1a5f8f" stroke="#00d4ff" stroke-width="2"/>
+    <rect x="360" y="340" width="40" height="250" fill="#1a5f8f" stroke="#00d4ff" stroke-width="2"/>
+
+    <!-- Center walls -->
+    <rect x="440" y="280" width="40" height="320" fill="#1a5f8f" stroke="#00d4ff" stroke-width="2"/>
+    <rect x="510" y="300" width="40" height="300" fill="#1a5f8f" stroke="#00d4ff" stroke-width="2"/>
+
+    <!-- Right walls -->
+    <rect x="660" y="320" width="40" height="280" fill="#1a5f8f" stroke="#00d4ff" stroke-width="2"/>
+    <rect x="730" y="340" width="40" height="250" fill="#1a5f8f" stroke="#00d4ff" stroke-width="2"/>
+
+    <!-- Horizontal path segments (glowing) -->
+    <rect x="200" y="380" width="500" height="25" fill="url(#pathGlow)" opacity="0.9" rx="4"/>
+    <rect x="210" y="500" width="420" height="25" fill="url(#pathGlow)" opacity="0.85" rx="4"/>
+    <rect x="240" y="620" width="380" height="25" fill="url(#pathGlow)" opacity="0.8" rx="4"/>
+  </g>
+
+  <!-- Exit portal (goal) - glowing square -->
+  <g id="exit">
+    <!-- Outer glow -->
+    <circle cx="820" cy="220" r="90" fill="url(#exitGlow)"/>
+
+    <!-- Exit square -->
+    <rect x="750" y="150" width="140" height="140" fill="none" stroke="#ffb700" stroke-width="6" rx="8"/>
+    <rect x="770" y="170" width="100" height="100" fill="none" stroke="#ff6b00" stroke-width="3" rx="6"/>
+
+    <!-- Inner glow fill -->
+    <rect x="770" y="170" width="100" height="100" fill="#ffb700" opacity="0.15" rx="6"/>
+
+    <!-- Center dot (goal marker) -->
+    <circle cx="820" cy="220" r="15" fill="#ffb700" opacity="0.9"/>
+    <circle cx="820" cy="220" r="8" fill="#ffffff" opacity="0.7"/>
+  </g>
+
+  <!-- Runner/Player indicator at start (pulsing) -->
+  <g id="player">
+    <!-- Starting position glow -->
+    <circle cx="150" cy="650" r="50" fill="#00d4ff" opacity="0.3"/>
+
+    <!-- Player indicator -->
+    <circle cx="150" cy="650" r="35" fill="none" stroke="#00d4ff" stroke-width="4"/>
+    <circle cx="150" cy="650" r="25" fill="#00d4ff" opacity="0.6"/>
+
+    <!-- Direction arrow (upward motion - escape) -->
+    <path d="M 150 610 L 140 630 L 150 625 L 160 630 Z"
+          fill="#00d4ff" opacity="0.8"/>
+  </g>
+
+  <!-- Speed motion lines -->
+  <g id="speedLines" opacity="0.5" filter="url(#motionBlur)">
+    <line x1="600" y1="200" x2="700" y2="200" stroke="#00d4ff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="620" y1="450" x2="710" y2="450" stroke="#00d4ff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="200" y1="700" x2="280" y2="700" stroke="#00d4ff" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <!-- Decorative corner accents (tech style) -->
+  <g stroke="#00d4ff" stroke-width="3" opacity="0.6" stroke-linecap="round">
+    <!-- Top-left corner -->
+    <line x1="100" y1="100" x2="200" y2="100"/>
+    <line x1="100" y1="100" x2="100" y2="200"/>
+
+    <!-- Top-right corner -->
+    <line x1="924" y1="100" x2="824" y2="100"/>
+    <line x1="924" y1="100" x2="924" y2="200"/>
+
+    <!-- Bottom-left corner -->
+    <line x1="100" y1="924" x2="200" y2="924"/>
+    <line x1="100" y1="924" x2="100" y2="824"/>
+
+    <!-- Bottom-right corner -->
+    <line x1="924" y1="924" x2="824" y2="924"/>
+    <line x1="924" y1="924" x2="924" y2="824"/>
+  </g>
+
+  <!-- Subtle scan lines (sci-fi aesthetic) -->
+  <g stroke="#00d4ff" stroke-width="1" opacity="0.08">
+    <line x1="0" y1="256" x2="1024" y2="256"/>
+    <line x1="0" y1="512" x2="1024" y2="512"/>
+    <line x1="0" y1="768" x2="1024" y2="768"/>
+  </g>
+</svg>

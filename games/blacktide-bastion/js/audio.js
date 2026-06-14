@@ -1,7 +1,5 @@
 // audio.js — Blacktide Bastion sound adapter.
-// Delegates to the shared ArcadeSound engine (/engine/sound/engine.js) and
-// registers the game's cannon/ship/fort SFX there. Keeps the GameAudio API
-// so game.js / hud.js call sites need no changes.
+// High-quality procedural synthesis for naval warfare sounds.
 
 const GameAudio = (() => {
   let _enabled = true;
@@ -10,40 +8,74 @@ const GameAudio = (() => {
   function _registerSFX() {
     if (_registered || !window.ArcadeSound) return;
     _registered = true;
-    const { osc, noise } = ArcadeSound._internal;
+    const { resonance, chamber, plate, noise, explosion, impact, fire } = ArcadeSound._internal;
 
-    ArcadeSound.registerSFX('cannon', 0.50, (o, n) => {
-      osc(o, 'sine', 60, 0, 0.32, 40, 0.44, 0.001);
-      osc(o, 'sine', 40, 0.02, 0.45, 30, 0.33, 0.001);
-      noise(o, n, 0.22, 0.22, 0.001, 300, 'lowpass');
+    // Cannon — explosive, aggressive artillery boom (not bell-like)
+    ArcadeSound.registerSFX('cannon', 0.90, (o, n) => {
+      // Full multiband explosion: snap + roar + bass + sub + crackle
+      explosion(o, n, 0.90, 85, 1.0);
     });
-    ArcadeSound.registerSFX('reload', 0.14, (o) => {
-      osc(o, 'square', 200, 0, 0.08, 200, 0.08, 0.001);
-      osc(o, 'square', 260, 0.02, 0.10, 260, 0.07, 0.001);
+
+    // Reload — mechanical metal click
+    ArcadeSound.registerSFX('reload', 0.22, (o, n) => {
+      // Click impulse
+      noise(o, n, 0.06, 0.20, 0.001, 2000, 'highpass');
+      // Metal plate resonance
+      plate(o, n, 0.20, 300);
     });
-    ArcadeSound.registerSFX('shipHit', 0.22, (o, n) => {
-      noise(o, n, 0.18, 0.28, 0.001, 1200, 'lowpass');
-      osc(o, 'sawtooth', 120, 0, 0.15, 80, 0.17, 0.001);
+
+    // Ship Hit — sharp crack impact (wood/metal hull getting struck)
+    ArcadeSound.registerSFX('shipHit', 0.55, (o, n) => {
+      // Sharp transient snap (high-freq wooden crack)
+      noise(o, n, 0.08, 0.40, 0.001, 2500, 'highpass');
+      // Mid-range impact (wood/metal resonance, but quick decay)
+      resonance(o, n, 450, 4, 0.35, 0.25, 0.35);
+      // Very short low-end thump (impact weight, quick fade)
+      noise(o, n, 0.12, 0.15, 0.001, 150, 'lowpass');
     });
+
+    // Ship Sink — descending catastrophe + water rushing
     ArcadeSound.registerSFX('shipSink', 0.95, (o, n) => {
-      osc(o, 'sine', 320, 0, 0.90, 60, 0.28, 0.001);
-      noise(o, n, 0.35, 0.17, 0.001, 600, 'lowpass');
+      // Water intake + structural failure
+      noise(o, n, 0.40, 0.45, 0.001, 500, 'lowpass');
+      // Sinking resonance (descending from 200Hz to 60Hz)
+      chamber(o, n, 0.90, 120, 0.90);
+      // Structural groan
+      resonance(o, n, 80, 6, 0.88, 0.35, 0.88);
     });
-    ArcadeSound.registerSFX('fortHit', 0.65, (o, n) => {
-      osc(o, 'sine', 55, 0, 0.60, 45, 0.50, 0.001);
-      noise(o, n, 0.40, 0.33, 0.001, 400, 'lowpass');
+
+    // Fort Hit — cannon hit on stone fortress (deep boom)
+    ArcadeSound.registerSFX('fortHit', 0.85, (o, n) => {
+      // Heavy explosion impact
+      explosion(o, n, 0.85, 70, 0.95);
     });
-    ArcadeSound.registerSFX('waveClear', 0.70, (o) => {
-      [440, 550, 660].forEach((f, i) => osc(o, 'sine', f, i * 0.08, i * 0.08 + 0.40, f, 0.19, 0.001));
+
+    // Splash — chaotic water impact (noise-based, not resonant)
+    ArcadeSound.registerSFX('splash', 0.50, (o, n) => {
+      // Broad splash impact: white noise burst
+      noise(o, n, 0.40, 0.60, 0.001, 800, 'lowpass');   // Initial splash roar
+      // Quick secondary spray (aeration)
+      noise(o, n, 0.15, 0.15, 0.001, 2000, 'highpass'); // High-freq spray
+      // Minimal resonance (just a tiny body, not a drum)
+      noise(o, n, 0.20, 0.08, 0.001, 200, 'lowpass');   // Low rumble (brief)
     });
-    ArcadeSound.registerSFX('gameOver', 0.95, (o) => {
-      [220, 180, 140, 100].forEach((f, i) => osc(o, 'sine', f, i * 0.12, i * 0.12 + 0.55, f, 0.22, 0.001));
+
+    // Wave Clear — triumphant, victorious
+    ArcadeSound.registerSFX('waveClear', 0.50, (o, n) => {
+      resonance(o, n, 700, 8, 0.35, 0.28, 0.35);
+      resonance(o, n, 1050, 7, 0.32, 0.24, 0.32);
     });
-    ArcadeSound.registerSFX('upgrade', 0.45, (o) => {
-      [330, 440, 550].forEach((f, i) => osc(o, 'sine', f, i * 0.06, i * 0.06 + 0.25, f, 0.17, 0.001));
+
+    // Game Over — deep defeat resonance
+    ArcadeSound.registerSFX('gameOver', 0.65, (o, n) => {
+      chamber(o, n, 0.62, 100, 0.62);
+      resonance(o, n, 150, 6, 0.45, 0.20, 0.45);
     });
-    ArcadeSound.registerSFX('splash', 0.30, (o, n) => {
-      noise(o, n, 0.25, 0.17, 0.001, 1500, 'lowpass');
+
+    // Upgrade — bright confirmation resonance
+    ArcadeSound.registerSFX('upgrade', 0.35, (o, n) => {
+      resonance(o, n, 800, 7, 0.30, 0.25, 0.30);
+      resonance(o, n, 600, 6, 0.28, 0.20, 0.28);
     });
   }
 

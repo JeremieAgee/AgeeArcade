@@ -25,6 +25,50 @@
   let px = 0, pz = 0;
   let gd = {};
   let md = {};
+  let runStartedAt = 0;
+  let analyticsSessionActive = false;
+
+  function trackEvent(type, data) {
+    if (!window.AgeeAnalytics || !AgeeAnalytics.trackEvent) return;
+    AgeeAnalytics.trackEvent(type, Object.assign({
+      floor: gd.floor || 1,
+      score: gd.score || 0,
+      lives: gd.lives || 0,
+    }, data || {}));
+  }
+
+  function sessionStats(endReason) {
+    const elapsed = gd.totalTime || 0;
+    const floorElapsed = gd.floorTime || 0;
+    return {
+      duration_seconds: Math.max(0, Math.round(elapsed + floorElapsed || ((Date.now() - runStartedAt) / 1000))),
+      max_floor: gd.floor || 1,
+      max_level: gd.score || 0,
+      deaths: Math.max(0, LIVES_START - (gd.lives || 0)),
+      end_reason: endReason || 'unknown',
+    };
+  }
+
+  function startAnalyticsSession() {
+    runStartedAt = Date.now();
+    analyticsSessionActive = false;
+    if (window.AgeeAnalytics && AgeeAnalytics.startGameSession) {
+      AgeeAnalytics.startGameSession('maze_runner').then(() => {
+        analyticsSessionActive = true;
+        trackEvent('game_started');
+      });
+    } else {
+      trackEvent('game_started');
+    }
+  }
+
+  function endAnalyticsSession(endReason, unload) {
+    if (!analyticsSessionActive || !window.AgeeAnalytics) return;
+    const stats = sessionStats(endReason);
+    if (unload && AgeeAnalytics.endGameSessionUnload) AgeeAnalytics.endGameSessionUnload(stats);
+    else if (AgeeAnalytics.endGameSession) AgeeAnalytics.endGameSession(stats);
+    analyticsSessionActive = false;
+  }
 
   let wallMesh    = null;
   let lavaMesh        = null;
@@ -1206,6 +1250,7 @@
     if (window.SFX) SFX.stopAmbient();
     const bonus = Math.max(0, Math.floor(10000 / (gd.floorTime + 1)));
     gd.score += gd.floor * 100 + bonus;
+    trackEvent('floor_reached', { completed_floor: gd.floor, next_floor: gd.floor + 1, bonus });
     updateFloorSummary();
     showScreen('floor-complete');
   }
@@ -1216,6 +1261,8 @@
     clearSave();
     if (window.SFX) SFX.once('gameover');
     if (window.SFX) SFX.stopAmbient();
+    trackEvent('player_died');
+    endAnalyticsSession('death');
     updateGameOverSummary();
     showScreen('game-over');
     trySubmitScore();
@@ -1467,10 +1514,12 @@
   // ─── Game flow ─────────────────────────────────────
   function startGame() {
     document.activeElement && document.activeElement.blur();
+    if (state === 'playing' || state === 'floor-complete' || state === 'paused') endAnalyticsSession('restart');
     if (window.SFX) SFX.init(); // unlock audio on first user gesture
     if (window.SFX) SFX.startAmbient();
     clearSave();
     gd = { hp: HP_MAX, lives: LIVES_START, floor: 1, score: 0, totalTime: 0, floorTime: 0 };
+    startAnalyticsSession();
     buildFloor(1);
     state = 'playing';
     showScreen(null);
@@ -1482,9 +1531,11 @@
     const save = loadSave();
     if (!save) { startGame(); return; }
     document.activeElement && document.activeElement.blur();
+    if (state === 'playing' || state === 'floor-complete' || state === 'paused') endAnalyticsSession('restart');
     if (window.SFX) SFX.init();
     if (window.SFX) SFX.startAmbient();
     gd = { ...save.gd };
+    startAnalyticsSession();
     buildFloor(gd.floor);
     // Player position is restored after buildFloor places them at start;
     // restore saved position only if it looks valid (non-zero and on the floor)
@@ -1521,6 +1572,7 @@
     gd.totalTime += gd.floorTime;
     gd.floorTime  = 0;
     gd.floor++;
+    trackEvent('floor_started', { floor: gd.floor });
     buildFloor(gd.floor);
     state = 'playing';
     if (window.SFX) SFX.startAmbient();
@@ -1801,9 +1853,13 @@
       if (e.code === 'Space' && (state === 'playing' || state === 'dying')) {
         e.preventDefault();
       }
-      if (e.code === 'Escape' && state === 'playing') {
-        state = 'paused';
-        showScreen('title');
+      if (e.code === 'Escape') {
+        if (state === 'playing') {
+          state = 'paused';
+          showScreen('title');
+        } else if (state === 'paused') {
+          window.dispatchEvent(new Event('arcade:exit-game'));
+        }
       }
     });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -1909,6 +1965,10 @@
     initRenderer();
     buildMaterials();
     initInput();
+    trackEvent('game_loaded');
+    window.addEventListener('beforeunload', () => {
+      if (state === 'playing' || state === 'floor-complete' || state === 'paused') endAnalyticsSession('quit', true);
+    });
 
     mmCanvas = document.getElementById('minimap');
     mmCtx    = mmCanvas ? mmCanvas.getContext('2d') : null;

@@ -35,6 +35,9 @@ const Game = (() => {
   const SPEAR_SPEED = 440;
   const SPEAR_MAX_D = 320;
   const SP = { state:'held', x:0, y:0, vx:0, vy:0, traveled:0, ang:0, fish:null };
+  const ROUND_TIME = 90;
+  const ROUND_GOAL_BASE = 250;
+  const ROUND_GOAL_GROWTH = 1.55;
 
   // ── Fish definitions ───────────────────────────────────
   const FISH_DEF = [
@@ -44,6 +47,7 @@ const Game = (() => {
     { name:'Tuna',   col:0x2240aa, hi:0x5080ee, fin:0x3a66dd, size:44, spd:128, pts:100, pulls:8 },
   ];
   const MAX_FISH = 8;
+  const MAX_ROUND_FISH = 12;
   let fish = [], spawnTimer = 0;
 
   // ── Rocks (static underwater obstacles) ────────────────
@@ -58,7 +62,8 @@ const Game = (() => {
 
   // ── State ──────────────────────────────────────────────
   const S = { TITLE:0, PLAYING:1, REELING:2, OVER:3 };
-  let gs = S.TITLE, score = 0, timer = 90, wt = 0;
+  let gs = S.TITLE, score = 0, timer = ROUND_TIME, round = 1, roundGoal = ROUND_GOAL_BASE, wt = 0;
+  let runStartedAt = 0, throws = 0, catches = 0, analyticsSessionActive = false;
   let hi = +(localStorage.getItem('sf_hi') || 0);
   const LB_KEY = 'spear_fisher_lb';
   const LB_SYNC_KEY = 'spear_fisher_lb.synced.v1';
@@ -604,9 +609,58 @@ const Game = (() => {
     }
     return min;
   }
+  function roundRequirement(r) {
+    return Math.round(ROUND_GOAL_BASE * Math.pow(ROUND_GOAL_GROWTH, Math.max(0, r - 1)));
+  }
+  function roundSpeedScale() {
+    return 1 + (round - 1) * 0.16;
+  }
+  function roundPointScale() {
+    return 1 + (round - 1) * 0.25;
+  }
+  function roundFishLimit() {
+    return Math.min(MAX_ROUND_FISH, MAX_FISH + Math.floor((round - 1) / 2));
+  }
+  function spawnDelay() {
+    return Math.max(0.45, 2.2 - (round - 1) * 0.16);
+  }
+  function refillFish() {
+    while (fish.length < roundFishLimit()) fish.push(makeFish());
+  }
+
+  function trackEvent(type, data) {
+    if (!window.AgeeAnalytics || !AgeeAnalytics.trackEvent) return;
+    AgeeAnalytics.trackEvent(type, Object.assign({
+      score,
+      round,
+      time_left: Math.ceil(timer),
+    }, data || {}));
+  }
+
+  function gameSessionStats(endReason) {
+    return {
+      duration_seconds: runStartedAt ? Math.max(0, Math.round((Date.now() - runStartedAt) / 1000)) : 0,
+      max_floor: round,
+      max_level: score,
+      deaths: 0,
+      enemies_killed: catches,
+      end_reason: endReason || 'time_up',
+    };
+  }
+
+  function endAnalyticsSession(endReason, unload) {
+    if (!analyticsSessionActive || !window.AgeeAnalytics) return;
+    const stats = gameSessionStats(endReason);
+    if (unload && AgeeAnalytics.endGameSessionUnload) AgeeAnalytics.endGameSessionUnload(stats);
+    else if (AgeeAnalytics.endGameSession) AgeeAnalytics.endGameSession(stats);
+    analyticsSessionActive = false;
+  }
 
   function makeFish() {
     const def = FISH_DEF[Math.floor(Math.random() * FISH_DEF.length)];
+    const spd = Math.round(def.spd * roundSpeedScale());
+    const pts = Math.round(def.pts * roundPointScale());
+    const pulls = def.pulls + Math.floor((round - 1) / 3);
     let x, y, attempts = 0;
     do {
       x = 45 + Math.random() * (VW - 90);
@@ -614,8 +668,8 @@ const Game = (() => {
       attempts++;
     } while ((boatDist(x, y) < 1.35 || rockMinDist(x, y) < 22) && attempts < 60);
     const ang = Math.random() * Math.PI * 2;
-    return { ...def, x, y, vx: Math.cos(ang) * def.spd, vy: Math.sin(ang) * def.spd, facing: ang,
-             wobble: Math.random() * Math.PI * 2, wanderT: 0.8 + Math.random() * 2, state: 'free', pullsLeft: def.pulls };
+    return { ...def, spd, pts, pulls, x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, facing: ang,
+             wobble: Math.random() * Math.PI * 2, wanderT: 0.8 + Math.random() * 2, state: 'free', pullsLeft: pulls };
   }
 
   function throwSpear() {
@@ -623,6 +677,8 @@ const Game = (() => {
     const ang = Math.atan2(my - P.y, mx - P.x);
     Object.assign(SP, { state: 'flying', x: P.x, y: P.y, vx: Math.cos(ang) * SPEAR_SPEED,
                         vy: Math.sin(ang) * SPEAR_SPEED, traveled: 0, ang, fish: null });
+    throws++;
+    trackEvent('spear_thrown', { throws });
     addSplash(P.x, P.y, 4, 'water');
     SFX.once('sf_throw');
   }
@@ -635,13 +691,21 @@ const Game = (() => {
     SFX.once('sf_pull');
     if (f.pullsLeft <= 0) {
       score += f.pts;
+      catches++;
       if (score > hi) { hi = score; localStorage.setItem('sf_hi', String(hi)); }
       addSplash(f.x, f.y, 16, 'gold');
       SFX.once('sf_catch');
       addPopup(f.x, f.y - 24, '+' + f.pts + ' ' + f.name + '!');
+      trackEvent('fish_caught', {
+        fish: f.name,
+        points: f.pts,
+        catches,
+      });
       fish = fish.filter(ff => ff !== f);
       SP.state = 'held'; SP.fish = null; gs = S.PLAYING;
-      spawnTimer = 2.2; updateHUD();
+      spawnTimer = spawnDelay();
+      checkRoundAdvance();
+      updateHUD();
     } else {
       const fAng = Math.random() * Math.PI * 2;
       f.x = Math.max(22, Math.min(VW - 22, f.x + Math.cos(fAng) * 38));
@@ -652,12 +716,41 @@ const Game = (() => {
   function startGame() {
     SFX.init();
     SFX.startAmbient();
-    score = 0; timer = 90; gs = S.PLAYING;
+    score = 0; timer = ROUND_TIME; round = 1; roundGoal = ROUND_GOAL_BASE; gs = S.PLAYING;
+    runStartedAt = Date.now();
+    throws = 0;
+    catches = 0;
+    analyticsSessionActive = false;
+    if (window.AgeeAnalytics && AgeeAnalytics.startGameSession) {
+      AgeeAnalytics.startGameSession('spear_fisher').then(() => {
+        analyticsSessionActive = true;
+        trackEvent('game_started');
+      });
+    } else {
+      trackEvent('game_started');
+    }
     SP.state = 'held'; SP.fish = null;
-    fish = Array.from({ length: MAX_FISH }, makeFish);
+    fish = [];
+    refillFish();
     spawnTimer = 0;
     document.querySelectorAll('.screen.active').forEach(s => s.classList.remove('active'));
     updateHUD();
+  }
+
+  function checkRoundAdvance() {
+    if (score < roundGoal) return;
+
+    round++;
+    timer = ROUND_TIME;
+    roundGoal += roundRequirement(round);
+    SP.state = 'held';
+    SP.fish = null;
+    gs = S.PLAYING;
+    fish = fish.filter(f => f.state === 'free');
+    refillFish();
+    addPopup(P.x, P.y - 42, 'ROUND ' + round + '!');
+    trackEvent('round_reached', { reached_round: round, next_goal: roundGoal });
+    SFX.once('sf_catch');
   }
 
   function loadLeaderboardScores() {
@@ -747,12 +840,20 @@ const Game = (() => {
 
   function endGame() {
     gs = S.OVER;
+    trackEvent('game_over', {
+      end_reason: 'time_up',
+      throws,
+      catches,
+      final_score: score,
+      final_round: round,
+    });
+    endAnalyticsSession('time_up');
     SFX.once('sf_gameover');
     SFX.stopAmbient();
     document.getElementById('finalScore').textContent = score;
     document.getElementById('finalHigh').textContent = hi;
     const msgs = ['Good haul!', 'The sea provides!', 'A worthy catch!', 'The ocean remembers.', 'You are one with the water.'];
-    document.getElementById('finalMsg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+    document.getElementById('finalMsg').textContent = msgs[Math.floor(Math.random() * msgs.length)] + ' Round ' + round + '.';
     document.getElementById('gameoverScreen').classList.add('active');
     triggerLeaderboardPrompt();
   }
@@ -776,11 +877,13 @@ const Game = (() => {
         if (dst(SP.x, SP.y, f.x, f.y) < f.size * 0.88) {
           SP.state = 'stuck'; SP.fish = f; f.state = 'speared'; f.vx = f.vy = 0;
           gs = S.REELING; addSplash(SP.x, SP.y, 10, 'water'); addRipple(SP.x, SP.y);
+          trackEvent('fish_speared', { fish: f.name });
           SFX.once('sf_stick'); break;
         }
       }
       if (SP.state === 'flying' && (SP.traveled > SPEAR_MAX_D || SP.x < -10 || SP.x > VW + 10 || SP.y < -10 || SP.y > VH + 10)) {
         addSplash(SP.x, SP.y, 7, 'water'); addRipple(SP.x, SP.y); SP.state = 'held';
+        trackEvent('spear_missed', { throws });
         SFX.once('sf_splash');
       }
     }
@@ -825,7 +928,13 @@ const Game = (() => {
       f.wobble += dt * 5.8;
     }
 
-    if (fish.length < MAX_FISH) { spawnTimer -= dt; if (spawnTimer <= 0) { fish.push(makeFish()); spawnTimer = 0; } }
+    if (fish.length < roundFishLimit()) {
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        fish.push(makeFish());
+        spawnTimer = spawnDelay();
+      }
+    }
 
     updateHUD();
   }
@@ -834,12 +943,17 @@ const Game = (() => {
   function updateHUD() {
     document.getElementById('hudScore').textContent = score;
     document.getElementById('hudHigh').textContent = hi;
+    document.getElementById('hudRound').textContent = round;
+    document.getElementById('hudGoal').textContent = roundGoal;
     document.getElementById('hudTime').textContent = Math.ceil(timer);
     const rp = document.getElementById('reelPrompt'), st = document.getElementById('hudStatus');
     if (gs === S.REELING && SP.fish) {
       rp.textContent = 'REEL IT IN! — ' + SP.fish.name + ' (' + SP.fish.pullsLeft + ' pull' + (SP.fish.pullsLeft !== 1 ? 's' : '') + ' left)';
       rp.style.opacity = '1'; st.textContent = 'REEL!';
-    } else if (gs === S.PLAYING) { rp.style.opacity = '0'; st.textContent = 'Aim & Throw'; }
+    } else if (gs === S.PLAYING) {
+      rp.style.opacity = '0';
+      st.textContent = 'Round ' + round + ' - ' + Math.max(0, roundGoal - score) + ' to advance';
+    }
   }
 
   /* ════════════════════════════════════════════════════════
@@ -926,8 +1040,17 @@ const Game = (() => {
   function init() {
     buildScene();
     setTimeout(syncLocalLeaderboard, 0);
+    trackEvent('game_loaded');
+    window.addEventListener('beforeunload', () => {
+      if (gs === S.PLAYING || gs === S.REELING) endAnalyticsSession('quit', true);
+    });
     window.addEventListener('pointerdown', () => SFX.init(), { once: true });
-    window.addEventListener('keydown',     () => SFX.init(), { once: true });
+    window.addEventListener('keydown', (e) => {
+      SFX.init();
+      if (e.code === 'Escape') {
+        window.dispatchEvent(new Event('arcade:exit-game'));
+      }
+    }, { once: false });
     const el = renderer.domElement;
     el.addEventListener('mousemove', onMouseMove);
     el.addEventListener('click', onMouseClick);
@@ -938,7 +1061,8 @@ const Game = (() => {
     document.getElementById('restartBtn').addEventListener('click', startGame);
     if (hi > 0) { document.getElementById('titleHi').textContent = hi; document.getElementById('titleBest').style.display = 'flex'; }
     document.getElementById('hudHigh').textContent = hi;
-    fish = Array.from({ length: MAX_FISH }, makeFish);
+    fish = [];
+    refillFish();
     requestAnimationFrame(loop);
   }
 

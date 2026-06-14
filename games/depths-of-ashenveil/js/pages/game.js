@@ -278,17 +278,15 @@ const Game = (() => {
     document.addEventListener('keydown', e => {
       const key = e.key.toLowerCase();
       keys[key] = true;
+      if (e.key === 'Escape') {
+        if (UI.isPauseMenuOpen()) UI.closePauseMenu();
+        return;
+      }
       if (!running) return;
       if (key === 'i') UI.togglePanel('inv');
       if (key === 'k') UI.togglePanel('skills');
       if (key === 'e') tryInteract();
       if (key === ' ' && !e.repeat) tryBlink();
-      if (e.key === 'Escape') {
-        // ESC closes the menu. Pointer lock re-entry must come from a click
-        // (browsers throw SecurityError if requestPointerLock is called
-        //  in the same event chain that caused the lock to exit via ESC).
-        if (UI.isPauseMenuOpen()) UI.closePauseMenu();
-      }
       if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(key))
         e.preventDefault();
     });

@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Background gradient: Dark stone to deep purple -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0f2e;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#2d1b4e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f0810;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Glow effect for the gem -->
+    <radialGradient id="gemGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#9d4edd;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#5a189a;stop-opacity:0" />
+    </radialGradient>
+
+    <!-- Gem shine gradient -->
+    <linearGradient id="gemShine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e0aaff;stop-opacity:0.6" />
+      <stop offset="50%" style="stop-color:#9d4edd;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5a189a;stop-opacity:0.8" />
+    </linearGradient>
+
+    <!-- Stone texture -->
+    <filter id="stoneTexture">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" />
+    </filter>
+  </defs>
+
+  <!-- Main background -->
+  <rect width="1024" height="1024" fill="url(#bgGradient)"/>
+
+  <!-- Subtle stone texture overlay -->
+  <rect width="1024" height="1024" fill="url(#bgGradient)" opacity="0.3" filter="url(#stoneTexture)"/>
+
+  <!-- Dungeon entrance arch shadow -->
+  <ellipse cx="512" cy="420" rx="320" ry="240" fill="#000000" opacity="0.4"/>
+
+  <!-- Stone arch structure -->
+  <g id="arch">
+    <!-- Left pillar -->
+    <rect x="280" y="300" width="80" height="380" fill="#2a1a45" stroke="#5a189a" stroke-width="4"/>
+    <rect x="280" y="300" width="80" height="380" fill="#3d2e5f" opacity="0.3"/>
+
+    <!-- Right pillar -->
+    <rect x="664" y="300" width="80" height="380" fill="#2a1a45" stroke="#5a189a" stroke-width="4"/>
+    <rect x="664" y="300" width="80" height="380" fill="#3d2e5f" opacity="0.3"/>
+
+    <!-- Arch curve -->
+    <path d="M 360 340 Q 512 220 664 340"
+          stroke="#5a189a" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M 360 340 Q 512 240 664 340"
+          stroke="#7b3ff2" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.6"/>
+  </g>
+
+  <!-- Mystical gem/crystal at center -->
+  <g id="gem">
+    <!-- Glow halo -->
+    <circle cx="512" cy="480" r="140" fill="url(#gemGlow)"/>
+
+    <!-- Main gem shape (octagon) -->
+    <polygon points="512,340 602,380 642,470 602,560 512,600 422,560 382,470 422,380"
+             fill="url(#gemShine)" stroke="#e0aaff" stroke-width="3"/>
+
+    <!-- Gem highlights -->
+    <polygon points="512,340 602,380 612,405 522,365"
+             fill="#ffffff" opacity="0.5"/>
+    <polygon points="602,380 642,470 635,490 595,400"
+             fill="#e0aaff" opacity="0.4"/>
+
+    <!-- Inner depth detail -->
+    <polygon points="512,410 560,450 512,490 464,450"
+             fill="#3d0f66" opacity="0.7" stroke="#9d4edd" stroke-width="2"/>
+
+    <!-- Center bright core -->
+    <circle cx="512" cy="480" r="25" fill="#e0aaff" opacity="0.8"/>
+    <circle cx="512" cy="470" r="15" fill="#ffffff" opacity="0.6"/>
+  </g>
+
+  <!-- Descending staircases (suggesting dungeon descent) -->
+  <g id="stairs" opacity="0.6">
+    <!-- Upper stairs -->
+    <rect x="420" y="630" width="60" height="12" fill="#5a189a" opacity="0.5"/>
+    <rect x="430" y="650" width="60" height="12" fill="#5a189a" opacity="0.5"/>
+    <rect x="440" y="670" width="60" height="12" fill="#5a189a" opacity="0.5"/>
+
+    <!-- Lower stairs -->
+    <rect x="544" y="630" width="60" height="12" fill="#5a189a" opacity="0.5"/>
+    <rect x="534" y="650" width="60" height="12" fill="#5a189a" opacity="0.5"/>
+    <rect x="524" y="670" width="60" height="12" fill="#5a189a" opacity="0.5"/>
+  </g>
+
+  <!-- Atmospheric mist/fog at bottom -->
+  <ellipse cx="512" cy="850" rx="400" ry="150" fill="#9d4edd" opacity="0.15"/>
+  <ellipse cx="512" cy="900" rx="350" ry="120" fill="#5a189a" opacity="0.1"/>
+
+  <!-- Corner accent lines (fantasy/dungeon aesthetic) -->
+  <g stroke="#7b3ff2" stroke-width="2" opacity="0.4">
+    <line x1="150" y1="150" x2="250" y2="150"/>
+    <line x1="150" y1="150" x2="150" y2="250"/>
+
+    <line x1="874" y1="150" x2="774" y2="150"/>
+    <line x1="874" y1="150" x2="874" y2="250"/>
+
+    <line x1="150" y1="874" x2="250" y2="874"/>
+    <line x1="150" y1="874" x2="150" y2="774"/>
+
+    <line x1="874" y1="874" x2="774" y2="874"/>
+    <line x1="874" y1="874" x2="874" y2="774"/>
+  </g>
+</svg>

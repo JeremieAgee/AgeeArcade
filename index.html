@@ -42,22 +42,233 @@
                   https://*.gstatic.com
                   https://*.adtrafficquality.google
                   https://www.googletagmanager.com;
-      frame-src   https://*.doubleclick.net
+      frame-src   'self'
+                  https://*.doubleclick.net
                   https://*.googlesyndication.com
                   https://*.adtrafficquality.google
                   https://www.google.com;
+      worker-src  'self' blob:;
       object-src  'none';
       base-uri    'self';
       form-action 'self';
     ">
     <title>Agee Arcade — Free Browser Games</title>
 
+    <!-- PWA Manifest & Meta Tags -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0e0b1a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Agee Arcade">
+
     <!-- Google Fonts preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link rel="stylesheet" href="./css/main.css?v=20260610-spear">
-    <link rel="stylesheet" href="./css/cabinet-3d.css?v=20260604-arcade">
+    <link rel="stylesheet" href="./css/main.css?v=20260604-arcade">
+    <style>
+      /* 3D Arcade shell */
+      #arcade-canvas {
+        position: fixed; inset: 0;
+        width: 100%; height: 100%;
+        display: block;
+        z-index: 0;
+        cursor: default;
+      }
+      .site-header { position: relative; z-index: 20; background: rgba(8,6,16,0.75); backdrop-filter: blur(6px); }
+
+      #interact-prompt {
+        position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+        background: rgba(8,6,16,0.85);
+        border: 1px solid rgba(160,80,255,0.5);
+        color: #c080ff;
+        font-family: 'Courier New', monospace;
+        font-size: 1rem;
+        padding: 0.5rem 1.4rem;
+        border-radius: 4px;
+        letter-spacing: 0.08em;
+        pointer-events: none;
+        z-index: 30;
+        text-shadow: 0 0 8px #a050ff;
+        transition: opacity 0.15s;
+      }
+
+      #click-to-play {
+        position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+        color: rgba(160,80,255,0.6);
+        font-family: 'Courier New', monospace;
+        font-size: 0.8rem;
+        letter-spacing: 0.12em;
+        pointer-events: none;
+        z-index: 30;
+      }
+
+      /* Game overlay */
+      #game-overlay {
+        position: fixed; inset: 0;
+        z-index: 100;
+        background: #000;
+        display: flex; flex-direction: column;
+      }
+      #game-overlay[hidden] { display: none; }
+
+      #game-overlay-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.5rem 1rem;
+        background: #0e0b1a;
+        border-bottom: 1px solid rgba(160,80,255,0.3);
+        flex-shrink: 0;
+      }
+      #game-overlay-title {
+        color: #c080ff;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        letter-spacing: 0.1em;
+      }
+      #game-overlay-close {
+        background: none; border: 1px solid rgba(160,80,255,0.4);
+        color: #c080ff; cursor: pointer;
+        padding: 0.25rem 0.75rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        border-radius: 3px;
+      }
+      #game-overlay-close:hover { background: rgba(160,80,255,0.15); }
+
+      #game-iframe {
+        flex: 1; border: none; width: 100%; display: block;
+        overflow: hidden;
+      }
+
+      /* Arcade joystick */
+      #arcade-joy-base {
+        position: fixed;
+        bottom: 48px; left: 48px;
+        width: 100px; height: 100px;
+        border-radius: 50%;
+        background: rgba(8,6,16,0.6);
+        border: 2px solid rgba(160,80,255,0.4);
+        z-index: 40;
+        display: none; /* shown only on touch devices */
+        touch-action: none;
+        user-select: none;
+      }
+      #arcade-joy-nub {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 40px; height: 40px;
+        border-radius: 50%;
+        background: rgba(160,80,255,0.7);
+        transform: translate(0,0);
+        margin: -20px 0 0 -20px;
+        pointer-events: none;
+        transition: transform 0.05s;
+        box-shadow: 0 0 12px rgba(160,80,255,0.6);
+      }
+      @media (pointer: coarse) {
+        #arcade-joy-base { display: block; }
+        #click-to-play { display: none; }
+      }
+
+      /* Comments overlay — guestbook + per-game threads */
+      #comments-overlay {
+        position: fixed; inset: 0;
+        z-index: 90;
+        background: rgba(4,2,10,0.7);
+        backdrop-filter: blur(3px);
+        display: flex; align-items: center; justify-content: center;
+        padding: 2rem 1rem;
+      }
+      #comments-overlay[hidden] { display: none; }
+
+      #comments-panel {
+        width: min(720px, 94vw);
+        max-height: 82vh;
+        display: flex; flex-direction: column;
+        background: #0e0b1a;
+        border: 1px solid rgba(255,45,149,0.45);
+        border-radius: 8px;
+        box-shadow: 0 0 32px rgba(255,45,149,0.25);
+        overflow: hidden;
+      }
+      #comments-panel-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.5rem 1rem;
+        background: #14102a;
+        border-bottom: 1px solid rgba(255,45,149,0.3);
+        flex-shrink: 0;
+      }
+      #comments-panel-title {
+        color: #ff8ac2;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        letter-spacing: 0.1em;
+        text-shadow: 0 0 8px rgba(255,45,149,0.5);
+      }
+      #comments-overlay-close {
+        background: none; border: 1px solid rgba(255,45,149,0.4);
+        color: #ff8ac2; cursor: pointer;
+        padding: 0.25rem 0.75rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        border-radius: 3px;
+      }
+      #comments-overlay-close:hover { background: rgba(255,45,149,0.15); }
+      #comments-panel-body {
+        overflow-y: auto;
+        padding: 1rem;
+      }
+
+      /* Leaderboard overlay */
+      #leaderboard-overlay {
+        position: fixed; inset: 0;
+        z-index: 90;
+        background: rgba(4,2,10,0.7);
+        backdrop-filter: blur(3px);
+        display: flex; align-items: center; justify-content: center;
+        padding: 2rem 1rem;
+      }
+      #leaderboard-overlay[hidden] { display: none; }
+
+      #leaderboard-panel {
+        width: min(720px, 94vw);
+        max-height: 82vh;
+        display: flex; flex-direction: column;
+        background: #0e0b1a;
+        border: 1px solid rgba(100,200,255,0.45);
+        border-radius: 8px;
+        box-shadow: 0 0 32px rgba(100,200,255,0.25);
+        overflow: hidden;
+      }
+      #leaderboard-panel-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.5rem 1rem;
+        background: #0a1a2a;
+        border-bottom: 1px solid rgba(100,200,255,0.3);
+        flex-shrink: 0;
+      }
+      #leaderboard-panel-title {
+        color: #64c8ff;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        letter-spacing: 0.1em;
+        text-shadow: 0 0 8px rgba(100,200,255,0.5);
+      }
+      #leaderboard-overlay-close {
+        background: none; border: 1px solid rgba(100,200,255,0.4);
+        color: #64c8ff; cursor: pointer;
+        padding: 0.25rem 0.75rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        border-radius: 3px;
+      }
+      #leaderboard-overlay-close:hover { background: rgba(100,200,255,0.15); }
+      #leaderboard-panel-body {
+        overflow-y: auto;
+        padding: 1rem;
+      }
+    </style>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9709866738532619"
          crossorigin="anonymous"></script>
 </head>
@@ -66,171 +277,126 @@
     <!-- SHARED: site-header — update about/index.html and game pages when changing -->
     <header class="site-header">
         <a class="logo" href="./">AGEE ARCADE</a>
-        <nav class="site-nav">
-            <span>Created By Jeremie Agee</span>
+        <nav class="site-nav" id="header-auth-nav"></nav>
+        <div class="nav-menu">
+          <button class="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="dropdown-menu">
+            <span class="menu-icon">☰</span>
+          </button>
+          <nav class="dropdown-menu" id="dropdown-menu">
             <a href="./leaderboards/">Leaderboards</a>
             <a href="./about/">About</a>
-        </nav>
+          </nav>
+        </div>
     </header>
 
-    <main>
-        <!-- AdSense: inline top (enable once approved) -->
-        <!--
-        <div class="ad-inline">
-            <ins class="adsbygoogle ad-unit"
-                 data-ad-client="ca-pub-9709866738532619"
-                 data-ad-slot="7421345542"
-                 data-ad-format="auto"
-                 data-full-width-responsive="true"></ins>
-            <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-        </div>
-        -->
+    <!-- 3D Arcade Canvas -->
+    <canvas id="arcade-canvas"></canvas>
 
-        <!-- Hero -->
-        <section class="hero">
-            <!-- Pure CSS 3D arcade cabinet — separate box sections, rocks ±30° -->
-            <div class="cab-scene" aria-hidden="true">
-                <div class="cab">
+    <!-- Interact prompt — shown when near a cabinet -->
+    <div id="interact-prompt" hidden></div>
 
-                    <!-- A: Marquee box (wider than body, overhangs 19px each side) -->
-                    <div class="cab-sect s-mq">
-                        <div class="csf csf-front mq-front">
-                            <span class="cab-marquee-line1">AGEE ARCADE</span>
-                            <span class="cab-marquee-line2">★&nbsp;&nbsp;EST. 2026&nbsp;&nbsp;★</span>
-                        </div>
-                        <div class="csf csf-left  mq-left"></div>
-                        <div class="csf csf-right mq-right"></div>
-                        <div class="csf csf-top   mq-top"></div>
-                    </div>
+    <!-- Click-to-capture hint -->
+    <div id="click-to-play">WASD move  ·  Click to look  ·  E interact  ·  ESC release mouse</div>
 
-                    <!-- B: Monitor box -->
-                    <div class="cab-sect s-mon">
-                        <div class="csf csf-front mon-front">
-                            <div class="cab-bezel">
-                                <div class="cab-screen">
-                                    <div class="doa-title">DEPTHS OF<br>ASHENVEIL</div>
-                                    <div class="doa-tag">— Descend. Survive. Conquer. —</div>
-                                    <div class="doa-stat">Best Floor: 1 &middot; Best Level: 1 &middot; Runs: 5</div>
-                                    <div class="doa-btn">RESUME RUN</div>
-                                    <div class="doa-btn doa-btn-ghost">START NEW RUN</div>
-                                    <div class="doa-btn doa-btn-ghost">VIEW LEADERBOARD</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="csf csf-left  mon-left">
-                            <span class="cab-side-txt">AGEE<br>ARCADE</span>
-                        </div>
-                        <div class="csf csf-right mon-right">
-                            <span class="cab-side-txt">AGEE<br>ARCADE</span>
-                        </div>
-                    </div>
-
-                    <!-- C: Control panel — 3D object, children have translateZ -->
-                    <div class="cab-sect s-ctrl">
-                        <div class="csf csf-front ctrl-front">
-                            <div class="cab-stick">
-                                <div class="cab-stick-ball"></div>
-                                <div class="cab-stick-shaft"></div>
-                                <div class="cab-stick-base"></div>
-                            </div>
-                            <div class="cab-btns">
-                                <div class="cab-btn-row">
-                                    <span class="cab-btn cab-btn-r"></span>
-                                    <span class="cab-btn cab-btn-g"></span>
-                                    <span class="cab-btn cab-btn-b"></span>
-                                </div>
-                                <div class="cab-btn-row">
-                                    <span class="cab-btn cab-btn-y"></span>
-                                    <span class="cab-btn cab-btn-p"></span>
-                                    <span class="cab-btn cab-btn-w"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="csf csf-left  ctrl-left"></div>
-                        <div class="csf csf-right ctrl-right"></div>
-                        <div class="csf ctrl-apron"></div>
-                    </div>
-
-                    <!-- D: Base box -->
-                    <div class="cab-sect s-base">
-                        <div class="csf csf-front base-front">
-                            <div class="cab-coin-box">
-                                <span class="cab-coin-slot">25¢</span>
-                                <div class="cab-insert-group">
-                                    <div class="cab-insert-slot"></div>
-                                    <span class="cab-insert-txt">INSERT COIN</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="csf csf-left   base-left"></div>
-                        <div class="csf csf-right  base-right"></div>
-                        <div class="csf csf-bottom base-bottom"></div>
-                    </div>
-
-                </div>
-            </div>
-
-            <div class="hero__text">
-                <p class="hero__eyebrow">Welcome to</p>
-                <h1 class="hero__title">Agee Arcade</h1>
-                <p class="hero__subtitle">Free browser games created by Jeremie Agee - no download required.</p>
-            </div>
-        </section>
-
-        <!-- Featured Game — populated by main.js renderFeaturedGame() -->
-        <section class="featured-section container">
-            <h2 class="section-title">Featured Game</h2>
-            <div id="featured-game">
-                <!-- JS-populated -->
-            </div>
-        </section>
-
-        <!-- Game Grid — populated by main.js renderGameGrid() -->
-        <section class="games-section container">
-            <h2 class="section-title">All Games</h2>
-            <div id="game-grid" class="game-grid">
-                <!-- JS-populated -->
-            </div>
-        </section>
-
-        <!-- Comments -->
-        <section class="container">
-            <div id="arcade-comments"></div>
-        </section>
-
-    </main>
-
-    <!-- SHARED: site-footer — update all pages when changing -->
-    <footer class="site-footer">
-        <p>&copy; 2026 ageegaming.com &mdash; Built by Jeremie Agee &mdash; <a href="../privacy.html">Privacy Policy</a></p>
-    </footer>
-
-    <!-- Data layer must load before main.js -->
-    <!-- Fixed bottom ad banner (enable once approved) -->
-    <!--
-    <div class="ad-bottom-strip">
-        <ins class="adsbygoogle ad-unit"
-             data-ad-client="ca-pub-9709866738532619"
-             data-ad-slot="7421345542"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    <!-- Game iframe overlay -->
+    <div id="game-overlay" hidden>
+      <div id="game-overlay-bar">
+        <span id="game-overlay-title"></span>
+        <button id="game-overlay-close">✕ EXIT  [ESC]</button>
+      </div>
+      <iframe id="game-iframe" allowfullscreen scrolling="no"></iframe>
     </div>
-    -->
 
-    <script src="./js/games.js?v=20260610-spear"></script>
-    <script src="./js/main.js?v=20260610-spear"></script>
-    <!-- Supabase SDK + Arcade-wide auth -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="./js/analytics.js"></script>
-    <script src="./js/arcade-auth.js"></script>
-    <script src="./js/comments.js?v=3"></script>
-    <script>
+    <!-- Touch joystick -->
+    <div id="arcade-joy-base"><div id="arcade-joy-nub"></div></div>
+
+    <!-- Comments overlay — opened from the guestbook board or a cabinet's
+         COMMENTS side panel. Thread containers are created per pageId by
+         arcade/comments-board.js. -->
+    <div id="comments-overlay" hidden>
+      <div id="comments-panel">
+        <div id="comments-panel-bar">
+          <span id="comments-panel-title">ARCADE GUESTBOOK</span>
+          <button id="comments-overlay-close">✕ CLOSE  [ESC]</button>
+        </div>
+        <div id="comments-panel-body"></div>
+      </div>
+    </div>
+
+    <!-- Leaderboard overlay — top 10 scores for each cabinet -->
+    <div id="leaderboard-overlay" hidden>
+      <div id="leaderboard-panel">
+        <div id="leaderboard-panel-bar">
+          <span id="leaderboard-panel-title">TOP 10</span>
+          <button id="leaderboard-overlay-close">✕ CLOSE  [ESC]</button>
+        </div>
+        <div id="leaderboard-panel-body"></div>
+      </div>
+    </div>
+
+    <!-- Three.js + Supabase -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
+    <script src="./js/vendor/supabase.min.js"></script>
+
+    <!-- Ad system — must load before arcade scripts that depend on AdRouter -->
+    <script src="./js/ads/placements.js"             defer></script>
+    <script src="./js/ads/ad-router.js"              defer></script>
+    <script src="./js/ads/overlays.js"               defer></script>
+    <script src="./js/ads/iframe-bridge.js"          defer></script>
+    <!-- Ad network adapters — order = priority (H5 Games first, AdinPlay fallback) -->
+    <script src="./js/ads/adapters/h5-games-ads.js"  defer></script>
+    <script src="./js/ads/adapters/adinplay.js"      defer></script>
+
+    <!-- Arcade scripts — order matters -->
+    <script src="./arcade/player.js"            defer></script>
+    <script src="./arcade/cabinets.js"          defer></script>
+    <script src="./arcade/game-frame.js"        defer></script>
+    <script src="./arcade/ads.js"               defer></script>
+    <script src="./arcade/comments-board.js"    defer></script>
+    <script src="./arcade/arcade-leaderboard.js" defer></script>
+    <script src="./arcade/scene.js"             defer></script>
+
+    <!-- Auth + analytics -->
+    <script src="./js/arcade-auth.js" defer></script>
+    <script src="./js/analytics.js"   defer></script>
+    <script src="./js/comments.js"    defer></script>
+
+    <!-- Boot -->
+    <script defer>
       document.addEventListener('DOMContentLoaded', function () {
-        ArcadeComments.init({ pageId: 'arcade', containerId: 'arcade-comments', theme: 'arcade' });
+        // Dropdown menu
+        const menuBtn = document.querySelector('.menu-btn');
+        const dropdownMenu = document.querySelector('.dropdown-menu');
+
+        if (menuBtn && dropdownMenu) {
+          menuBtn.addEventListener('click', () => {
+            dropdownMenu.classList.toggle('open');
+            menuBtn.setAttribute('aria-expanded', dropdownMenu.classList.contains('open'));
+          });
+
+          dropdownMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+              dropdownMenu.classList.remove('open');
+              menuBtn.setAttribute('aria-expanded', 'false');
+            });
+          });
+
+          document.addEventListener('click', (e) => {
+            if (!e.target.closest('.nav-menu')) {
+              dropdownMenu.classList.remove('open');
+              menuBtn.setAttribute('aria-expanded', 'false');
+            }
+          });
+        }
+
+        if (window.ArcadeIframeBridge) ArcadeIframeBridge.init();
+        if (window.ArcadeLeaderboard) ArcadeLeaderboard.init();
+        ArcadeGameFrame.init();
+        ArcadeScene.init();
+        const yr = document.getElementById('footer-year');
+        if (yr) yr.textContent = new Date().getFullYear();
       });
     </script>
-    <script src="./ads/adsense.js"></script>
 
 </body>
 </html>

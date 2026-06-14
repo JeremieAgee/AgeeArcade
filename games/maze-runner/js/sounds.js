@@ -1,7 +1,7 @@
 /**
  * SFX — Maze Runner sound adapter.
- * Delegates to the shared ArcadeSound engine (/engine/sound/engine.js).
- * Registers Maze Runner-specific SFX that aren't in the shared set.
+ * High-quality procedural synthesis for platformer gameplay.
+ * Music remains procedurally generated (arcade style).
  */
 window.SFX = (() => {
   let _ready        = false;
@@ -12,40 +12,53 @@ window.SFX = (() => {
   let _stepTimer    = 0;
   const STEP_INTERVAL = 460; // ms between footsteps while moving
 
-  // Maze Runner SFX definitions — use ArcadeSound._internal helpers
+  // High-quality SFX with physical modeling
   function _registerMazeSFX() {
-    const { osc, noise } = window.ArcadeSound._internal;
+    const { resonance, plate, noise, impact, fire } = window.ArcadeSound._internal;
 
-    ArcadeSound.registerSFX('jump',     0.30, (o) => {
-      osc(o, 'sine',     220, 0,    0.08, 440,  0.18, 0.001);
-      osc(o, 'triangle', 330, 0.04, 0.22, 660,  0.08, 0.001);
+    // Jump — ascending spring/launch energy
+    ArcadeSound.registerSFX('jump', 0.28, (o, n) => {
+      resonance(o, n, 500, 7, 0.25, 0.20, 0.25);
     });
-    ArcadeSound.registerSFX('land',     0.20, (o, n) => {
-      noise(o, n, 0.12, 0.40, 0.001, 500, 'bandpass');
-      osc(o, 'sine', 120, 0, 0.10, 60, 0.20, 0.001);
+
+    // Land — ground impact (stone material, varies by intensity)
+    ArcadeSound.registerSFX('land', 0.42, (o, n) => {
+      // Stone ground impact with realistic decay
+      impact(o, n, 'stone', 0.8, 'medium');
     });
-    ArcadeSound.registerSFX('lava',     0.40, (o, n) => {
-      noise(o, n, 0.35, 0.55, 0.001, 300, 'lowpass');
-      osc(o, 'sawtooth', 90, 0, 0.30, 40, 0.25, 0.001);
+
+    // Lava — hot, bubbling danger (fire crackle + intense heat)
+    ArcadeSound.registerSFX('lava', 0.65, (o, n) => {
+      // Lava is hot, bubbly, aggressive
+      fire(o, n, 0.65, 0.9);  // Intense fire/boil sound
     });
-    ArcadeSound.registerSFX('fall',     0.50, (o) => {
-      osc(o, 'sine', 440, 0, 0.40, 110, 0.22, 0.001);
-      osc(o, 'triangle', 220, 0.10, 0.45, 55, 0.12, 0.001);
+
+    // Fall — descending air/wind rush
+    ArcadeSound.registerSFX('fall', 0.55, (o, n) => {
+      noise(o, n, 0.45, 0.55, 0.001, 2500, 'highpass');
+      resonance(o, n, 300, 6, 0.50, 0.25, 0.50);
     });
-    ArcadeSound.registerSFX('loot',     0.28, (o) => {
-      osc(o, 'sine', 880, 0, 0.06, 1320, 0.18, 0.001);
-      osc(o, 'sine', 1320, 0.05, 0.22, 1760, 0.10, 0.001);
+
+    // Loot — bright metallic coin chime
+    ArcadeSound.registerSFX('loot', 0.25, (o, n) => {
+      resonance(o, n, 1100, 8, 0.22, 0.18, 0.22);
     });
-    ArcadeSound.registerSFX('lifeup',   0.60, (o) => {
-      [330, 440, 660, 880].forEach((f, i) => osc(o, 'sine', f, i*0.10, i*0.10+0.18, f*1.02, 0.20, 0.001));
+
+    // Life Up — healing resonance (positive reinforcement)
+    ArcadeSound.registerSFX('lifeup', 0.32, (o, n) => {
+      resonance(o, n, 700, 7, 0.28, 0.22, 0.28);
     });
-    ArcadeSound.registerSFX('exit',     0.70, (o) => {
-      [261, 329, 392, 523, 659].forEach((f, i) => osc(o, 'sine', f, i*0.09, i*0.09+0.20, f*1.01, 0.22, 0.001));
+
+    // Exit — victory! (triumphant double resonance)
+    ArcadeSound.registerSFX('exit', 0.40, (o, n) => {
+      resonance(o, n, 900, 7, 0.30, 0.24, 0.30);
+      resonance(o, n, 600, 6, 0.28, 0.20, 0.28);
     });
-    ArcadeSound.registerSFX('gameover', 0.80, (o, n) => {
-      osc(o, 'sawtooth', 220, 0, 0.25, 55, 0.30, 0.001);
-      osc(o, 'square',   180, 0.15, 0.60, 40, 0.20, 0.001);
-      noise(o, n, 0.60, 0.20, 0.001, 250, 'lowpass');
+
+    // Game Over — heavy, solid impact defeat
+    ArcadeSound.registerSFX('gameover', 0.60, (o, n) => {
+      // Stone impact (solid, heavy, final)
+      impact(o, n, 'stone', 1.0, 'large');
     });
   }
 

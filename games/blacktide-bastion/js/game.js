@@ -40,6 +40,51 @@ const Game = (() => {
   };
 
   // ── INPUT STATE ───────────────────────────────────────────────
+  let _runStartedAt = 0;
+  let _shipsSunk = 0;
+  let _analyticsSessionActive = false;
+
+  function _trackEvent(type, data) {
+    if (!window.AgeeAnalytics || !AgeeAnalytics.trackEvent) return;
+    AgeeAnalytics.trackEvent(type, Object.assign({
+      wave: gs.wave || 0,
+      score: gs.score || 0,
+      fort_hp: gs.fortHP || 0,
+    }, data || {}));
+  }
+
+  function _sessionStats(endReason) {
+    return {
+      duration_seconds: _runStartedAt ? Math.max(0, Math.round((Date.now() - _runStartedAt) / 1000)) : 0,
+      max_floor: gs.wave || 1,
+      max_level: gs.score || 0,
+      enemies_killed: _shipsSunk,
+      end_reason: endReason || 'unknown',
+    };
+  }
+
+  function _startAnalyticsSession() {
+    _runStartedAt = Date.now();
+    _shipsSunk = 0;
+    _analyticsSessionActive = false;
+    if (window.AgeeAnalytics && AgeeAnalytics.startGameSession) {
+      AgeeAnalytics.startGameSession('blacktide_bastion').then(() => {
+        _analyticsSessionActive = true;
+        _trackEvent('game_started');
+      });
+    } else {
+      _trackEvent('game_started');
+    }
+  }
+
+  function _endAnalyticsSession(endReason, unload) {
+    if (!_analyticsSessionActive || !window.AgeeAnalytics) return;
+    const stats = _sessionStats(endReason);
+    if (unload && AgeeAnalytics.endGameSessionUnload) AgeeAnalytics.endGameSessionUnload(stats);
+    else if (AgeeAnalytics.endGameSession) AgeeAnalytics.endGameSession(stats);
+    _analyticsSessionActive = false;
+  }
+
   const keys       = {};
   const mouse      = { ndc: new THREE.Vector2(), world: new THREE.Vector3(), down: false };
   let   firePending = false;
@@ -173,6 +218,10 @@ const Game = (() => {
     scene.add(_aimLine);
     HUD.init();
     GameAudio.init();
+    _trackEvent('game_loaded');
+    window.addEventListener('beforeunload', () => {
+      if (gs.running) _endAnalyticsSession('quit', true);
+    });
 
     _bindInput();
     HUD.bindInterWaveButtons(_onRepair, _onContinue);
@@ -185,7 +234,11 @@ const Game = (() => {
   function _bindInput() {
     window.addEventListener('keydown', e => {
       keys[e.code] = true;
-      if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
+      if (e.code === 'Escape') {
+        if (gs.paused) togglePause();
+        else window.dispatchEvent(new Event('arcade:exit-game'));
+      }
+      if (e.code === 'KeyP') togglePause();
       if (e.code === 'Space') { e.preventDefault(); firePending = true; }
     });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -394,6 +447,7 @@ const Game = (() => {
     if (destroyed) {
       const rawGold  = Math.round(ship.def.gold * gs.goldMult);
       const rawScore = Math.round(ship.def.score * gs.multiplier);
+      _shipsSunk++;
       gs.gold  += rawGold;
       gs.score += rawScore;
       gs.streak++;
@@ -406,6 +460,11 @@ const Game = (() => {
       HUD.spawnScoreText(wp, '+' + rawScore, camera, renderer);
 
       GameAudio.play('shipSink');
+      _trackEvent('ship_sunk', {
+        ship: ship.def.name || 'ship',
+        points: rawScore,
+        ships_sunk: _shipsSunk,
+      });
       Engine.addShake(0.2);
       FX.explosion(wp, 1.4);
       EnemyShips.sinkShip(ship);
@@ -432,6 +491,7 @@ const Game = (() => {
   // ── WAVE LIFECYCLE ────────────────────────────────────────────
   function _startNextWave() {
     gs.wave++;
+    _trackEvent('wave_started', { wave: gs.wave });
     gs.betweenWaves  = false;
     gs.shotsFired    = 0;
     gs.shotsHit      = 0;
@@ -469,6 +529,7 @@ const Game = (() => {
     if (EnemyShips.active.size === 0) gs.score += 300;
 
     GameAudio.play('waveClear');
+    _trackEvent('wave_completed', { wave: gs.wave, ships_sunk: _shipsSunk });
     Engine.addShake(0.08);
 
     _currentUpgrades = pickUpgrades(3, gs.usedUpgradeIds);
@@ -513,6 +574,8 @@ const Game = (() => {
   // ── GAME OVER ─────────────────────────────────────────────────
   function _gameOver() {
     gs.running = false;
+    _trackEvent('game_over', { end_reason: 'fort_destroyed', ships_sunk: _shipsSunk });
+    _endAnalyticsSession('fort_destroyed');
     GameAudio.play('gameOver');
     HUD.incrementRuns();
     setTimeout(() => HUD.showFail(gs), 600);
@@ -525,6 +588,7 @@ const Game = (() => {
 
   // ── PUBLIC API ────────────────────────────────────────────────
   function start() {
+    if (gs.running) _endAnalyticsSession('restart');
     // Reset run state
     gs.running           = true;
     gs.paused            = false;
@@ -552,6 +616,7 @@ const Game = (() => {
     gs.playerLevel       = 1;
     gs.xp                = 0;
     gs.xpToNext          = 80;
+    _startAnalyticsSession();
 
     WaveDirector.reset();
     EnemyShips.clear();
@@ -584,6 +649,7 @@ const Game = (() => {
   }
 
   function goToTitle() {
+    if (gs.running) _endAnalyticsSession('quit');
     gs.running = false;
     gs.paused  = false;
     document.getElementById('pauseOverlay')?.classList.remove('active');

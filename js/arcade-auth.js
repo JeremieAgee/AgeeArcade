@@ -50,15 +50,6 @@ const ArcadeAuth = (() => {
     const nav = document.querySelector('.site-nav');
     if (!nav) return;
 
-    // Admin analytics link — hidden until admin signs in
-    const adminLink = document.createElement('a');
-    adminLink.id        = 'arcadeAdminBtn';
-    adminLink.className = 'arcade-admin-btn';
-    adminLink.textContent = '⚡ Analytics';
-    adminLink.href      = _arcadeUrl('admin/');
-    adminLink.style.display = 'none';
-    nav.appendChild(adminLink);
-
     const btn = document.createElement('button');
     btn.id = 'arcadeAuthBtn';
     btn.className = 'arcade-auth-btn';
@@ -76,8 +67,21 @@ const ArcadeAuth = (() => {
     btn.textContent = _user ? (_user.email.split('@')[0]) : 'Sign In';
     btn.classList.toggle('arcade-auth-btn--signed-in', !!_user);
 
-    const adminBtn = document.getElementById('arcadeAdminBtn');
-    if (adminBtn) adminBtn.style.display = _isAdmin() ? 'inline-flex' : 'none';
+    const dropdown = document.querySelector('.dropdown-menu');
+    if (dropdown) {
+      const existingAdminLink = dropdown.querySelector('a[href*="admin"]');
+
+      if (_isAdmin()) {
+        if (!existingAdminLink) {
+          const adminLink = document.createElement('a');
+          adminLink.href = _arcadeUrl('admin/');
+          adminLink.textContent = '⚡ Analytics';
+          dropdown.insertBefore(adminLink, dropdown.firstChild);
+        }
+      } else {
+        if (existingAdminLink) existingAdminLink.remove();
+      }
+    }
   }
 
   function _isAdmin() {
@@ -264,12 +268,6 @@ const ArcadeAuth = (() => {
   function getEmail()   { return _user?.email ?? null; }
   function isLoggedIn() { return !!_user; }
 
-  async function getAccessToken() {
-    if (!_client) return null;
-    const { data } = await _client.auth.getSession();
-    return data?.session?.access_token ?? null;
-  }
-
   /* ── Styles ─────────────────────────────────── */
   function _injectStyles() {
     const s = document.createElement('style');
@@ -383,5 +381,5 @@ const ArcadeAuth = (() => {
     init();
   }
 
-  return { show, hide, signIn, signUp, signOut, getUser, getUserId, getEmail, isLoggedIn, isAdmin: _isAdmin, getAccessToken };
+  return { show, hide, signIn, signUp, signOut, getUser, getUserId, getEmail, isLoggedIn, isAdmin: _isAdmin };
 })();

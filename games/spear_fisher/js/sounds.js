@@ -1,45 +1,51 @@
 /**
  * SFX — Spear Fisher sound adapter.
- * Delegates to the shared ArcadeSound engine (/engine/sound/engine.js).
- * Registers spear/water SFX and a calm ocean music theme.
+ * High-quality procedural synthesis for oceanic fishing.
+ * Music remains procedurally generated (ocean theme).
  */
 window.SFX = (() => {
   let _ready = false;
   let _ambientRequested = false;
 
+  // High-quality SFX with physical modeling
   function _registerSFX() {
-    const { osc, noise } = ArcadeSound._internal;
+    const { resonance, plate, noise, impact } = ArcadeSound._internal;
 
-    // Spear leaves the hand — airy whoosh rising then gone
-    ArcadeSound.registerSFX('sf_throw', 0.25, (o, n) => {
-      noise(o, n, 0.20, 0.26, 0.001, 2600, 'highpass');
-      osc(o, 'sine', 280, 0, 0.16, 520, 0.10, 0.001);
+    // Spear throw — whoosh air movement
+    ArcadeSound.registerSFX('sf_throw', 0.24, (o, n) => {
+      noise(o, n, 0.20, 0.30, 0.001, 3000, 'highpass');
     });
-    // Spear or fish breaks the surface
-    ArcadeSound.registerSFX('sf_splash', 0.40, (o, n) => {
-      noise(o, n, 0.30, 0.35, 0.001, 1400, 'lowpass');
-      noise(o, n, 0.16, 0.20, 0.001, 3200, 'highpass');
-      osc(o, 'sine', 180, 0, 0.12, 90, 0.12, 0.001);
+
+    // Splash — water body impact (realistic splash texture + resonance)
+    ArcadeSound.registerSFX('sf_splash', 0.55, (o, n) => {
+      // Water splash: low texture + resonance + spray
+      noise(o, n, 0.35, 0.45, 0.001, 600, 'lowpass');    // Splash texture
+      resonance(o, n, 200, 5, 0.35, 0.25, 0.35);          // Water resonance
+      noise(o, n, 0.15, 0.10, 0.001, 1500, 'highpass');   // Spray/aeration
     });
-    // Spear strikes a fish — wet thunk
-    ArcadeSound.registerSFX('sf_stick', 0.22, (o, n) => {
-      noise(o, n, 0.12, 0.40, 0.001, 700, 'bandpass');
-      osc(o, 'square', 150, 0, 0.10, 70, 0.16, 0.001);
-      osc(o, 'sine', 90, 0.02, 0.16, 50, 0.18, 0.001);
+
+    // Spear strike — impact on fish/water (sharp water impact)
+    ArcadeSound.registerSFX('sf_stick', 0.40, (o, n) => {
+      // Spear hitting water: sharp transient + impact
+      impact(o, n, 'rubber', 0.9, 'small');  // Fish is soft/rubbery
     });
-    // Reel tug — short rope strain
-    ArcadeSound.registerSFX('sf_pull', 0.18, (o, n) => {
-      noise(o, n, 0.10, 0.22, 0.001, 900, 'bandpass');
-      osc(o, 'triangle', 220, 0, 0.12, 320, 0.14, 0.001);
+
+    // Reel tension — rope strain and resistance
+    ArcadeSound.registerSFX('sf_pull', 0.26, (o, n) => {
+      noise(o, n, 0.18, 0.32, 0.001, 1200, 'bandpass');
+      resonance(o, n, 280, 6, 0.24, 0.18, 0.24);
     });
-    // Fish landed — bright little fanfare
-    ArcadeSound.registerSFX('sf_catch', 0.60, (o) => {
-      [523, 659, 784].forEach((f, i) => osc(o, 'sine', f, i * 0.07, i * 0.07 + 0.22, f * 1.01, 0.20, 0.001));
-      osc(o, 'triangle', 1046, 0.22, 0.55, 1318, 0.10, 0.001);
+
+    // Fish caught — victory chime (success!)
+    ArcadeSound.registerSFX('sf_catch', 0.35, (o, n) => {
+      resonance(o, n, 800, 7, 0.28, 0.22, 0.28);
+      resonance(o, n, 600, 6, 0.26, 0.18, 0.26);
     });
-    // Time's up
-    ArcadeSound.registerSFX('sf_gameover', 0.90, (o) => {
-      [392, 330, 262, 196].forEach((f, i) => osc(o, 'sine', f, i * 0.14, i * 0.14 + 0.40, f, 0.20, 0.001));
+
+    // Game Over — session end, solid impact
+    ArcadeSound.registerSFX('sf_gameover', 0.50, (o, n) => {
+      // Stone impact (solid, final)
+      impact(o, n, 'stone', 0.85, 'medium');
     });
   }
 
