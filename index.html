@@ -1,85 +1,464 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Agee Games — Free Browser Games by Jeremie Agee</title>
-  <meta name="description" content="Agee Games is a collection of free 3D browser games designed and built by solo developer Jeremie Agee. No download required — play Maze Runner, Depths of Ashenveil, and more right in your browser." />
-  <meta property="og:title" content="Agee Games — Free Browser Games by Jeremie Agee" />
-  <meta property="og:description" content="Play free browser games built by solo developer Jeremie Agee. No downloads, no sign-ups, just fun." />
-  <meta property="og:image" content="images/arcade.png" />
-  <meta property="og:url" content="https://ageegaming.com/" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <link rel="icon" href="images/arcade.png" />
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="./AgeeArcade/css/main.css?v=20260610-spear" />
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9709866738532619" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Agee Arcade - Free browser games created by Jeremie Agee. Play now, no download required.">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <!-- ── Content Security Policy ─────────────────────────────────────────
+         Restricts what the browser will load / connect to.
+         Tighten script-src by removing 'unsafe-inline' once onclick=""
+         handlers are replaced with addEventListener calls.
+    ──────────────────────────────────────────────────────────────────── -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src  'self' 'unsafe-inline'
+                  https://cdnjs.cloudflare.com
+                  https://cdn.jsdelivr.net
+                  https://*.googlesyndication.com
+                  https://*.doubleclick.net
+                  https://*.google.com
+                  https://*.adtrafficquality.google
+                  https://*.googletagservices.com;
+      style-src   'self' 'unsafe-inline'
+                  https://fonts.googleapis.com;
+      font-src    'self'
+                  https://fonts.gstatic.com;
+      connect-src 'self'
+                  https://xdvrgeaivfqpcsmuqeyi.supabase.co
+                  wss://xdvrgeaivfqpcsmuqeyi.supabase.co
+                  https://cdn.jsdelivr.net
+                  https://*.googlesyndication.com
+                  https://*.doubleclick.net
+                  https://*.google.com
+                  https://*.gstatic.com
+                  https://*.adtrafficquality.google;
+      img-src     'self' data: blob:
+                  https://*.googlesyndication.com
+                  https://*.doubleclick.net
+                  https://*.google.com
+                  https://*.gstatic.com
+                  https://*.adtrafficquality.google
+                  https://www.googletagmanager.com;
+      frame-src   'self'
+                  https://*.doubleclick.net
+                  https://*.googlesyndication.com
+                  https://*.adtrafficquality.google
+                  https://www.google.com;
+      worker-src  'self' blob:;
+      object-src  'none';
+      base-uri    'self';
+      form-action 'self';
+    ">
+    <title>Agee Arcade — Free Browser Games</title>
+
+    <!-- PWA Manifest & Meta Tags -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0e0b1a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Agee Arcade">
+
+    <!-- Google Fonts preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link rel="stylesheet" href="./css/main.css?v=20260604-arcade">
+    <style>
+      /* 3D Arcade shell */
+      #arcade-canvas {
+        position: fixed; inset: 0;
+        width: 100%; height: 100%;
+        display: block;
+        z-index: 0;
+        cursor: default;
+      }
+      .site-header { position: relative; z-index: 20; background: rgba(8,6,16,0.75); backdrop-filter: blur(6px); }
+
+      #interact-prompt {
+        position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+        background: rgba(8,6,16,0.85);
+        border: 1px solid rgba(160,80,255,0.5);
+        color: #c080ff;
+        font-family: 'Courier New', monospace;
+        font-size: 1rem;
+        padding: 0.5rem 1.4rem;
+        border-radius: 4px;
+        letter-spacing: 0.08em;
+        pointer-events: none;
+        z-index: 30;
+        text-shadow: 0 0 8px #a050ff;
+        transition: opacity 0.15s;
+      }
+
+      #click-to-play {
+        position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+        color: rgba(160,80,255,0.6);
+        font-family: 'Courier New', monospace;
+        font-size: 0.8rem;
+        letter-spacing: 0.12em;
+        pointer-events: none;
+        z-index: 30;
+      }
+
+      /* Game overlay */
+      #game-overlay {
+        position: fixed; inset: 0;
+        z-index: 100;
+        background: #000;
+        display: flex; flex-direction: column;
+      }
+      #game-overlay[hidden] { display: none; }
+
+      #game-overlay-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.5rem 1rem;
+        background: #0e0b1a;
+        border-bottom: 1px solid rgba(160,80,255,0.3);
+        flex-shrink: 0;
+      }
+      #game-overlay-title {
+        color: #c080ff;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        letter-spacing: 0.1em;
+      }
+      #game-overlay-close {
+        background: none; border: 1px solid rgba(160,80,255,0.4);
+        color: #c080ff; cursor: pointer;
+        padding: 0.25rem 0.75rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        border-radius: 3px;
+      }
+      #game-overlay-close:hover { background: rgba(160,80,255,0.15); }
+
+      #game-iframe {
+        flex: 1; border: none; width: 100%; display: block;
+        overflow: hidden;
+      }
+
+      /* Arcade joystick */
+      #arcade-joy-base {
+        position: fixed;
+        bottom: 48px; left: 48px;
+        width: 100px; height: 100px;
+        border-radius: 50%;
+        background: rgba(8,6,16,0.6);
+        border: 2px solid rgba(160,80,255,0.4);
+        z-index: 40;
+        display: none; /* shown only on touch devices */
+        touch-action: none;
+        user-select: none;
+      }
+      #arcade-joy-nub {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 40px; height: 40px;
+        border-radius: 50%;
+        background: rgba(160,80,255,0.7);
+        transform: translate(0,0);
+        margin: -20px 0 0 -20px;
+        pointer-events: none;
+        transition: transform 0.05s;
+        box-shadow: 0 0 12px rgba(160,80,255,0.6);
+      }
+      @media (pointer: coarse) {
+        #arcade-joy-base { display: block; }
+        #click-to-play { display: none; }
+      }
+
+      /* Comments overlay — guestbook + per-game threads */
+      #comments-overlay {
+        position: fixed; inset: 0;
+        z-index: 90;
+        background: rgba(4,2,10,0.7);
+        backdrop-filter: blur(3px);
+        display: flex; align-items: center; justify-content: center;
+        padding: 2rem 1rem;
+      }
+      #comments-overlay[hidden] { display: none; }
+
+      #comments-panel {
+        width: min(720px, 94vw);
+        max-height: 82vh;
+        display: flex; flex-direction: column;
+        background: #0e0b1a;
+        border: 1px solid rgba(255,45,149,0.45);
+        border-radius: 8px;
+        box-shadow: 0 0 32px rgba(255,45,149,0.25);
+        overflow: hidden;
+      }
+      #comments-panel-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.5rem 1rem;
+        background: #14102a;
+        border-bottom: 1px solid rgba(255,45,149,0.3);
+        flex-shrink: 0;
+      }
+      #comments-panel-title {
+        color: #ff8ac2;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        letter-spacing: 0.1em;
+        text-shadow: 0 0 8px rgba(255,45,149,0.5);
+      }
+      #comments-overlay-close {
+        background: none; border: 1px solid rgba(255,45,149,0.4);
+        color: #ff8ac2; cursor: pointer;
+        padding: 0.25rem 0.75rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        border-radius: 3px;
+      }
+      #comments-overlay-close:hover { background: rgba(255,45,149,0.15); }
+      #comments-panel-body {
+        overflow-y: auto;
+        padding: 1rem;
+      }
+
+      /* Leaderboard overlay */
+      #leaderboard-overlay {
+        position: fixed; inset: 0;
+        z-index: 90;
+        background: rgba(4,2,10,0.7);
+        backdrop-filter: blur(3px);
+        display: flex; align-items: center; justify-content: center;
+        padding: 2rem 1rem;
+      }
+      #leaderboard-overlay[hidden] { display: none; }
+
+      #leaderboard-panel {
+        width: min(720px, 94vw);
+        max-height: 82vh;
+        display: flex; flex-direction: column;
+        background: #0e0b1a;
+        border: 1px solid rgba(100,200,255,0.45);
+        border-radius: 8px;
+        box-shadow: 0 0 32px rgba(100,200,255,0.25);
+        overflow: hidden;
+      }
+      #leaderboard-panel-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.5rem 1rem;
+        background: #0a1a2a;
+        border-bottom: 1px solid rgba(100,200,255,0.3);
+        flex-shrink: 0;
+      }
+      #leaderboard-panel-title {
+        color: #64c8ff;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        letter-spacing: 0.1em;
+        text-shadow: 0 0 8px rgba(100,200,255,0.5);
+      }
+      #leaderboard-overlay-close {
+        background: none; border: 1px solid rgba(100,200,255,0.4);
+        color: #64c8ff; cursor: pointer;
+        padding: 0.25rem 0.75rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        border-radius: 3px;
+      }
+      #leaderboard-overlay-close:hover { background: rgba(100,200,255,0.15); }
+      #leaderboard-panel-body {
+        overflow-y: auto;
+        padding: 1rem;
+      }
+
+      /* Mobile interaction button */
+      #arcade-interact-btn {
+        position: fixed;
+        bottom: 120px;
+        right: 24px;
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: linear-gradient(180deg, #1a3a6a, #0a1a3a);
+        border: 2px solid #1a4a7a;
+        color: #f0d060;
+        font-family: 'Courier New', monospace;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        letter-spacing: 1px;
+        text-shadow: 0 0 10px rgba(0,150,255,0.4);
+        transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
+        box-shadow: inset 0 1px 0 rgba(100,180,255,0.15), 0 10px 24px rgba(0,0,0,0.35);
+        z-index: 40;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #arcade-interact-btn:hover {
+        background: linear-gradient(180deg, #1e4a7a, #0e2a4a);
+        border-color: #c8a04a;
+        box-shadow: 0 0 22px rgba(0,120,255,0.25);
+        transform: translateY(-2px);
+      }
+      #arcade-interact-btn:active {
+        transform: translateY(0);
+      }
+      @media (pointer: fine) {
+        #arcade-interact-btn { display: none; }
+      }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9709866738532619"
+         crossorigin="anonymous"></script>
 </head>
 <body>
 
-  <!-- ── Header banner ── -->
-  <header class="site-header">
-    <div class="site-head-inner">
-      <a class="logo-link" href="./">Agee Games</a>
-      <div class="header-right">
+    <!-- SHARED: site-header — update about/index.html and game pages when changing -->
+    <header class="site-header">
+        <a class="logo" href="./">AGEE ARCADE</a>
         <nav class="site-nav" id="header-auth-nav"></nav>
         <div class="nav-menu">
           <button class="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="dropdown-menu">
             <span class="menu-icon">☰</span>
           </button>
           <nav class="dropdown-menu" id="dropdown-menu">
-            <a href="./AgeeArcade/leaderboards/">Leaderboards</a>
-            <a href="about.html">About</a>
+            <a href="./leaderboards/">Leaderboards</a>
+            <a href="./about/">About</a>
           </nav>
         </div>
+    </header>
+
+    <!-- 3D Arcade Canvas -->
+    <canvas id="arcade-canvas"></canvas>
+
+    <!-- Interact prompt — shown when near a cabinet -->
+    <div id="interact-prompt" hidden></div>
+
+    <!-- Click-to-capture hint -->
+    <div id="click-to-play">WASD move  ·  Click to look  ·  E interact  ·  ESC release mouse</div>
+
+    <!-- Game iframe overlay -->
+    <div id="game-overlay" hidden>
+      <div id="game-overlay-bar">
+        <span id="game-overlay-title"></span>
+        <button id="game-overlay-close">✕ EXIT  [ESC]</button>
+      </div>
+      <iframe id="game-iframe" allowfullscreen scrolling="no"></iframe>
+    </div>
+
+    <!-- Touch joystick -->
+    <div id="arcade-joy-base"><div id="arcade-joy-nub"></div></div>
+
+    <!-- Mobile interaction button -->
+    <button id="arcade-interact-btn" type="button" hidden>E</button>
+
+
+    <!-- Comments overlay — opened from the guestbook board or a cabinet's
+         COMMENTS side panel. Thread containers are created per pageId by
+         arcade/comments-board.js. -->
+    <div id="comments-overlay" hidden>
+      <div id="comments-panel">
+        <div id="comments-panel-bar">
+          <span id="comments-panel-title">ARCADE GUESTBOOK</span>
+          <button id="comments-overlay-close">✕ CLOSE  [ESC]</button>
+        </div>
+        <div id="comments-panel-body"></div>
       </div>
     </div>
-  </header>
-  <p class="tagline">Free browser games — no download, no sign-up. Just play.</p>
 
-  <main>
-
-    <!-- Arcade entrance -->
-    <section class="arcade-scene" aria-label="Enter the arcade">
-      <div class="arcade-wrap">
-        <img src="images/arcade.png" alt="Agee Arcade storefront lit up at night with neon signs" class="arcade-img" />
-        <a class="door-hotspot" href="./AgeeArcade/" aria-label="Enter Agee Arcade">
-          <span class="enter-label">Enter</span>
-        </a>
+    <!-- Leaderboard overlay — top 10 scores for each cabinet -->
+    <div id="leaderboard-overlay" hidden>
+      <div id="leaderboard-panel">
+        <div id="leaderboard-panel-bar">
+          <span id="leaderboard-panel-title">TOP 10</span>
+          <button id="leaderboard-overlay-close">✕ CLOSE  [ESC]</button>
+        </div>
+        <div id="leaderboard-panel-body"></div>
       </div>
-      <p class="arcade-cta">Hover the doors &amp; click to enter the arcade</p>
-    </section>
+    </div>
 
-    <section class="featured-section container">
-      <h2 class="section-title">Featured Game</h2>
-      <div id="featured-game"></div>
-    </section>
+    <!-- Three.js + Supabase -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
+    <script src="./js/vendor/supabase.min.js"></script>
 
-    <section class="games-section container">
-      <h2 class="section-title">All Games</h2>
-      <div id="game-grid" class="game-grid"></div>
-    </section>
+    <!-- Ad system — must load before arcade scripts that depend on AdRouter -->
+    <script src="./js/ads/placements.js"             defer></script>
+    <script src="./js/ads/ad-router.js"              defer></script>
+    <script src="./js/ads/overlays.js"               defer></script>
+    <script src="./js/ads/iframe-bridge.js"          defer></script>
+    <!-- Ad network adapters — order = priority (H5 Games first, AdinPlay fallback) -->
+    <script src="./js/ads/adapters/h5-games-ads.js"  defer></script>
+    <script src="./js/ads/adapters/adinplay.js"      defer></script>
 
-    <section class="section" id="comments">
-      <h2 class="section-title">Comments</h2>
-      <div id="agee-comments"></div>
-    </section>
+    <!-- Arcade scripts — order matters -->
+    <script src="./arcade/player.js"            defer></script>
+    <script src="./arcade/cabinets.js"          defer></script>
+    <script src="./arcade/game-frame.js"        defer></script>
+    <script src="./arcade/ads.js"               defer></script>
+    <script src="./arcade/comments-board.js"    defer></script>
+    <script src="./arcade/arcade-leaderboard.js" defer></script>
+    <script src="./arcade/scene.js"             defer></script>
 
-  </main>
+    <!-- Auth + analytics -->
+    <script src="./js/arcade-auth.js" defer></script>
+    <script src="./js/analytics.js"   defer></script>
+    <script src="./js/comments.js"    defer></script>
 
-  <footer>&copy; 2026 ageegaming.com &mdash; Built by Jeremie Agee &mdash; <a href="privacy.html">Privacy Policy</a></footer>
-  <script>window.AgeeArcadeRoot = './AgeeArcade/';</script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="./AgeeArcade/js/analytics.js"></script>
-  <script src="./AgeeArcade/js/arcade-auth.js"></script>
-  <script src="./AgeeArcade/js/comments.js"></script>
-  <script src="./AgeeArcade/js/games.js?v=20260610-spear"></script>
-  <script src="./AgeeArcade/js/main.js?v=20260610-spear"></script>
-  <script src="script.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      ArcadeComments.init({ pageId: 'agee-home', containerId: 'agee-comments', theme: 'arcade' });
-    });
-  </script>
+    <!-- Boot -->
+    <script defer>
+      document.addEventListener('DOMContentLoaded', function () {
+        // Dropdown menu
+        const menuBtn = document.querySelector('.menu-btn');
+        const dropdownMenu = document.querySelector('.dropdown-menu');
+
+        if (menuBtn && dropdownMenu) {
+          menuBtn.addEventListener('click', () => {
+            dropdownMenu.classList.toggle('open');
+            menuBtn.setAttribute('aria-expanded', dropdownMenu.classList.contains('open'));
+          });
+
+          dropdownMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+              dropdownMenu.classList.remove('open');
+              menuBtn.setAttribute('aria-expanded', 'false');
+            });
+          });
+
+          document.addEventListener('click', (e) => {
+            if (!e.target.closest('.nav-menu')) {
+              dropdownMenu.classList.remove('open');
+              menuBtn.setAttribute('aria-expanded', 'false');
+            }
+          });
+        }
+
+        // Mobile interaction button
+        const interactBtn = document.getElementById('arcade-interact-btn');
+        const interactPrompt = document.getElementById('interact-prompt');
+        if (interactBtn && interactPrompt) {
+          // Show on touch devices
+          if (navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches) {
+            interactBtn.hidden = false;
+          }
+
+          // Sync visibility with prompt
+          const observer = new MutationObserver(() => {
+            interactBtn.hidden = interactPrompt.hidden;
+          });
+          observer.observe(interactPrompt, { attributes: true, attributeFilter: ['hidden'] });
+
+          // Trigger interaction
+          interactBtn.addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('arcade:interact'));
+          });
+        }
+
+        if (window.ArcadeIframeBridge) ArcadeIframeBridge.init();
+        if (window.ArcadeLeaderboard) ArcadeLeaderboard.init();
+        ArcadeGameFrame.init();
+        ArcadeScene.init();
+        const yr = document.getElementById('footer-year');
+        if (yr) yr.textContent = new Date().getFullYear();
+      });
+    </script>
+
 </body>
 </html>
