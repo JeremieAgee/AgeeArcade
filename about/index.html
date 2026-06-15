@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -9,22 +9,28 @@
       script-src  'self' 'unsafe-inline'
                   https://cdnjs.cloudflare.com
                   https://cdn.jsdelivr.net
-                  https://pagead2.googlesyndication.com;
+                  https://pagead2.googlesyndication.com
+                  https://ep2.adtrafficquality.google;
       style-src   'self' 'unsafe-inline'
                   https://fonts.googleapis.com;
       font-src    'self'
                   https://fonts.gstatic.com;
       connect-src 'self'
                   https://xdvrgeaivfqpcsmuqeyi.supabase.co
-                  wss://xdvrgeaivfqpcsmuqeyi.supabase.co;
+                  wss://xdvrgeaivfqpcsmuqeyi.supabase.co
+                  https://pagead2.googlesyndication.com
+                  https://googleads.g.doubleclick.net
+                  https://ep1.adtrafficquality.google;
       img-src     'self' data: blob:
-                  https://www.googletagmanager.com;
-      frame-src   'none';
+                  https://www.googletagmanager.com
+                  https://pagead2.googlesyndication.com
+                  https://googleads.g.doubleclick.net;
+      frame-src   https://googleads.g.doubleclick.net;
       object-src  'none';
       base-uri    'self';
       form-action 'self';
     ">
-    <title>About — Agee Arcade</title>
+    <title>About â€” Agee Arcade</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +40,7 @@
 </head>
 <body>
 
-    <!-- SHARED: site-header — update about/index.html and game pages when changing -->
+    <!-- SHARED: site-header â€” update about/index.html and game pages when changing -->
     <header class="site-header">
         <a class="logo" href="../">AGEE ARCADE</a>
         <nav class="site-nav">
@@ -52,11 +58,11 @@
 
         <section class="container" style="max-width:680px; padding-top:2rem; padding-bottom:4rem;">
             <p style="color:var(--text-secondary); font-size:1.05rem; line-height:1.8; margin-bottom:1.5rem;">
-                Agee Arcade is designed and built entirely by <strong style="color:var(--text-primary);">Jeremie Agee</strong> — a solo developer who has always had a deep love for games and coding. That combination is what drives this project: a genuine passion for the craft and a desire to create experiences people can enjoy.
+                Agee Arcade is designed and built entirely by <strong style="color:var(--text-primary);">Jeremie Agee</strong> â€” a solo developer who has always had a deep love for games and coding. That combination is what drives this project: a genuine passion for the craft and a desire to create experiences people can enjoy.
             </p>
 
             <p style="color:var(--text-secondary); font-size:1.05rem; line-height:1.8; margin-bottom:1.5rem;">
-                The arcade is dedicated to <strong style="color:var(--text-primary);">3D web-based games</strong> — free to play, right in your browser, no downloads required. New games are actively in development and will continue to be added over time.
+                The arcade is dedicated to <strong style="color:var(--text-primary);">3D web-based games</strong> â€” free to play, right in your browser, no downloads required. New games are actively in development and will continue to be added over time.
             </p>
 
             <h2 style="color:var(--text-primary); font-family:'Orbitron',sans-serif; font-size:1rem; letter-spacing:0.05em; margin-bottom:1rem; margin-top:2rem;">Skills &amp; Technologies</h2>
@@ -76,14 +82,14 @@
             <h2 style="color:var(--text-primary); font-family:'Orbitron',sans-serif; font-size:1rem; letter-spacing:0.05em; margin-bottom:0.75rem;">Inquiries &amp; Hiring</h2>
             <p style="color:var(--text-secondary); font-size:1.05rem; line-height:1.8;">
                 Available for freelance work and open to new opportunities. For project inquiries or to discuss a specific role, reach out directly at
-                <a href="mailto:Jeremie.w.agee@gmail.com" style="color:var(--accent);">Jeremie.w.agee@gmail.com</a>.
+                <a href="mailto:ageegamingLLC@gmail.com" style="color:var(--accent);">ageegamingLLC@gmail.com</a>.
             </p>
         </section>
     </main>
 
-    <!-- SHARED: site-footer — update all pages when changing -->
+    <!-- SHARED: site-footer â€” update all pages when changing -->
     <footer class="site-footer">
-        <p>&copy; 2026 ageegaming.com &mdash; Built by Jeremie Agee &mdash; <a href="../../privacy.html">Privacy Policy</a></p>
+        <p>&copy; <span id="footer-year"></span> Created By Jeremie Agee. All rights reserved.</p>
     </footer>
 
     <div class="ad-bottom-strip">
@@ -93,13 +99,21 @@
              data-ad-slot="7421345542"
              data-ad-format="auto"
              data-full-width-responsive="true"></ins>
-        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+        <script>
+            window.addEventListener('load', function () {
+                var slot = document.querySelector('.ad-bottom-strip .adsbygoogle');
+                if (!slot || slot.offsetWidth <= 0) return;
+                (adsbygoogle = window.adsbygoogle || []).push({});
+            });
+        </script>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
+    <script src="../js/vendor/supabase.min.js"></script>
     <script src="../js/analytics.js"></script>
     <script>if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('about_opened');</script>
     <script src="../ads/adsense.js"></script>
 
 </body>
 </html>
+
