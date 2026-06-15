@@ -1990,6 +1990,7 @@
     btn('btnContinue', continueGame);
     btn('btnNextFloor', nextFloor);
     btn('btnRestart',   restartGame);
+    btn('btnRewardAd', () => { if (typeof window.adBreak === 'function') { adBreak({ type: 'reward', name: 'bonus-offer' }); } });
     updateContinueBtn();
     let lbReturnScreen = 'title';
     btn('btnLB',      () => { lbReturnScreen = 'title';     loadLeaderboard(); showScreen('leaderboard'); });

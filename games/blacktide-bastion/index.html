@@ -8,35 +8,16 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="icon" href="./thumb.png" type="image/png" />
+  <link rel="icon" href="./thumb.jpg" type="image/jpeg" />
 
   <link rel="stylesheet" href="./css/layout.css" />
   <link rel="stylesheet" href="./css/ui.css" />
 
-  <!-- AdSense loads only once this page is actually on screen. The arcade
-       preloads games in hidden iframes — those must never request ads
-       (hidden impressions = invalid-traffic risk). Queued
-       adsbygoogle.push() calls flush when the script loads. -->
-  <script>
-    (function () {
-      var loaded = false;
-      function loadAds() {
-        if (loaded) return;
-        loaded = true;
-        var s = document.createElement('script');
-        s.async = true;
-        s.crossOrigin = 'anonymous';
-        s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9709866738532619';
-        document.head.appendChild(s);
-      }
-      if (!('IntersectionObserver' in window)) { loadAds(); return; }
-      var io = new IntersectionObserver(function (entries) {
-        for (var i = 0; i < entries.length; i++) {
-          if (entries[i].isIntersecting) { io.disconnect(); loadAds(); return; }
-        }
-      });
-      io.observe(document.documentElement);
-    })();
+  <!-- Google H5 Games Ads -->
+  <script async
+    data-ad-client="ca-pub-381246496"
+    data-ad-frequency-hint="60s"
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
   </script>
 </head>
 <body>
@@ -179,6 +160,7 @@
         </div>
       </div>
       <a class="big-btn secondary title-link-btn" href="./leaderboard/">VIEW LEADERBOARD</a>
+      <button class="big-btn" onclick="if(typeof window.adBreak==='function'){adBreak({type:'reward',name:'bonus-offer'})}">▶ WATCH AD FOR BONUS</button>
       <button class="big-btn" onclick="Game.restart()">SAIL AGAIN</button>
       <button class="big-btn secondary" onclick="Game.goToTitle()">TITLE SCREEN</button>
       <a class="big-btn secondary title-link-btn" href="../../">RETURN TO ARCADE</a>

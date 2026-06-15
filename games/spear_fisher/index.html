@@ -14,30 +14,11 @@
   <link rel="stylesheet" href="./css/layout.css" />
   <link rel="stylesheet" href="./css/ui.css" />
 
-  <!-- AdSense loads only once this page is actually on screen. The arcade
-       preloads games in hidden iframes — those must never request ads
-       (hidden impressions = invalid-traffic risk). Queued
-       adsbygoogle.push() calls flush when the script loads. -->
-  <script>
-    (function () {
-      var loaded = false;
-      function loadAds() {
-        if (loaded) return;
-        loaded = true;
-        var s = document.createElement('script');
-        s.async = true;
-        s.crossOrigin = 'anonymous';
-        s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9709866738532619';
-        document.head.appendChild(s);
-      }
-      if (!('IntersectionObserver' in window)) { loadAds(); return; }
-      var io = new IntersectionObserver(function (entries) {
-        for (var i = 0; i < entries.length; i++) {
-          if (entries[i].isIntersecting) { io.disconnect(); loadAds(); return; }
-        }
-      });
-      io.observe(document.documentElement);
-    })();
+  <!-- Google H5 Games Ads -->
+  <script async
+    data-ad-client="ca-pub-381246496"
+    data-ad-frequency-hint="60s"
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
   </script>
 </head>
 <body>
@@ -147,6 +128,7 @@
             <button class="mini-btn" id="lbSaveBtn">Save</button>
           </div>
         </div>
+        <button class="big-btn" onclick="if(typeof window.adBreak==='function'){adBreak({type:'reward',name:'bonus-offer'})}">▶ WATCH AD FOR BONUS</button>
         <button class="big-btn" id="restartBtn">FISH AGAIN</button>
         <a class="big-btn secondary" href="../../">ARCADE</a>
       </div>
