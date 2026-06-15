@@ -99,6 +99,26 @@ const Loot = (() => {
     }
   }
 
+  /* ── Generate permanent upgrade ──────────────────── */
+  function genUpgrade(floor) {
+    const upgrades = [
+      { name: '+2 Damage',          apply: p => { p.atk += 2; } },
+      { name: '+8 Max Health',      apply: p => { p.maxHp += 8; p.hp = Math.min(p.hp + 8, p.maxHp); } },
+      { name: '+1.5 Attack Speed',  apply: p => { p.atkSpeed *= 0.8; } },
+      { name: '+4 Defense',         apply: p => { p.def += 4; } },
+      { name: '+1 Movement Speed',  apply: p => { p.speed += 1.0; } },
+      { name: '+10% Crit Chance',   apply: p => { p.critChance += 0.1; } },
+    ];
+    const upgrade = upgrades[Math.floor(Math.random() * upgrades.length)];
+    return {
+      type: 'upgrade',
+      name: upgrade.name,
+      apply: upgrade.apply,
+      rarity: 'rare',
+      id: uid(),
+    };
+  }
+
   function uid() {
     return Math.random().toString(36).slice(2, 9);
   }
@@ -178,6 +198,7 @@ const Loot = (() => {
 
   return {
     genItem,
+    genUpgrade,
     startingInventory,
     SKILLS,
     RARITY_COLOR,

@@ -70,6 +70,15 @@
     analyticsSessionActive = false;
   }
 
+  function showAdBreak(adType, adName) {
+    if (typeof window.adBreak !== 'function') return;
+    if (document.hidden) return;
+    adBreak({
+      type: adType,
+      name: adName,
+    });
+  }
+
   let wallMesh    = null;
   let lavaMesh        = null;
   let fallMesh        = null;
@@ -1264,6 +1273,7 @@
     trackEvent('player_died');
     endAnalyticsSession('death');
     updateGameOverSummary();
+    showAdBreak('reward', 'game-over');
     showScreen('game-over');
     trySubmitScore();
   }
@@ -1517,6 +1527,7 @@
     if (state === 'playing' || state === 'floor-complete' || state === 'paused') endAnalyticsSession('restart');
     if (window.SFX) SFX.init(); // unlock audio on first user gesture
     if (window.SFX) SFX.startAmbient();
+    showAdBreak('start', 'game-start');
     clearSave();
     gd = { hp: HP_MAX, lives: LIVES_START, floor: 1, score: 0, totalTime: 0, floorTime: 0 };
     startAnalyticsSession();
@@ -1573,6 +1584,7 @@
     gd.floorTime  = 0;
     gd.floor++;
     trackEvent('floor_started', { floor: gd.floor });
+    showAdBreak('next', 'floor-advance');
     buildFloor(gd.floor);
     state = 'playing';
     if (window.SFX) SFX.startAmbient();

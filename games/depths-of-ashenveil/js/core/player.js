@@ -30,10 +30,15 @@ const Player = (() => {
       hasWhirl:    false,
       hasRegen:    false,
       hasExecute:  false,
-      atkTimer:    0,     // cooldown frames remaining
       iframes:     0,     // invincibility frames
       blinkCD:     0,
       regenAccum:  0,
+      // Attack state machine
+      atkState:    'idle',    // idle | windup | active | recovery
+      atkPhaseT:   0,         // elapsed time in current phase
+      atkHitTargets: new Set(), // enemy IDs hit in current attack
+      atkAimAngle: 0,         // direction of attack
+      _lastAttackFrameDmg: false, // prevent double-damage in same frame
       // Skills unlocked
       skills:      {},
       // Inventory
@@ -116,8 +121,23 @@ const Player = (() => {
 
   /* ── Per-frame update ────────────────────────── */
   function update(p, dungeon, keys, aimAngle, dt) {
+  // Attack state machine
+  if (p.atkState !== 'idle') {
+    p.atkPhaseT += dt;
+    if (p.atkState === 'windup' && p.atkPhaseT >= 0.2) {
+      p.atkState = 'active';
+      p.atkPhaseT = 0;
+    } else if (p.atkState === 'active' && p.atkPhaseT >= 0.3) {
+      p.atkState = 'recovery';
+      p.atkPhaseT = 0;
+    } else if (p.atkState === 'recovery' && p.atkPhaseT >= 0.25) {
+      p.atkState = 'idle';
+      p.atkPhaseT = 0;
+      p.atkHitTargets.clear();
+    }
+  }
+
   // Timers
-  if (p.atkTimer > 0) p.atkTimer  -= dt * 60;
   if (p.iframes  > 0) p.iframes   -= dt * 60;
   if (p.blinkCD  > 0) p.blinkCD   -= dt * 60;
 
@@ -197,38 +217,50 @@ if (wPressed || sPressed || dPressed || aPressed) {
 }
 }
 
-  /* ── Attack ──────────────────────────────────── */
-  function attack(p, enemies, aimAngle) {
-    const w    = equippedWeapon(p);
-    const cd   = Math.max(18, 38 * p.atkSpeed - (w ? w.spd * 5 : 0));
-    if (p.atkTimer > 0) return [];
+  /* ── Attack State Machine ────────────────────── */
+  // Initiate attack — transitions from idle to windup
+  function startAttack(p, aimAngle) {
+    if (p.atkState !== 'idle') return false;
+    p.atkState = 'windup';
+    p.atkPhaseT = 0;
+    p.atkAimAngle = aimAngle;
+    p.atkHitTargets.clear();
+    return true;
+  }
 
-    p.atkTimer = cd;
+  // Apply damage during active phase (called once per attack from game.js)
+  function applyAttackDamage(p, enemies) {
+    if (p.atkState !== 'active') return [];
+
     const atk  = totalAtk(p);
     const range = atkRange(p) * 1.8;
     const hits  = [];
 
     if (p.hasWhirl) {
-      // Whirlwind — hit every enemy in range
       enemies.forEach(e => {
-        if (e.dead) return;
+        if (e.dead || p.atkHitTargets.has(e.id)) return;
         const dist = Math.sqrt((e.x - p.x) ** 2 + (e.z - p.z) ** 2);
-        if (dist <= range) processHit(p, e, atk, hits);
+        if (dist <= range) {
+          p.atkHitTargets.add(e.id);
+          processHit(p, e, atk, hits);
+        }
       });
     } else {
-      // Single target — nearest enemy inside the ±70° cone
       let target = null, bestDist = Infinity;
       enemies.forEach(e => {
-        if (e.dead) return;
+        if (e.dead || p.atkHitTargets.has(e.id)) return;
         const dist = Math.sqrt((e.x - p.x) ** 2 + (e.z - p.z) ** 2);
         if (dist > range) return;
         const eAngle = Math.atan2(e.z - p.z, e.x - p.x);
-        let diff = eAngle - aimAngle;
+        let diff = eAngle - p.atkAimAngle;
         while (diff >  Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
         if (Math.abs(diff) < 1.22 && dist < bestDist) { bestDist = dist; target = e; }
       });
-      if (target) processHit(p, target, atk, hits);
+      if (target) {
+        p.atkHitTargets.add(target.id);
+        processHit(p, target, atk, hits);
+      }
     }
 
     return hits;
@@ -285,7 +317,8 @@ function blink(p, aimAngle, dungeon) {
     equippedWeapon,
     equippedArmor,
     update,
-    attack,
+    startAttack,
+    applyAttackDamage,
     takeDamage,
     blink,
     checkLevelUp,

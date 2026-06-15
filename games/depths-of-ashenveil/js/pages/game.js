@@ -41,6 +41,9 @@ const Game = (() => {
   let dungeon = null;
   let enemies = [];
   let enemiesById = new Map();
+  let traps   = [];
+  let trapRooms = [];
+  let activeTrapRoom = null;
   let floor   = 1;
   let running = false;
 
@@ -218,6 +221,15 @@ const Game = (() => {
   let _runBossesDefeated  = 0;
   let _runChestsOpened    = 0;
   let _runEnemiesKilled   = 0;
+
+  function _showAdBreak(adType, adName) {
+    if (typeof window.adBreak !== 'function') return;
+    if (document.hidden) return;
+    adBreak({
+      type: adType,
+      name: adName,
+    });
+  }
 
   const keys = {};
   let rafId  = null;
@@ -635,6 +647,7 @@ const Game = (() => {
     _nextFloorNum = 0;
     _nextFloorGenerating = false;
     Engine.startAmbient();
+    _showAdBreak('start', 'game-start');
 
     _runStartTime      = Date.now();
     _runDeaths         = 0;
@@ -696,6 +709,9 @@ const Game = (() => {
     }
 
     enemies = [];
+    traps = Traps.generateTrapsForFloor(dungeon, floor);
+    trapRooms = TrapRooms.designateTrapRooms(dungeon, floor);
+    activeTrapRoom = null;
     preBoss = null;
     if (_aiWorker) {
       _workerInit(floor, dungeon);
@@ -812,6 +828,7 @@ const Game = (() => {
 
   function nextFloor() {
     floor++;
+    _showAdBreak('next', 'floor-advance');
     bossSpawned  = false;
     bossDefeated = false;
     doorOpened   = false;
@@ -838,6 +855,9 @@ const Game = (() => {
     if (typeof SpatialManager !== 'undefined') SpatialManager.init(dungeon);
 
     enemies = [];
+    traps = Traps.generateTrapsForFloor(dungeon, floor);
+    trapRooms = TrapRooms.designateTrapRooms(dungeon, floor);
+    activeTrapRoom = null;
     preBoss = null;
     _aiTickInFlight = false;
     _pendingUpdates = null; _pendingEvents = null; _pendingDead = null;
@@ -999,6 +1019,9 @@ const Game = (() => {
     }
 
     checkBossEntry();
+    tickTrapRooms();
+    tickTraps(dt);
+    tickAttackDamage();
 
     // ── Dispatch tick to worker (fire-and-forget) ──
     if (_aiWorker && _workerReady && !_aiTickInFlight) {
@@ -1042,7 +1065,18 @@ const Game = (() => {
       for (const ev of events) {
         if (ev.type === 'attack') {
           const dmg = Player.takeDamage(player, ev.dmg);
-          if (dmg > 0) { UI.addMsg(ev.earthSlam ? `${ev.name}'s earth slam hits you for ${dmg}!` : `${ev.name} hits you for ${dmg}!`, 'combat'); Engine.playSound('player_hurt'); }
+          if (dmg > 0) {
+            UI.addMsg(ev.earthSlam ? `${ev.name}'s earth slam hits you for ${dmg}!` : `${ev.name} hits you for ${dmg}!`, 'combat');
+            Engine.playSound('player_hurt');
+            const enemy = enemiesById.get(ev.id);
+            if (enemy) {
+              const kbDX = player.x - enemy.x, kbDZ = player.z - enemy.z;
+              const kbD = Math.sqrt(kbDX * kbDX + kbDZ * kbDZ) || 1;
+              player.hitStaggerT = 0.2;
+              player.hitKnockDX = (kbDX / kbD) * 0.7;
+              player.hitKnockDZ = (kbDZ / kbD) * 0.7;
+            }
+          }
           if (ev.earthSlam) Engine.spawnParticles(player.x, 0.2, player.z, 0x8a6a3a, 22, 3.5, 0.7);
           if (player.hp <= 0) { die(); return; }
         }
@@ -1225,70 +1259,170 @@ const Game = (() => {
 
   /* ── Attack ──────────────────────────────────── */
   function doAttack() {
+    if (!Player.startAttack(player, aimAngleVal)) return;
     Engine.triggerSwing();
     Engine.playSound('swing');
-    const hits = Player.attack(player, enemies, aimAngleVal);
+  }
 
-    hits.forEach(({ enemy, dmg, isCrit, killed }) => {
-      // Tell worker about the damage so it updates hp in its own state
-      if (_aiWorker) _aiWorker.postMessage({ type: 'damage', id: enemy.id, amount: dmg });
-      Engine.spawnParticles(
-        enemy.x, enemy.height * 0.7, enemy.z,
-        isCrit ? 0xffff00 : 0xff3300,
-        isCrit ? 14 : 8, isCrit ? 5 : 3, isCrit ? 0.8 : 0.5
-      );
-      Engine.playSound(killed ? 'enemy_death' : 'hit');
-      if (isCrit) UI.addMsg(`Critical! ${dmg} damage`, 'combat');
+  function tickTrapRooms() {
+    if (!trapRooms || trapRooms.length === 0) return;
 
-      // Knockback / stagger on hit
-      if (!killed) {
-        const kbDX = enemy.x - player.x, kbDZ = enemy.z - player.z;
-        const kbD  = Math.sqrt(kbDX * kbDX + kbDZ * kbDZ) || 1;
-        enemy.staggerT = 0.25;
-        enemy.knockDX  = kbDX / kbD;
-        enemy.knockDZ  = kbDZ / kbD;
-      }
+    // Check for player entry into a trap room
+    if (!activeTrapRoom) {
+      const entered = TrapRooms.checkTrapRoomEntry(trapRooms, player.x, player.z);
+      if (entered) {
+        activeTrapRoom = entered;
+        // Capture enemies in this trap room
+        const TILE = dungeon.TILE;
+        const roomX = entered.x * TILE;
+        const roomY = entered.y * TILE;
+        const roomW = entered.w * TILE;
+        const roomH = entered.h * TILE;
 
-      if (killed) {
-        enemy.dead      = true;
-        enemy.deathAnim = 0.45;
-        _runEnemiesKilled++;
-        Engine.spawnParticles(enemy.x, 1.0, enemy.z, enemy.color, 20, 4, 1.0);
-        player.xp += enemy.xp;
-        UI.addMsg(`${enemy.name} slain! +${enemy.xp} XP`, 'combat');
-
-        if (Math.random() < 0.18 + floor * 0.015) {
-          const item = Loot.genItem(floor);
-          if (player.inventory.length < 24) {
-            player.inventory.push(item);
-            UI.addMsg(`Found: ${item.name} [${item.rarity}]`, 'loot');
+        for (const e of enemies) {
+          if (!e.dead && e.x >= roomX && e.x < roomX + roomW &&
+              e.z >= roomY && e.z < roomY + roomH) {
+            entered.enemies.push(e.id);
+            e.isTrapRoomEnemy = true;
           }
         }
 
-        if (enemy.isBoss) {
-          bossDefeated = true;
-          _runBossesDefeated++;
-          if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('boss_defeated', { floor: floor });
-          refreshSaveMeta(Save.recordBossDefeated());
-          UI.hideBossBar();
-          UI.addMsg('Boss defeated! Step into the portal to continue...', 'level');
-          Engine.spawnParticles(enemy.x, 1.5, enemy.z, 0x8844ff, 40, 6, 2.0);
-          Engine.revealExitPortal();
-          exitOpen = true;
-          pregenNextFloor(); // next floor generates while player walks to portal
+        // Add traps to the room
+        for (const trap of traps) {
+          if (trap.x >= roomX && trap.x < roomX + roomW &&
+              trap.z >= roomY && trap.z < roomY + roomH) {
+            entered.trapsInRoom.push(trap.id);
+          }
         }
 
-        const leveled = Player.checkLevelUp(player);
-        if (leveled) { Engine.spawnParticles(player.x, 1.0, player.z, 0x4488ff, 24, 5, 1.2); Engine.playSound('level_up'); }
-        UI.refresh(player);
+        UI.addMsg('⚠ Doors slam shut!', 'warn');
+        Engine.playSound('door_open');
+        Engine.spawnParticles(player.x, 1.0, player.z, 0xff6644, 20, 3, 0.8);
       }
-    });
+    }
 
-    const a = aimAngleVal || 0;
-    Engine.spawnParticles(
-      player.x + Math.cos(a) * 1.5, 1.0, player.z + Math.sin(a) * 1.5,
-      0xffcc44, 5, 2.5, 0.3
-    );
+    // Check if active trap room is cleared
+    if (activeTrapRoom) {
+      if (TrapRooms.clearTrapRoomCheck(activeTrapRoom, enemies)) {
+        UI.addMsg('Room cleared! Doors unlock.', 'level');
+        Engine.spawnParticles(player.x, 1.5, player.z, 0x44ff44, 30, 5, 1.0);
+        const reward = TrapRooms.spawnReward(activeTrapRoom);
+        if (reward) {
+          // Generate upgrade reward
+          const upgrade = Loot.genUpgrade(floor);
+          upgrade.apply(player);
+          UI.addMsg(`✦ ${upgrade.name}!`, 'level');
+          UI.refresh(player);
+          Engine.spawnParticles(reward.x, 0.9, reward.z, 0xffcc44, 25, 3, 0.9);
+          activeTrapRoom = null;
+        }
+      }
+    }
+  }
+
+  function tickTraps(dt) {
+    if (!traps || traps.length === 0) return;
+    try {
+      const result = Traps.update(traps, player, dt);
+      if (!result) return;
+      const { hits, events } = result;
+
+      events.forEach(({ type, trap }) => {
+        if (type === 'triggered') {
+          Engine.spawnParticles(trap.x, 0.3, trap.z, 0xffcc44, 8, 1.5, 0.4);
+        } else if (type === 'activated') {
+          Engine.spawnParticles(trap.x, 0.8, trap.z, trap.color, 12, 2.0, 0.5);
+          Engine.playSound('player_hurt');
+        }
+      });
+
+      hits.forEach(({ trap, dmg }) => {
+        const reduced = Player.takeDamage(player, dmg);
+        if (reduced > 0) {
+          UI.addMsg(`${trap.name} hits for ${reduced}!`, 'combat');
+          Engine.playSound('player_hurt');
+          Engine.spawnParticles(player.x, 0.5, player.z, trap.color, 16, 2.5, 0.6);
+        }
+        if (player.hp <= 0) die();
+      });
+    } catch (e) {
+      console.error('[Traps] Error:', e);
+    }
+  }
+
+  function tickAttackDamage() {
+    try {
+      if (player.atkState !== 'active') {
+        player._lastAttackFrameDmg = false;
+        return;
+      }
+      if (player._lastAttackFrameDmg) return;
+      player._lastAttackFrameDmg = true;
+
+      // Spawn weapon trail during active phase
+      const a = player.atkAimAngle || 0;
+      const range = Player.atkRange(player) * 1.8;
+      Engine.spawnParticles(
+        player.x + Math.cos(a) * (range * 0.6), 1.2, player.z + Math.sin(a) * (range * 0.6),
+        0xff9944, 12, range * 0.8, 0.4
+      );
+
+      const hits = Player.applyAttackDamage(player, enemies);
+      hits.forEach(({ enemy, dmg, isCrit, killed }) => {
+        if (_aiWorker) _aiWorker.postMessage({ type: 'damage', id: enemy.id, amount: dmg });
+        Engine.spawnParticles(
+          enemy.x, enemy.height * 0.7, enemy.z,
+          isCrit ? 0xffff00 : 0xff3300,
+          isCrit ? 14 : 8, isCrit ? 5 : 3, isCrit ? 0.8 : 0.5
+        );
+        Engine.playSound(killed ? 'enemy_death' : 'hit');
+        if (isCrit) UI.addMsg(`Critical! ${dmg} damage`, 'combat');
+
+        if (!killed) {
+          const kbDX = enemy.x - player.x, kbDZ = enemy.z - player.z;
+          const kbD  = Math.sqrt(kbDX * kbDX + kbDZ * kbDZ) || 1;
+          enemy.staggerT = 0.25;
+          enemy.knockDX  = kbDX / kbD;
+          enemy.knockDZ  = kbDZ / kbD;
+        }
+
+        if (killed) {
+          enemy.dead      = true;
+          enemy.deathAnim = 0.45;
+          _runEnemiesKilled++;
+          Engine.spawnParticles(enemy.x, 1.0, enemy.z, enemy.color, 20, 4, 1.0);
+          player.xp += enemy.xp;
+          UI.addMsg(`${enemy.name} slain! +${enemy.xp} XP`, 'combat');
+
+          if (Math.random() < 0.18 + floor * 0.015) {
+            const item = Loot.genItem(floor);
+            if (player.inventory.length < 24) {
+              player.inventory.push(item);
+              UI.addMsg(`Found: ${item.name} [${item.rarity}]`, 'loot');
+            }
+          }
+
+          if (enemy.isBoss) {
+            bossDefeated = true;
+            _runBossesDefeated++;
+            if (window.AgeeAnalytics) window.AgeeAnalytics.trackEvent('boss_defeated', { floor: floor });
+            refreshSaveMeta(Save.recordBossDefeated());
+            UI.hideBossBar();
+            UI.addMsg('Boss defeated! Step into the portal to continue...', 'level');
+            Engine.spawnParticles(enemy.x, 1.5, enemy.z, 0x8844ff, 40, 6, 2.0);
+            Engine.revealExitPortal();
+            exitOpen = true;
+            pregenNextFloor();
+          }
+
+          const leveled = Player.checkLevelUp(player);
+          if (leveled) { Engine.spawnParticles(player.x, 1.0, player.z, 0x4488ff, 24, 5, 1.2); Engine.playSound('level_up'); }
+          UI.refresh(player);
+        }
+      });
+    } catch (e) {
+      console.error('[Attack] Error:', e);
+    }
   }
 
   /* ── Interact ────────────────────────────────── */
@@ -1404,6 +1538,7 @@ const Game = (() => {
     if (Save.clearActiveRun) Save.clearActiveRun();
     refreshSaveMeta(Save.recordDeath(floor, player.level));
     UI.hideBossBar();
+    _showAdBreak('reward', 'game-over');
     UI.showDeath(floor, player.level);
     if (window.AgeeAnalytics) {
       window.AgeeAnalytics.trackEvent('player_died', { floor: floor, level: player.level });

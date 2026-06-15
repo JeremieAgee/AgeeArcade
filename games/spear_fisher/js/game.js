@@ -68,6 +68,15 @@ const Game = (() => {
   const LB_KEY = 'spear_fisher_lb';
   const LB_SYNC_KEY = 'spear_fisher_lb.synced.v1';
 
+  function showAdBreak(adType, adName) {
+    if (typeof window.adBreak !== 'function') return;
+    if (document.hidden) return;
+    adBreak({
+      type: adType,
+      name: adName,
+    });
+  }
+
   // ── 3D context (shared arcade engine) ──────────────────
   let gfx, renderer, scene, camera, clock;
   let waterMesh, waterBase, seabed;
@@ -716,6 +725,7 @@ const Game = (() => {
   function startGame() {
     SFX.init();
     SFX.startAmbient();
+    showAdBreak('start', 'game-start');
     score = 0; timer = ROUND_TIME; round = 1; roundGoal = ROUND_GOAL_BASE; gs = S.PLAYING;
     runStartedAt = Date.now();
     throws = 0;
@@ -743,6 +753,7 @@ const Game = (() => {
     round++;
     timer = ROUND_TIME;
     roundGoal += roundRequirement(round);
+    showAdBreak('next', 'round-advance');
     SP.state = 'held';
     SP.fish = null;
     gs = S.PLAYING;
@@ -848,6 +859,7 @@ const Game = (() => {
       final_round: round,
     });
     endAnalyticsSession('time_up');
+    showAdBreak('reward', 'game-over');
     SFX.once('sf_gameover');
     SFX.stopAmbient();
     document.getElementById('finalScore').textContent = score;

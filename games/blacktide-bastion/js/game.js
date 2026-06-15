@@ -85,6 +85,15 @@ const Game = (() => {
     _analyticsSessionActive = false;
   }
 
+  function _showAdBreak(adType, adName) {
+    if (typeof window.adBreak !== 'function') return;
+    if (document.hidden) return;
+    adBreak({
+      type: adType,
+      name: adName,
+    });
+  }
+
   const keys       = {};
   const mouse      = { ndc: new THREE.Vector2(), world: new THREE.Vector3(), down: false };
   let   firePending = false;
@@ -492,6 +501,7 @@ const Game = (() => {
   function _startNextWave() {
     gs.wave++;
     _trackEvent('wave_started', { wave: gs.wave });
+    _showAdBreak('next', 'wave-advance');
     gs.betweenWaves  = false;
     gs.shotsFired    = 0;
     gs.shotsHit      = 0;
@@ -576,6 +586,7 @@ const Game = (() => {
     gs.running = false;
     _trackEvent('game_over', { end_reason: 'fort_destroyed', ships_sunk: _shipsSunk });
     _endAnalyticsSession('fort_destroyed');
+    _showAdBreak('reward', 'game-over');
     GameAudio.play('gameOver');
     HUD.incrementRuns();
     setTimeout(() => HUD.showFail(gs), 600);
@@ -617,6 +628,7 @@ const Game = (() => {
     gs.xp                = 0;
     gs.xpToNext          = 80;
     _startAnalyticsSession();
+    _showAdBreak('start', 'game-start');
 
     WaveDirector.reset();
     EnemyShips.clear();

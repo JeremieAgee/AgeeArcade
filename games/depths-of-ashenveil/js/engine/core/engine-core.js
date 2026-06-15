@@ -1702,13 +1702,14 @@ function updateChests(dt) {
 
   group.add(arm);
 
-  // ── Left arm (static)
+  // ── Left arm (animated)
   const la = new THREE.Mesh(
     new THREE.CylinderGeometry(0.04, 0.05, h * 0.25, 6),
     bone
   );
   la.position.set(-r * 0.45, h * 0.5, 0);
   la.rotation.z = -0.6;
+  la.userData.isLeftArm = true;
   group.add(la);
 }
 
@@ -1853,6 +1854,7 @@ function updateChests(dt) {
   offArm.position.set(-r * 0.52, h * 0.46, r * 0.04);
   offArm.rotation.z = 0.65;
   offArm.rotation.x = -0.22;
+  offArm.userData.isLeftArm = true;
   group.add(offArm);
   group.add(arm);
 }
@@ -1937,6 +1939,7 @@ function updateChests(dt) {
     sleeve.position.set(side * r * 0.58, h * 0.57, r * 0.02);
     sleeve.rotation.z = side * 0.72;
     sleeve.rotation.x = -0.2;
+    if (side < 0) sleeve.userData.isLeftArm = true;
     group.add(sleeve);
   });
 
@@ -2077,8 +2080,10 @@ function updateChests(dt) {
       sm.position.set(s*r*1.0,h*.46,-.05); sm.rotation.z=s*(Math.PI/2-.18); group.add(sm);
     });
     // Static left arm (2 segments)
-    mk(new THREE.CylinderGeometry(r*.17,r*.20,h*.25,7,2), flesh, -r*1.10,h*.40,0, 0,0,-.30, .035);
-    mk(new THREE.CylinderGeometry(r*.14,r*.17,h*.22,6,2), flesh, -r*1.28,h*.18,.04, 0,0,-.55, .03);
+    const la1 = mk(new THREE.CylinderGeometry(r*.17,r*.20,h*.25,7,2), flesh, -r*1.10,h*.40,0, 0,0,-.30, .035);
+    la1.userData.isLeftArm = true;
+    const la2 = mk(new THREE.CylinderGeometry(r*.14,r*.17,h*.22,6,2), flesh, -r*1.28,h*.18,.04, 0,0,-.55, .03);
+    la2.userData.isLeftArm = true;
     // Right attackArm + clawed fingers
     const arm=new THREE.Group(); arm.position.set(r*.95,h*.52,0); group.userData.attackArm=arm;
     [h*.14,h*.36].forEach((y,i) => { const ag=new THREE.CylinderGeometry(r*(.16-i*.02),r*(.19-i*.02),h*.22,7,2); distortGeometry(ag,.03); const am=new THREE.Mesh(ag,flesh); am.position.y=-y; am.castShadow=true; arm.add(am); });
@@ -2137,9 +2142,9 @@ function updateChests(dt) {
     for (let i=0;i<5;i++) { const crG=new THREE.BoxGeometry(.026,h*(.06+Math.random()*.08),.026); const crm=new THREE.Mesh(crG,darkSt); crm.position.set((Math.random()-.5)*r*1.1,h*(.22+Math.random()*.30),(Math.random()-.5)*r*.9); crm.rotation.y=Math.random()*Math.PI; group.add(crm); }
     // Left arm slabs
     const laG=new THREE.DodecahedronGeometry(r*.36,1); distortGeometry(laG,.06);
-    const la=new THREE.Mesh(laG,stone); la.position.set(-r*1.24,h*.32,0); la.scale.set(.72,1.28,.76); la.rotation.z=-.22; la.castShadow=true; group.add(la);
+    const la=new THREE.Mesh(laG,stone); la.position.set(-r*1.24,h*.32,0); la.scale.set(.72,1.28,.76); la.rotation.z=-.22; la.castShadow=true; la.userData.isLeftArm = true; group.add(la);
     const lfG=new THREE.DodecahedronGeometry(r*.40,1); distortGeometry(lfG,.07);
-    const lf=new THREE.Mesh(lfG,stone); lf.position.set(-r*1.30,h*.09,r*.08); lf.scale.set(1.05,.80,1.02); lf.rotation.set(.18,.28,-.12); group.add(lf);
+    const lf=new THREE.Mesh(lfG,stone); lf.position.set(-r*1.30,h*.09,r*.08); lf.scale.set(1.05,.80,1.02); lf.rotation.set(.18,.28,-.12); lf.userData.isLeftArm = true; group.add(lf);
     // Right attackArm + crystal knuckle spikes
     const gArm=new THREE.Group(); gArm.position.set(r*1.02,h*.55,0); group.userData.attackArm=gArm;
     const raG=new THREE.DodecahedronGeometry(r*.36,1); distortGeometry(raG,.06); const ra=new THREE.Mesh(raG,stone); ra.position.y=-h*.22; ra.scale.set(.76,1.25,.78); ra.rotation.z=.14; ra.castShadow=true; gArm.add(ra);
@@ -2259,8 +2264,8 @@ function updateChests(dt) {
     const arm=new THREE.Group(); arm.position.set(r*.52,h*.55,0); group.userData.attackArm=arm;
     [0,-h*.16,-h*.35].forEach((y,i) => { const ag=new THREE.CylinderGeometry(r*(.10-i*.01),r*(.12-i*.01),h*.22,7); distortGeometry(ag,.022); const am=new THREE.Mesh(ag,bone); am.position.y=y; am.castShadow=true; arm.add(am); });
     for (let c=0;c<4;c++) { const fg=new THREE.CylinderGeometry(.018,.022,h*.10,4); distortGeometry(fg,.01); const fm=new THREE.Mesh(fg,darkBone); fm.position.set((c-1.5)*.08,-h*.50,0); fm.rotation.x=.3; arm.add(fm); }
-    const laG=new THREE.CylinderGeometry(r*.09,r*.11,h*.34,6); distortGeometry(laG,.025); const la=new THREE.Mesh(laG,bone); la.position.set(-r*.52,h*.52,0); la.rotation.z=-.60; group.add(la);
-    const la2G=new THREE.CylinderGeometry(r*.07,r*.09,h*.28,5); distortGeometry(la2G,.022); const la2=new THREE.Mesh(la2G,bone); la2.position.set(-r*.72,h*.34,0); la2.rotation.z=-1.0; group.add(la2);
+    const laG=new THREE.CylinderGeometry(r*.09,r*.11,h*.34,6); distortGeometry(laG,.025); const la=new THREE.Mesh(laG,bone); la.position.set(-r*.52,h*.52,0); la.rotation.z=-.60; la.userData.isLeftArm = true; group.add(la);
+    const la2G=new THREE.CylinderGeometry(r*.07,r*.09,h*.28,5); distortGeometry(la2G,.022); const la2=new THREE.Mesh(la2G,bone); la2.position.set(-r*.72,h*.34,0); la2.rotation.z=-1.0; la2.userData.isLeftArm = true; group.add(la2);
     group.add(arm);
   }
 
@@ -2405,10 +2410,14 @@ function updateChests(dt) {
       // ── Stagger / knockback (takes priority) ──
       if (e.staggerT > 0) {
         const p = e.staggerT / 0.25;
-        mesh.position.x = e.x + (e.knockDX || 0) * p * 0.55;
-        mesh.position.z = e.z + (e.knockDZ || 0) * p * 0.55;
-        mesh.rotation.x = -p * 0.4;
-        mesh.position.y  = p * 0.07;
+        mesh.position.x = e.x + (e.knockDX || 0) * p * 0.85;
+        mesh.position.z = e.z + (e.knockDZ || 0) * p * 0.85;
+        mesh.rotation.x = -p * 0.65;
+        mesh.position.y  = p * 0.12;
+        if (arm) {
+          arm.rotation.x = p * 0.4;
+          arm.rotation.z = (Math.random() - 0.5) * p * 0.3;
+        }
         return;
       }
 
@@ -2428,7 +2437,9 @@ function updateChests(dt) {
           mesh.position.z = e.z;
           mesh.rotation.x = wp * 0.18;
           mesh.position.y = wp * 0.06;
-          if (arm) arm.rotation.x = 1.0 + wp * 0.9;
+          if (arm) {
+            arm.rotation.x = 0.4 + wp * 1.2;
+          }
         } else {
           // Strike phase: drive forward with type-specific style
           const sp    = (progress - 0.35) / 0.65;
@@ -2441,7 +2452,7 @@ function updateChests(dt) {
             mesh.position.z = e.z + Math.cos(mesh.rotation.y) * lunge;
             mesh.position.y = swing * 0.08;
             mesh.rotation.x = -swing * 0.25;
-            if (arm) arm.rotation.x = 1.9 - swing * 3.8;
+            if (arm) arm.rotation.x = 0.4 + swing * 2.0;
 
           } else if (e.typeKey === 'goblin') {
             // Quick side swipe
@@ -2450,7 +2461,7 @@ function updateChests(dt) {
             mesh.position.z = e.z + Math.cos(mesh.rotation.y) * lunge;
             mesh.rotation.x = 0;
             if (arm) {
-              arm.rotation.x = 0.4 - swing * 1.8;
+              arm.rotation.x = 0.4 + swing * 1.8;
               arm.rotation.z = swing * 0.7;
             }
 
@@ -2460,7 +2471,7 @@ function updateChests(dt) {
             mesh.position.x = e.x + Math.sin(mesh.rotation.y) * lunge;
             mesh.position.z = e.z + Math.cos(mesh.rotation.y) * lunge;
             mesh.position.y = 0.1 + swing * 0.3;
-            if (arm) arm.rotation.x = -swing * 1.6;
+            if (arm) arm.rotation.x = 0.4 + swing * 1.2;
 
           } else {
             // Default overhand chop (skeleton, shardgolem, archer)
@@ -2468,7 +2479,7 @@ function updateChests(dt) {
             mesh.position.x = e.x + Math.sin(mesh.rotation.y) * lunge;
             mesh.position.z = e.z + Math.cos(mesh.rotation.y) * lunge;
             mesh.position.y = 0;
-            if (arm) arm.rotation.x = 1.0 - swing * 2.2;
+            if (arm) arm.rotation.x = 0.4 + swing * 1.6;
           }
         }
         return;
@@ -2484,25 +2495,32 @@ function updateChests(dt) {
         if (e.typeKey === 'troll') {
           const s = Math.sin(e._walkT * 4.5);
           mesh.position.y = Math.abs(s) * 0.13;
-          if (arm) arm.rotation.x = s * 0.45;
+          if (arm) arm.rotation.x = 0.4 + s * 0.3;
 
         } else if (e.typeKey === 'wraith') {
           mesh.position.y = 0.2 + Math.sin(e._walkT * 3.0) * 0.09;
-          if (arm) arm.rotation.x = Math.sin(e._walkT * 3.0) * 0.12;
+          if (arm) arm.rotation.x = 0.4 + Math.sin(e._walkT * 3.0) * 0.08;
 
         } else {
           const step = Math.sin(e._walkT * 8);
           mesh.position.y = Math.abs(step) * 0.06;
-          if (arm) arm.rotation.x = step * 0.28;
+          if (arm) {
+            arm.rotation.x = 0.4 + step * 0.2;
+          }
 
           if (e.typeKey === 'skeleton' || e.typeKey === 'archer') {
             const legL = mesh.children.find(c => c.userData.isSkelLeg === 'left');
             const legR = mesh.children.find(c => c.userData.isSkelLeg === 'right');
             if (legL) legL.rotation.x =  step * 0.55;
             if (legR) legR.rotation.x = -step * 0.55;
+            const leftArm = mesh.children.find(c => c.userData.isLeftArm);
+            if (leftArm) leftArm.rotation.x = -step * 0.35;
           }
         }
-        if (arm) arm.rotation.z *= 0.8;
+        if (arm) {
+          arm.rotation.z *= 0.85;
+          arm.rotation.z = Math.abs(arm.rotation.z) < 0.02 ? 0 : arm.rotation.z;
+        }
 
       } else {
         // Idle — settle back to rest
@@ -2513,15 +2531,18 @@ function updateChests(dt) {
           mesh.position.y *= 0.88;
         }
         if (arm) {
-          arm.rotation.x *= 0.75;
-          arm.rotation.z *= 0.75;
+          arm.rotation.x *= 0.82;
+          arm.rotation.z *= 0.85;
           if (Math.abs(arm.rotation.x) < 0.01) arm.rotation.x = 0;
+          if (Math.abs(arm.rotation.z) < 0.02) arm.rotation.z = 0;
         }
         if (e.typeKey === 'skeleton' || e.typeKey === 'archer') {
           const legL = mesh.children.find(c => c.userData.isSkelLeg === 'left');
           const legR = mesh.children.find(c => c.userData.isSkelLeg === 'right');
           if (legL) legL.rotation.x *= 0.8;
           if (legR) legR.rotation.x *= 0.8;
+          const leftArm = mesh.children.find(c => c.userData.isLeftArm);
+          if (leftArm) leftArm.rotation.x *= 0.8;
         }
       }
     });
@@ -2978,11 +2999,25 @@ function updateTorchInteractionAnimations(dt) {
     const descentY = player._descentY || 0;
     const clampedY = Math.min(descentY, 0);
 
-    const camX = player.x - Math.cos(aimAngle) * camDist;
-    const camZ = player.z - Math.sin(aimAngle) * camDist;
+    let camX = player.x - Math.cos(aimAngle) * camDist;
+    let camZ = player.z - Math.sin(aimAngle) * camDist;
+    let lookY = 0.9 + clampedY;
+    let lookX = player.x + Math.cos(aimAngle) * 1.5;
+    let lookZ = player.z + Math.sin(aimAngle) * 1.5;
+
+    // Apply knockback effect
+    if (player.hitStaggerT && player.hitStaggerT > 0) {
+      const p = player.hitStaggerT / 0.2;
+      const kbDist = p * 1.2;
+      camX += (player.hitKnockDX || 0) * kbDist;
+      camZ += (player.hitKnockDZ || 0) * kbDist;
+      lookX += (player.hitKnockDX || 0) * kbDist * 0.5;
+      lookZ += (player.hitKnockDZ || 0) * kbDist * 0.5;
+      lookY -= p * 0.3;
+    }
 
     camera.position.set(camX, camH + clampedY, camZ);
-    camera.lookAt(player.x + Math.cos(aimAngle) * 1.5, 0.9 + clampedY, player.z + Math.sin(aimAngle) * 1.5);
+    camera.lookAt(lookX, lookY, lookZ);
   }
 
   /* ── Flash player ────────────────────────────── */
@@ -2998,7 +3033,13 @@ function updateTorchInteractionAnimations(dt) {
 
   /* ── Main render ─────────────────────────────── */
   function render(player, t, dt) {
-    if (player) { _playerX = player.x; _playerZ = player.z; }
+    if (player) {
+      _playerX = player.x;
+      _playerZ = player.z;
+      if (player.hitStaggerT && player.hitStaggerT > 0) {
+        player.hitStaggerT -= dt || 0.016;
+      }
+    }
     updateTorchInteractionAnimations(dt || 0.016);
     updateActiveLanternLights(player, dt || 0.016);
 
@@ -3010,7 +3051,7 @@ function updateTorchInteractionAnimations(dt) {
 
       // ── Walking leg & arm animation ───────────────
       if (player._moving) player._walkT = (player._walkT || 0) + (dt || 0.016) * 7.5;
-      const walkSwing = player._moving ? Math.sin(player._walkT) * 0.42 : 0;
+      const walkSwing = player._moving ? Math.sin(player._walkT) * 0.48 : 0;
       playerMesh.children.forEach(c => {
         if (!c.userData.isLeg) return;
         const target = c.userData.isLeg === 'left' ? walkSwing : -walkSwing;
@@ -3035,13 +3076,13 @@ function updateTorchInteractionAnimations(dt) {
         const reach = torchReachAmount();
         const carry = carryingTorch ? 1.4 : 0;
         // chestReach negative = forward for torchArm; inward on z (positive brings arm toward center)
-        const torchTarget = -walkSwing * 0.35 - reach * 1.15 - carry * 0.55 - chestReach * 0.82;
+        const torchTarget = -walkSwing * 0.42 - reach * 1.15 - carry * 0.55 - chestReach * 0.82;
         torchArmMesh.rotation.x += (torchTarget - torchArmMesh.rotation.x) * 0.2;
         torchArmMesh.rotation.z += (reach * 0.55 + carry * 0.28 + chestReach * 0.26 - torchArmMesh.rotation.z) * 0.18;
       }
       if (weaponArmMesh && !weaponArmMesh.userData.swinging) {
         // chestReach positive = forward for weaponArm; inward on z (positive from -0.15 base)
-        const wArmTarget = walkSwing * 0.3 + chestReach * 0.85;
+        const wArmTarget = walkSwing * 0.35 + chestReach * 0.85;
         weaponArmMesh.rotation.x += (wArmTarget - weaponArmMesh.rotation.x) * 0.2;
         weaponArmMesh.rotation.z += (-0.15 + chestReach * 0.28 - weaponArmMesh.rotation.z) * 0.18;
       }
