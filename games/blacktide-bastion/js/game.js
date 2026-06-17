@@ -586,7 +586,8 @@ const Game = (() => {
     gs.running = false;
     _trackEvent('game_over', { end_reason: 'fort_destroyed', ships_sunk: _shipsSunk });
     _endAnalyticsSession('fort_destroyed');
-    _showAdBreak('reward', 'game-over');
+    // Reward ads removed - broken
+    // _showAdBreak('reward', 'game-over');
     GameAudio.play('gameOver');
     HUD.incrementRuns();
     setTimeout(() => HUD.showFail(gs), 600);

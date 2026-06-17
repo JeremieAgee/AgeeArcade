@@ -13,11 +13,16 @@
   <link rel="stylesheet" href="./css/layout.css" />
   <link rel="stylesheet" href="./css/ui.css" />
 
-  <!-- Google H5 Games Ads -->
+  <!-- Google H5 Games Ads (TEST ID - for debugging) -->
   <script async
-    data-ad-client="ca-pub-381246496"
+    data-ad-client="ca-pub-3940256099942544"
     data-ad-frequency-hint="60s"
     src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
+  </script>
+  <script>
+    window.addEventListener('load', () => {
+      console.log('Ads script loaded. adBreak available:', typeof window.adBreak === 'function');
+    });
   </script>
 </head>
 <body>
@@ -160,7 +165,7 @@
         </div>
       </div>
       <a class="big-btn secondary title-link-btn" href="./leaderboard/">VIEW LEADERBOARD</a>
-      <button class="big-btn" onclick="if(typeof window.adBreak==='function'){adBreak({type:'reward',name:'bonus-offer'})}">▶ WATCH AD FOR BONUS</button>
+      <button class="big-btn" onclick="if(typeof window.adBreak==='function'){adBreak({type:'reward',name:'bonus-offer'})}else{console.log('adBreak not available yet'); alert('Ads loading... try again in a moment');}">▶ WATCH AD FOR BONUS</button>
       <button class="big-btn" onclick="Game.restart()">SAIL AGAIN</button>
       <button class="big-btn secondary" onclick="Game.goToTitle()">TITLE SCREEN</button>
       <a class="big-btn secondary title-link-btn" href="../../">RETURN TO ARCADE</a>

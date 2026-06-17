@@ -27,6 +27,8 @@
   let md = {};
   let runStartedAt = 0;
   let analyticsSessionActive = false;
+  let lastInterstitialAdTime = 0;
+  const INTERSTITIAL_COOLDOWN = 60; // seconds
 
   function trackEvent(type, data) {
     if (!window.AgeeAnalytics || !AgeeAnalytics.trackEvent) return;
@@ -76,7 +78,26 @@
     adBreak({
       type: adType,
       name: adName,
+      onClose: () => {
+        if (adType === 'reward') onRewardAdClose();
+      },
     });
+  }
+
+  function onRewardAdClose() {
+    if (state !== 'game-over') return;
+    // Restore full HP and add 1 life
+    gd.hp = HP_MAX;
+    gd.lives++;
+    showFlash('❤️ +1 LIFE  ⚡ FULL HP RESTORED', '#ff88ff');
+    updateGameOverSummary();
+    const btn = document.getElementById('btnRewardAd');
+    if (btn) btn.disabled = true;
+    // Resume game from same floor
+    state = 'playing';
+    showScreen(null);
+    if (window.SFX) SFX.startAmbient();
+    updateHUD();
   }
 
   let wallMesh    = null;
@@ -1273,7 +1294,14 @@
     trackEvent('player_died');
     endAnalyticsSession('death');
     updateGameOverSummary();
-    showAdBreak('reward', 'game-over');
+    // Show interstital ad on death, respecting 60s cooldown
+    const timeSinceLastAd = Date.now() / 1000 - lastInterstitialAdTime;
+    if (timeSinceLastAd >= INTERSTITIAL_COOLDOWN) {
+      lastInterstitialAdTime = Date.now() / 1000;
+      showAdBreak('interstitial', 'player-death');
+    }
+    // Reward ads removed - broken
+    // showAdBreak('reward', 'game-over');
     showScreen('game-over');
     trySubmitScore();
   }
@@ -1527,7 +1555,6 @@
     if (state === 'playing' || state === 'floor-complete' || state === 'paused') endAnalyticsSession('restart');
     if (window.SFX) SFX.init(); // unlock audio on first user gesture
     if (window.SFX) SFX.startAmbient();
-    showAdBreak('start', 'game-start');
     clearSave();
     gd = { hp: HP_MAX, lives: LIVES_START, floor: 1, score: 0, totalTime: 0, floorTime: 0 };
     startAnalyticsSession();
@@ -1584,7 +1611,6 @@
     gd.floorTime  = 0;
     gd.floor++;
     trackEvent('floor_started', { floor: gd.floor });
-    showAdBreak('next', 'floor-advance');
     buildFloor(gd.floor);
     state = 'playing';
     if (window.SFX) SFX.startAmbient();
@@ -1990,7 +2016,8 @@
     btn('btnContinue', continueGame);
     btn('btnNextFloor', nextFloor);
     btn('btnRestart',   restartGame);
-    btn('btnRewardAd', () => { if (typeof window.adBreak === 'function') { adBreak({ type: 'reward', name: 'bonus-offer' }); } });
+    // Reward ads removed - broken
+    // btn('btnRewardAd', () => { showAdBreak('reward', 'bonus-offer'); });
     updateContinueBtn();
     let lbReturnScreen = 'title';
     btn('btnLB',      () => { lbReturnScreen = 'title';     loadLeaderboard(); showScreen('leaderboard'); });

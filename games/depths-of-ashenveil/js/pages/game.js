@@ -221,6 +221,8 @@ const Game = (() => {
   let _runBossesDefeated  = 0;
   let _runChestsOpened    = 0;
   let _runEnemiesKilled   = 0;
+  let _lastInterstitialAdTime = 0;
+  const INTERSTITIAL_COOLDOWN = 60; // seconds
 
   function _showAdBreak(adType, adName) {
     if (typeof window.adBreak !== 'function') return;
@@ -228,7 +230,19 @@ const Game = (() => {
     adBreak({
       type: adType,
       name: adName,
+      onClose: () => {
+        if (adType === 'reward') _onRewardAdClose();
+      },
     });
+  }
+
+  function _onRewardAdClose() {
+    if (!running) return;
+    // Restore health and mana to full
+    player.hp = player.maxHp;
+    player.mana = player.maxMana;
+    UI.updateHUD();
+    if (window.SFX) SFX.once('lifeup');
   }
 
   const keys = {};
@@ -647,7 +661,6 @@ const Game = (() => {
     _nextFloorNum = 0;
     _nextFloorGenerating = false;
     Engine.startAmbient();
-    _showAdBreak('start', 'game-start');
 
     _runStartTime      = Date.now();
     _runDeaths         = 0;
@@ -828,7 +841,6 @@ const Game = (() => {
 
   function nextFloor() {
     floor++;
-    _showAdBreak('next', 'floor-advance');
     bossSpawned  = false;
     bossDefeated = false;
     doorOpened   = false;
@@ -1209,6 +1221,7 @@ const Game = (() => {
       if (player.hp <= 0) { die(); }
     }
     Engine.updateParticles(dt);
+    Engine.updateDamageNumbers(dt);
     Engine.updateTorchFlicker(t);
     Engine.updateChests(dt);
     if (t - _lastPromptT > 0.12) {
@@ -1538,7 +1551,14 @@ const Game = (() => {
     if (Save.clearActiveRun) Save.clearActiveRun();
     refreshSaveMeta(Save.recordDeath(floor, player.level));
     UI.hideBossBar();
-    _showAdBreak('reward', 'game-over');
+    // Show interstital ad on death, respecting 60s cooldown
+    const timeSinceLastAd = Date.now() / 1000 - _lastInterstitialAdTime;
+    if (timeSinceLastAd >= INTERSTITIAL_COOLDOWN) {
+      _lastInterstitialAdTime = Date.now() / 1000;
+      _showAdBreak('interstitial', 'player-death');
+    }
+    // Reward ads removed - broken
+    // _showAdBreak('reward', 'game-over');
     UI.showDeath(floor, player.level);
     if (window.AgeeAnalytics) {
       window.AgeeAnalytics.trackEvent('player_died', { floor: floor, level: player.level });

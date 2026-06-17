@@ -20,6 +20,11 @@
     data-ad-frequency-hint="60s"
     src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
   </script>
+  <script>
+    window.addEventListener('load', () => {
+      console.log('Ads script loaded. adBreak available:', typeof window.adBreak === 'function');
+    });
+  </script>
 </head>
 <body>
 
@@ -128,7 +133,7 @@
             <button class="mini-btn" id="lbSaveBtn">Save</button>
           </div>
         </div>
-        <button class="big-btn" onclick="if(typeof window.adBreak==='function'){adBreak({type:'reward',name:'bonus-offer'})}">▶ WATCH AD FOR BONUS</button>
+        <button class="big-btn" onclick="if(typeof window.adBreak==='function'){adBreak({type:'reward',name:'bonus-offer'})}else{console.log('adBreak not available yet'); alert('Ads loading... try again in a moment');}">▶ WATCH AD FOR BONUS</button>
         <button class="big-btn" id="restartBtn">FISH AGAIN</button>
         <a class="big-btn secondary" href="../../">ARCADE</a>
       </div>

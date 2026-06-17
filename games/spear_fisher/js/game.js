@@ -859,7 +859,8 @@ const Game = (() => {
       final_round: round,
     });
     endAnalyticsSession('time_up');
-    showAdBreak('reward', 'game-over');
+    // Reward ads removed - broken
+    // showAdBreak('reward', 'game-over');
     SFX.once('sf_gameover');
     SFX.stopAmbient();
     document.getElementById('finalScore').textContent = score;

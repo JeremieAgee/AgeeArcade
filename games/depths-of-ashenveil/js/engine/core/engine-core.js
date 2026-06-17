@@ -8,10 +8,29 @@ window.EngineCore = (() => {
   /* ── Internal state ──────────────────────────── */
   let renderer, scene, camera;
   let playerMesh, torchLight, ambientLight, hemiLight;
+  let _ambientColor = { r: 0.29, g: 0.22, b: 0.16 }; // Default dungeon color
   let _blobMat = null;
   let enemyMeshes   = {};
   let particles     = [];
+  let damageNumbers = [];
   let chestMeshes   = [];
+
+  // Performance LOD detection and quality settings
+  const PERF_LEVEL = (() => {
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const cores = navigator.hardwareConcurrency || 4;
+    if (isMobile) return 'low';
+    if (cores <= 2) return 'low';
+    if (cores <= 4) return 'medium';
+    return 'high';
+  })();
+
+  const QUALITY_SETTINGS = {
+    high: { particleMax: 2000, shadowMapSize: 512, damageNumMax: 100, lod: false },
+    medium: { particleMax: 1200, shadowMapSize: 256, damageNumMax: 50, lod: false },
+    low: { particleMax: 600, shadowMapSize: 256, damageNumMax: 25, lod: true },
+  };
+  const QUALITY = QUALITY_SETTINGS[PERF_LEVEL];
   let doorMesh      = null;
   let doorOpen      = false;
   let portalMesh    = null;
@@ -97,6 +116,16 @@ window.EngineCore = (() => {
   const TORCH_FLAME_OFFSET = new THREE.Vector3(0, 0.18, 0);
   const AMBIENT_INT   = 0.55;
 
+  // Light types with distinct properties
+  const LIGHT_TYPES = {
+    torch: { color: 0xff8833, intensity: 1.0, range: 38, flicker: 0.12, warmth: 1.0 },      // warm orange
+    candle: { color: 0xffaa44, intensity: 0.7, range: 24, flicker: 0.08, warmth: 0.95 },    // light orange
+    brazier: { color: 0xff6622, intensity: 1.3, range: 42, flicker: 0.15, warmth: 1.1 },    // deep orange
+    orb_blue: { color: 0x4488ff, intensity: 0.9, range: 32, flicker: 0.05, warmth: 0.3 },   // cool blue
+    orb_purple: { color: 0xaa66ff, intensity: 0.85, range: 30, flicker: 0.06, warmth: 0.4 }, // mystical purple
+    orb_green: { color: 0x44ff88, intensity: 0.8, range: 28, flicker: 0.04, warmth: 0.6 },   // arcane green
+  };
+
   /* ── Init ────────────────────────────────────── */
   function init() {
     const mount = document.getElementById('canvasMount');
@@ -155,23 +184,59 @@ window.EngineCore = (() => {
 
   function makeFlameCluster(radius = 0.12, coreColor = 0xff7a18, emberColor = 0xffc45a) {
     const group = new THREE.Group();
+
+    // Inner bright core (high emissive)
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: coreColor,
+      emissive: coreColor,
+      emissiveIntensity: 2.0,
+      roughness: 0.9,
+      metalness: 0.0,
+    });
     const core = new THREE.Mesh(
-      new THREE.ConeGeometry(radius * 0.45, radius * 1.8, 7),
-      new THREE.MeshBasicMaterial({ color: coreColor })
+      new THREE.ConeGeometry(radius * 0.45, radius * 1.8, 8),
+      coreMat
     );
     core.position.y = radius * 0.45;
     core.userData.baseScale = core.scale.clone();
     core.userData.baseY = core.position.y;
     group.add(core);
 
-    const ember = new THREE.Mesh(
-      new THREE.ConeGeometry(radius * 0.28, radius * 1.1, 6),
-      new THREE.MeshBasicMaterial({ color: emberColor })
+    // Middle orange layer
+    const midMat = new THREE.MeshStandardMaterial({
+      color: emberColor,
+      emissive: 0xff9944,
+      emissiveIntensity: 1.4,
+      roughness: 0.85,
+      metalness: 0.0,
+    });
+    const mid = new THREE.Mesh(
+      new THREE.ConeGeometry(radius * 0.55, radius * 1.4, 7),
+      midMat
     );
-    ember.position.y = radius * 0.36;
-    ember.userData.baseScale = ember.scale.clone();
-    ember.userData.baseY = ember.position.y;
-    group.add(ember);
+    mid.position.y = radius * 0.28;
+    mid.userData.baseScale = mid.scale.clone();
+    mid.userData.baseY = mid.position.y;
+    group.add(mid);
+
+    // Outer glow layer (translucent)
+    const glowMat = new THREE.MeshStandardMaterial({
+      color: 0xffaa44,
+      emissive: 0xffaa44,
+      emissiveIntensity: 0.8,
+      roughness: 1.0,
+      metalness: 0.0,
+      transparent: true,
+      opacity: 0.3,
+    });
+    const glow = new THREE.Mesh(
+      new THREE.ConeGeometry(radius * 0.75, radius * 1.6, 6),
+      glowMat
+    );
+    glow.position.y = radius * 0.3;
+    glow.userData.baseScale = glow.scale.clone();
+    glow.userData.baseY = glow.position.y;
+    group.add(glow);
 
     group.userData.isFlame = true;
     group.userData.baseY = group.position.y;
@@ -182,25 +247,50 @@ window.EngineCore = (() => {
   function animateFlame(flame, t, offset) {
     if (!flame) return;
     const radius = flame.userData.radius || 0.12;
-    const pulse = Math.sin(t * 9.0 + offset) * 0.12 + Math.sin(t * 15.5 + offset * 0.7) * 0.06;
-    const lean = Math.sin(t * 6.5 + offset) * radius * 0.18;
 
+    // Multiple frequency flicker for more organic motion
+    const slowPulse = Math.sin(t * 2.2 + offset) * 0.08;
+    const mediumPulse = Math.sin(t * 5.7 + offset) * 0.12;
+    const fastPulse = Math.sin(t * 13.5 + offset) * 0.06;
+    const pulse = slowPulse + mediumPulse + fastPulse;
+
+    const leanSlow = Math.sin(t * 1.8 + offset) * radius * 0.15;
+    const leanFast = Math.sin(t * 7.3 + offset) * radius * 0.08;
+    const lean = leanSlow + leanFast;
+
+    // Core (bright center)
     const core = flame.children[0];
     if (core && core.userData.baseScale) {
       core.scale.set(
         core.userData.baseScale.x * (1.0 + pulse * 0.5),
-        core.userData.baseScale.y * (1.0 + pulse * 0.9),
-        core.userData.baseScale.z * (1.0 - pulse * 0.25)
+        core.userData.baseScale.y * (1.0 + pulse * 0.95),
+        core.userData.baseScale.z * (1.0 - pulse * 0.3)
       );
-      core.position.x = lean;
-      core.position.y = core.userData.baseY + pulse * radius * 0.45;
+      core.position.x = lean * 0.6;
+      core.position.y = core.userData.baseY + pulse * radius * 0.5;
     }
 
-    const ember = flame.children[1];
-    if (ember && ember.userData.baseScale) {
-      ember.scale.setScalar(1.0 + pulse * 0.35);
-      ember.position.x = -lean * 0.45;
-      ember.position.y = ember.userData.baseY - Math.max(0, pulse) * radius * 0.25;
+    // Middle layer
+    const mid = flame.children[1];
+    if (mid && mid.userData.baseScale) {
+      mid.scale.set(
+        mid.userData.baseScale.x * (1.0 + pulse * 0.4),
+        mid.userData.baseScale.y * (1.0 + pulse * 0.7),
+        mid.userData.baseScale.z * (1.0 - pulse * 0.2)
+      );
+      mid.position.x = lean * 0.8;
+      mid.position.y = mid.userData.baseY + pulse * radius * 0.3;
+    }
+
+    // Outer glow layer
+    const glow = flame.children[2];
+    if (glow && glow.userData.baseScale) {
+      glow.scale.setScalar(1.0 + Math.abs(pulse) * 0.35);
+      glow.position.x = lean;
+      glow.position.y = glow.userData.baseY + Math.max(0, pulse * 0.5) * radius * 0.2;
+      if (glow.material && glow.material.opacity !== undefined) {
+        glow.material.opacity = 0.25 + Math.sin(t * 3.1 + offset) * 0.08;
+      }
     }
   }
 
@@ -305,19 +395,52 @@ window.EngineCore = (() => {
     }
   }
 
+  function configureLightByType(light, lightType = 'torch', castShadow = true) {
+    const typeConfig = LIGHT_TYPES[lightType] || LIGHT_TYPES.torch;
+    const scaledIntensity = LANTERN_INTENSITY * (typeConfig.intensity / 1.0);
+
+    light.color.setHex(typeConfig.color);
+    light.intensity = scaledIntensity;
+    light.distance = typeConfig.range * (LANTERN_RADIUS / 38);
+    light.decay = 1;
+    light.castShadow = castShadow;
+
+    if (castShadow) {
+      const shadowSize = QUALITY.shadowMapSize;
+      light.shadow.mapSize.set(shadowSize, shadowSize);
+      light.shadow.camera.near = 0.15;
+      light.shadow.camera.far = light.distance * 1.2;
+      light.shadow.bias = -0.005;
+      light.shadow.radius = PERF_LEVEL === 'low' ? 1 : 3;
+      light.shadow.normalBias = 0.01;
+    }
+
+    light.userData.baseIntensity = scaledIntensity;
+    light.userData.baseColor = typeConfig.color;
+    light.userData.lightType = lightType;
+    light.userData.flickerAmount = typeConfig.flicker;
+    light.userData.warmth = typeConfig.warmth;
+    light.userData.flameOffset = Math.random() * Math.PI * 2;
+
+    return light;
+  }
+
   function configurePointTorch(light, baseIntensity, distance, shadowFar, castShadow = true) {
     light.intensity = baseIntensity;
     light.distance = distance;
     light.decay = 1;
     light.castShadow = castShadow;
     if (castShadow) {
-      light.shadow.mapSize.set(256, 256);
-      light.shadow.camera.near = 0.2;
+      const shadowSize = QUALITY.shadowMapSize;
+      light.shadow.mapSize.set(shadowSize, shadowSize);
+      light.shadow.camera.near = 0.15;
       light.shadow.camera.far = shadowFar;
-      light.shadow.bias = -0.004;
-      light.shadow.radius = 2;
+      light.shadow.bias = -0.005;
+      light.shadow.radius = PERF_LEVEL === 'low' ? 1 : 3;
+      light.shadow.normalBias = 0.01;
     }
     light.userData.baseIntensity = baseIntensity;
+    light.userData.baseColor = light.color.getHex();
     light.userData.flameOffset = Math.random() * Math.PI * 2;
     return light;
   }
@@ -479,10 +602,11 @@ window.EngineCore = (() => {
     if (!_cachedBrickTex) { _cachedBrickTex = makeBrickTexture(); _cachedBrickTex.wrapS = _cachedBrickTex.wrapT = THREE.RepeatWrapping; }
     if (!_cachedFloorTex) { _cachedFloorTex = makeFloorTexture(); _cachedFloorTex.wrapS = _cachedFloorTex.wrapT = THREE.RepeatWrapping; }
     if (!_cachedBossFloorTex) { _cachedBossFloorTex = makeBossFloorTexture(); _cachedBossFloorTex.wrapS = _cachedBossFloorTex.wrapT = THREE.RepeatWrapping; }
-    const wallMat      = new THREE.MeshLambertMaterial({ map: _cachedBrickTex,    color: 0x8a6a4a });
-    const floorMat     = new THREE.MeshLambertMaterial({ color: 0x6a5a48, map: _cachedFloorTex });
-    const corridorMat  = new THREE.MeshLambertMaterial({ color: 0x4a3a2a, map: _cachedFloorTex });
-    const bossFloorMat = new THREE.MeshLambertMaterial({ color: 0x3a2a1a, map: _cachedBossFloorTex });
+    // Enhanced dungeon materials with better lighting response
+    const wallMat      = new THREE.MeshStandardMaterial({ map: _cachedBrickTex, color: 0x8a6a4a, roughness: 0.85, metalness: 0.05 });
+    const floorMat     = new THREE.MeshStandardMaterial({ color: 0x6a5a48, map: _cachedFloorTex, roughness: 0.9, metalness: 0.02 });
+    const corridorMat  = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, map: _cachedFloorTex, roughness: 0.92, metalness: 0.01 });
+    const bossFloorMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, map: _cachedBossFloorTex, roughness: 0.88, metalness: 0.03 });
 
     const BORDER_H      = 14;
     const wallGeo       = new THREE.BoxGeometry(TILE, WALL_H,   TILE);
@@ -600,10 +724,11 @@ window.EngineCore = (() => {
       _cachedBossFloorTex = makeBossFloorTexture();
       _cachedBossFloorTex.wrapS = _cachedBossFloorTex.wrapT = THREE.RepeatWrapping;
     }
-    const wallMat      = new THREE.MeshLambertMaterial({ map: _cachedBrickTex, color: 0x8a6a4a });
-    const floorMat     = new THREE.MeshLambertMaterial({ color: 0x6a5a48, map: _cachedFloorTex });
-    const corridorMat  = new THREE.MeshLambertMaterial({ color: 0x4a3a2a, map: _cachedFloorTex });
-    const bossFloorMat = new THREE.MeshLambertMaterial({ color: 0x3a2a1a, map: _cachedBossFloorTex });
+    // Enhanced dungeon materials with better lighting response
+    const wallMat      = new THREE.MeshStandardMaterial({ map: _cachedBrickTex, color: 0x8a6a4a, roughness: 0.85, metalness: 0.05 });
+    const floorMat     = new THREE.MeshStandardMaterial({ color: 0x6a5a48, map: _cachedFloorTex, roughness: 0.9, metalness: 0.02 });
+    const corridorMat  = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, map: _cachedFloorTex, roughness: 0.92, metalness: 0.01 });
+    const bossFloorMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, map: _cachedBossFloorTex, roughness: 0.88, metalness: 0.03 });
     const BORDER_H      = 14;
     const wallGeo       = new THREE.BoxGeometry(TILE, WALL_H,   TILE);
     const floorGeo      = new THREE.BoxGeometry(TILE, 0.25,     TILE);
@@ -1430,7 +1555,7 @@ function updateChests(dt) {
     const armorCol = rarityArmorColor(armor ? armor.rarity : 'common');
     const armorMat = new THREE.MeshStandardMaterial({ color: armorCol, metalness: 0.7, roughness: 0.35 });
     const body = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 0.9, 10), armorMat);
-    body.position.y = 1.07; body.castShadow = true; group.add(body);
+    body.position.y = 1.07; body.castShadow = true; body.receiveShadow = true; group.add(body);
 
     // Chest plate ridge
     const chest = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.38, 0.06), armorMat);
@@ -1647,11 +1772,14 @@ function updateChests(dt) {
   skull.scale.set(0.9, 1.05, 0.85);
   group.add(skull);
 
-  // Eyes
+  // Eyes with glow
+  const eyeGlowMat = new THREE.MeshStandardMaterial({
+    color: 0xff4400, emissive: 0xff6600, emissiveIntensity: 1.8, metalness: 0.2
+  });
   [-1, 1].forEach(side => {
     const eye = new THREE.Mesh(
       new THREE.SphereGeometry(0.06, 6, 5),
-      dark
+      eyeGlowMat
     );
     eye.position.set(side * 0.12, h * 0.87, r * 0.25);
     group.add(eye);
@@ -2619,21 +2747,60 @@ function updateChests(dt) {
   }
 
   /* ── Particles ───────────────────────────────── */
-  function spawnParticles(x, y, z, color, count = 8, speed = 3, life = 0.6) {
+  function spawnParticles(x, y, z, color, count = 8, speed = 3, life = 0.6, type = 'burst') {
+    // Limit particles based on quality and current load
+    if (particles.length >= QUALITY.particleMax) return;
+    count = Math.min(count, Math.max(1, Math.floor(QUALITY.particleMax / 20)));
+    const effectTypes = {
+      burst: { gravity: 6, damping: 0.95, verticalBias: 2.0, scatter: Math.PI * 2 },
+      fire: { gravity: 2, damping: 0.92, verticalBias: 1.5, scatter: Math.PI * 0.8 },
+      spell: { gravity: 0.5, damping: 0.98, verticalBias: 0.3, scatter: Math.PI * 1.5 },
+      impact: { gravity: 8, damping: 0.85, verticalBias: 0.5, scatter: Math.PI * 2 },
+      heal: { gravity: -2, damping: 0.88, verticalBias: 3.0, scatter: Math.PI * 1.2 },
+      poison: { gravity: 1, damping: 0.80, verticalBias: 0.5, scatter: Math.PI * 1.8 },
+    };
+
+    const cfg = effectTypes[type] || effectTypes.burst;
+
     for (let i = 0; i < count; i++) {
-      const geo  = new THREE.SphereGeometry(0.06 + Math.random()*0.08, 4, 3);
-      const mat  = new THREE.MeshBasicMaterial({ color });
+      let geo, mat;
+
+      if (type === 'spell') {
+        geo = new THREE.TetrahedronGeometry(0.04 + Math.random()*0.05);
+        mat = new THREE.MeshStandardMaterial({
+          color, emissive: color, emissiveIntensity: 1.2, roughness: 0.3, metalness: 0.8
+        });
+      } else if (type === 'fire') {
+        geo = new THREE.ConeGeometry(0.05, 0.12, 4);
+        mat = new THREE.MeshStandardMaterial({
+          color, emissive: color, emissiveIntensity: 2.0, roughness: 1.0
+        });
+      } else if (type === 'heal') {
+        geo = new THREE.OctahedronGeometry(0.04);
+        mat = new THREE.MeshStandardMaterial({
+          color, emissive: color, emissiveIntensity: 1.5, roughness: 0.4, metalness: 0.2
+        });
+      } else {
+        geo = new THREE.SphereGeometry(0.06 + Math.random()*0.06, 4, 3);
+        mat = new THREE.MeshBasicMaterial({ color });
+      }
+
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(x, y, z);
-      const a  = Math.random() * Math.PI * 2;
-      const el = (Math.random() - 0.5) * Math.PI;
-      const s  = speed * (0.5 + Math.random() * 0.8);
+
+      const a = Math.random() * cfg.scatter;
+      const el = (Math.random() - 0.5) * Math.PI * 0.5;
+      const s = speed * (0.6 + Math.random() * 0.7);
+
       mesh.userData = {
-        vx: Math.cos(a)*Math.cos(el)*s,
-        vy: Math.sin(el)*s + 2,
-        vz: Math.sin(a)*Math.cos(el)*s,
-        life, maxL: life,
+        type,
+        vx: Math.cos(a) * Math.cos(el) * s,
+        vy: Math.sin(el) * s + cfg.verticalBias * speed * 0.3,
+        vz: Math.sin(a) * Math.cos(el) * s,
+        life, maxL: life, gravity: cfg.gravity, damping: cfg.damping,
+        rotVx: (Math.random() - 0.5) * 6, rotVy: (Math.random() - 0.5) * 6, rotVz: (Math.random() - 0.5) * 6,
       };
+
       scene.add(mesh);
       particles.push(mesh);
     }
@@ -2644,11 +2811,97 @@ function updateChests(dt) {
       const p = particles[i];
       p.userData.life -= dt;
       if (p.userData.life <= 0) { scene.remove(p); particles.splice(i, 1); continue; }
+
+      // Movement
       p.position.x += p.userData.vx * dt;
       p.position.y += p.userData.vy * dt;
       p.position.z += p.userData.vz * dt;
-      p.userData.vy -= 6 * dt;
-      p.scale.setScalar(p.userData.life / p.userData.maxL);
+
+      // Physics
+      p.userData.vy -= p.userData.gravity * dt;
+      p.userData.vx *= p.userData.damping;
+      p.userData.vy *= p.userData.damping;
+      p.userData.vz *= p.userData.damping;
+
+      // Rotation
+      p.rotation.x += p.userData.rotVx * dt;
+      p.rotation.y += p.userData.rotVy * dt;
+      p.rotation.z += p.userData.rotVz * dt;
+
+      // Fade out
+      const alpha = p.userData.life / p.userData.maxL;
+      p.scale.setScalar(alpha);
+      if (p.material.opacity !== undefined) p.material.opacity = alpha;
+    }
+  }
+
+  /* ── Damage numbers (floating text) ──────────── */
+  function spawnDamageNumber(x, y, z, amount, type = 'damage') {
+    // Skip on low-end devices if too many
+    if (damageNumbers.length >= QUALITY.damageNumMax) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+
+    // Colors by type
+    const colors = {
+      damage: { text: '#ff4444', shadow: '#000000' },
+      heal: { text: '#44ff44', shadow: '#000000' },
+      crit: { text: '#ffff00', shadow: '#ff6600' },
+      miss: { text: '#888888', shadow: '#000000' },
+    };
+
+    const color = colors[type] || colors.damage;
+    ctx.shadowColor = color.shadow;
+    ctx.shadowBlur = 3;
+    ctx.fillStyle = color.text;
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(amount.toString(), 32, 16);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const geo = new THREE.PlaneGeometry(0.5, 0.25);
+    const mat = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+    const mesh = new THREE.Mesh(geo, mat);
+
+    mesh.position.set(x, y + 0.5, z);
+    scene.add(mesh);
+
+    damageNumbers.push({
+      mesh,
+      x, y: y + 0.5, z,
+      life: 1.0,
+      maxLife: 1.0,
+      vx: (Math.random() - 0.5) * 2,
+      vy: 3,
+      vz: (Math.random() - 0.5) * 2,
+      type,
+    });
+  }
+
+  function updateDamageNumbers(dt) {
+    for (let i = damageNumbers.length - 1; i >= 0; i--) {
+      const dn = damageNumbers[i];
+      dn.life -= dt;
+      if (dn.life <= 0) {
+        scene.remove(dn.mesh);
+        damageNumbers.splice(i, 1);
+        continue;
+      }
+
+      dn.x += dn.vx * dt;
+      dn.y += dn.vy * dt;
+      dn.z += dn.vz * dt;
+      dn.vy -= 5 * dt;
+
+      dn.mesh.position.set(dn.x, dn.y, dn.z);
+
+      // Fade and scale
+      const alpha = dn.life / dn.maxLife;
+      dn.mesh.material.opacity = alpha;
+      dn.mesh.scale.setScalar(0.8 + alpha * 0.4);
     }
   }
 
@@ -2683,13 +2936,75 @@ function updateChests(dt) {
 
       const base = isCarried ? LANTERN_INTENSITY * 1.5 : cur * distScale;
 
-      // Flicker on top of distance-scaled base
-      const f = Math.sin(t * 3.5 + ud.flameOffset) * 0.12 +
-                Math.sin(t * 6.2 + ud.flameOffset) * 0.06;
-      l.intensity = Math.max(0, base + f * 1.4);
+      // Enhanced flicker with multiple frequency components for organic feel
+      // Mix slow (mood) + medium (glow) + fast (flutter) + very fast (sparkle) components
+      const offset = ud.flameOffset || 0;
+      const flickerScale = ud.flickerAmount || 0.12;  // Different lights have different flicker intensity
 
-      if (doFlame) animateFlame(ud.flame, t, ud.flameOffset);
+      const slowFlicker = Math.sin(t * 0.7 + offset) * flickerScale * 0.67;
+      const mediumFlicker = Math.sin(t * 2.3 + offset) * flickerScale * 1.17;
+      const fastFlicker = Math.sin(t * 5.1 + offset) * flickerScale * 0.83;
+      const veryFastFlicker = Math.sin(t * 11.7 + offset) * flickerScale * 0.50;
+
+      // Combine components with weighted blend for more organic look
+      const flickerAmount = slowFlicker + mediumFlicker + fastFlicker * 0.8 + veryFastFlicker * 0.6;
+      l.intensity = Math.max(0.05, base + flickerAmount * 1.2);
+
+      // Apply subtle color flicker (warm/cool shifts)
+      if (l.color) {
+        const colorFlicker = 0.95 + Math.sin(t * 1.8 + offset) * 0.05;
+        const baseColor = ud.baseColor || 0xff8833;
+        const r = ((baseColor >> 16) & 0xff) / 255 * colorFlicker;
+        const g = ((baseColor >> 8) & 0xff) / 255 * colorFlicker;
+        const b = ((baseColor >> 0) & 0xff) / 255 * (colorFlicker * 0.95);
+        l.color.setRGB(r, g, b);
+      }
+
+      if (doFlame) animateFlame(ud.flame, t, offset);
     }
+  }
+
+  function updateAmbientMood(player) {
+    if (!ambientLight || !player) return;
+
+    // Calculate average color of nearby lit torches
+    let r = 0, g = 0, b = 0;
+    let influence = 0;
+
+    for (const l of lanternLights) {
+      if (l.intensity <= 0.05) continue;
+      const dx = l.position.x - player.x;
+      const dz = l.position.z - player.z;
+      const distSq = dx * dx + dz * dz;
+      const rangeSq = LANTERN_RADIUS * LANTERN_RADIUS;
+
+      if (distSq > rangeSq) continue;
+
+      // Distance falloff: full influence at 50% range, fade beyond
+      const distRatio = Math.sqrt(distSq) / LANTERN_RADIUS;
+      const weight = Math.max(0, 1.0 - Math.pow(distRatio * 1.2, 2)) * (l.intensity / 6.5);
+
+      r += (l.color.r || 1.0) * weight;
+      g += (l.color.g || 0.7) * weight;
+      b += (l.color.b || 0.3) * weight;
+      influence += weight;
+    }
+
+    // Blend between current and target color
+    let targetR = 0.29, targetG = 0.22, targetB = 0.16; // default dungeon
+
+    if (influence > 0) {
+      targetR = Math.min(1.0, r / Math.max(1, influence * 0.5));
+      targetG = Math.min(1.0, g / Math.max(1, influence * 0.5));
+      targetB = Math.min(1.0, b / Math.max(1, influence * 0.5));
+    }
+
+    // Smooth transition to new ambient color (0.05 = 20 frame blend at 60fps)
+    _ambientColor.r += (targetR - _ambientColor.r) * 0.05;
+    _ambientColor.g += (targetG - _ambientColor.g) * 0.05;
+    _ambientColor.b += (targetB - _ambientColor.b) * 0.05;
+
+    ambientLight.color.setRGB(_ambientColor.r, _ambientColor.g, _ambientColor.b);
   }
 
   /* ── Tile → room index (O(1) lookup) ────────── */
@@ -3042,6 +3357,7 @@ function updateTorchInteractionAnimations(dt) {
     }
     updateTorchInteractionAnimations(dt || 0.016);
     updateActiveLanternLights(player, dt || 0.016);
+    updateAmbientMood(player);
 
     if (playerMesh) {
       const dy = player._descentY || 0;
@@ -3463,6 +3779,8 @@ function buildSegmentedWing(r, h, mat, side) {
     getChestAnim: () => chestInteractAnim,
     toggleNearbyWallTorch,
     spawnParticles, updateParticles,
+    spawnDamageNumber, updateDamageNumbers,
+    configureLightByType,
     fireBolt, updateBolts,
     updateTorchFlicker, updateActiveLanternLights, snapLanternsToPlayer,
     flashPlayer,

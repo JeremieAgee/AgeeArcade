@@ -60,6 +60,11 @@
     data-ad-frequency-hint="60s"
     src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
   </script>
+  <script>
+    window.addEventListener('load', () => {
+      console.log('Ads script loaded. adBreak available:', typeof window.adBreak === 'function');
+    });
+  </script>
 </head>
 <body>
 
@@ -232,7 +237,7 @@
           <p id="leaderboardPromptError" class="leaderboard-prompt-error"></p>
         </div>
         <a class="big-btn secondary title-link-btn" href="./leaderboard/">VIEW LEADERBOARD</a>
-        <button class="big-btn" onclick="if(typeof window.adBreak==='function'){adBreak({type:'reward',name:'bonus-offer'})}">▶ WATCH AD FOR BONUS</button>
+        <button class="big-btn" onclick="if(typeof window.adBreak==='function'){adBreak({type:'reward',name:'bonus-offer'})}else{console.log('adBreak not available yet'); alert('Ads loading... try again in a moment');}">▶ WATCH AD FOR BONUS</button>
         <button class="big-btn" onclick="Game.start()">DESCEND AGAIN</button>
         <button class="big-btn secondary" onclick="Game.goToTitle()">TITLE SCREEN</button>
       </div>

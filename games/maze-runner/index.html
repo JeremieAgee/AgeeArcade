@@ -53,6 +53,11 @@
     data-ad-frequency-hint="60s"
     src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
   </script>
+  <script>
+    window.addEventListener('load', () => {
+      console.log('Ads script loaded. adBreak available:', typeof window.adBreak === 'function');
+    });
+  </script>
 </head>
 <body>
 
@@ -147,7 +152,6 @@
           <tr><td>Final Score</td><td id="go-score">—</td></tr>
           <tr><td>Total Time</td><td id="go-time">—</td></tr>
         </table>
-        <button id="btnRewardAd" class="btn-secondary" style="margin-bottom:.5rem;">▶ Watch Ad for Bonus</button>
         <button id="btnRestart" class="btn-primary">PLAY AGAIN</button>
         <button id="btnLBBack"  class="btn-ghost">LEADERBOARD</button>
         <a href="../../" class="btn-link">← Back to Arcade</a>
