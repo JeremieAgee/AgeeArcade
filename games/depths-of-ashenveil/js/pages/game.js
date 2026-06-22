@@ -88,7 +88,7 @@ const Game = (() => {
     };
   }
 
-  function _workerGenerateFloor(floorNum) {
+  function _workerGenerateFloor(floorNum, seed) {
     return new Promise((resolve, reject) => {
       _initFloorWorker();
       if (!_floorWorker) {
@@ -105,7 +105,7 @@ const Game = (() => {
         resolve: msg => { clearTimeout(timeoutId); resolve(msg); },
         reject: err => { clearTimeout(timeoutId); reject(err); },
       };
-      _floorWorker.postMessage({ type: 'generate', floor: floorNum, requestId });
+      _floorWorker.postMessage({ type: 'generate', floor: floorNum, requestId, seed });
     });
   }
 

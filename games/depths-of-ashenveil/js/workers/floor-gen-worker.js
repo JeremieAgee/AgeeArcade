@@ -5,7 +5,7 @@
    main thread (WebGL requires it).
 
    Messages IN:
-     { type: 'generate', floor: N, requestId: string }
+     { type: 'generate', floor: N, requestId: string, seed?: number }
 
    Messages OUT:
      { type: 'ready', floor: N, requestId: string,
@@ -33,11 +33,11 @@ function serializeDungeon(d) {
 }
 
 self.onmessage = function (e) {
-  const { type, floor, requestId } = e.data;
+  const { type, floor, requestId, seed } = e.data;
   if (type !== 'generate') return;
 
   try {
-    const d      = Dungeon.generate(floor);
+    const d      = Dungeon.generate(floor, seed);
     const spawns = Enemies.spawnAll(d, floor);
     const boss   = d.bossRoom ? Enemies.createBoss(d.bossRoom, floor, d) : null;
 

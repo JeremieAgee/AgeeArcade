@@ -13,6 +13,17 @@ const Dungeon = (() => {
     BOSS_FLOOR: 4,
   };
 
+  /* ── Seeded PRNG (mulberry32) ─────────────────────── */
+  function makeRNG(seed) {
+    let s = seed >>> 0;
+    return () => {
+      s = (s + 0x6D2B79F5) >>> 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
   /* ── Grid helpers ────────────────────────────── */
   function makeGrid(cols, rows) {
     return Array.from({ length: rows }, () => new Uint8Array(cols).fill(T.WALL));
@@ -176,7 +187,7 @@ const Dungeon = (() => {
   /* ── Lantern placement ───────────────────────── */
   // Room-scoped torch placement. Each room gets enough torches for coverage, with
   // candidates spread around its perimeter instead of randomly capped by wall face.
-  function placeLanterns(g, rooms, cols, rows) {
+  function placeLanterns(g, rooms, cols, rows, rand) {
     const TILES_PER_TORCH = 18;
     const lanterns = [];
 
@@ -222,7 +233,7 @@ const Dungeon = (() => {
       });
 
       for (let i = valid.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(rand() * (i + 1));
         [valid[i], valid[j]] = [valid[j], valid[i]];
       }
 
@@ -236,38 +247,38 @@ const Dungeon = (() => {
   /* ── Enemy spawn points ──────────────────────── */
   // Each regular room gets one enemy type (pack). Boss room gets a handful of
   // mixed minion guards in addition to the boss itself.
-  function enemySpawnPoints(rooms, floor, bossRoom) {
+  function enemySpawnPoints(rooms, floor, bossRoom, rand) {
     const ALL_TYPES = ['skeleton', 'goblin', 'wraith', 'troll', 'archer'];
     const spawns = [];
 
     // Regular rooms — one type per room, 2–(3+floor/2) enemies
     for (let i = 1; i < rooms.length - 1; i++) {
       const r       = rooms[i];
-      const typeKey = ALL_TYPES[Math.floor(Math.random() * ALL_TYPES.length)];
+      const typeKey = ALL_TYPES[Math.floor(rand() * ALL_TYPES.length)];
       const roomArea = Math.max(1, (r.w - 2) * (r.h - 2));
       const maxBySize = Math.max(2, Math.floor(roomArea / 3));
       const maxCount  = Math.min(maxBySize, 3 + Math.floor(floor / 2));
-      const count = 2 + Math.floor(Math.random() * Math.max(1, maxCount - 1));
+      const count = 2 + Math.floor(rand() * Math.max(1, maxCount - 1));
       for (let k = 0; k < count; k++) {
         spawns.push({
           roomIndex: i,
           typeKey,
-          gx: r.x + 1 + Math.floor(Math.random() * Math.max(1, r.w - 2)),
-          gy: r.y + 1 + Math.floor(Math.random() * Math.max(1, r.h - 2)),
+          gx: r.x + 1 + Math.floor(rand() * Math.max(1, r.w - 2)),
+          gy: r.y + 1 + Math.floor(rand() * Math.max(1, r.h - 2)),
         });
       }
     }
 
     // Boss room — 2–4 mixed minion guards (independent of boss)
     if (bossRoom) {
-      const minionCount = 2 + Math.floor(Math.random() * (1 + Math.min(2, Math.floor(floor / 3))));
+      const minionCount = 2 + Math.floor(rand() * (1 + Math.min(2, Math.floor(floor / 3))));
       for (let k = 0; k < minionCount; k++) {
-        const typeKey = ALL_TYPES[Math.floor(Math.random() * ALL_TYPES.length)];
+        const typeKey = ALL_TYPES[Math.floor(rand() * ALL_TYPES.length)];
         spawns.push({
           isBossRoomMinion: true,
           typeKey,
-          gx: bossRoom.x + 1 + Math.floor(Math.random() * Math.max(1, bossRoom.w - 2)),
-          gy: bossRoom.y + 1 + Math.floor(Math.random() * Math.max(1, bossRoom.h - 2)),
+          gx: bossRoom.x + 1 + Math.floor(rand() * Math.max(1, bossRoom.w - 2)),
+          gy: bossRoom.y + 1 + Math.floor(rand() * Math.max(1, bossRoom.h - 2)),
         });
       }
     }
@@ -276,11 +287,11 @@ const Dungeon = (() => {
   }
 
   /* ── Loot chest positions ────────────────────── */
-  function chestPositions(rooms) {
+  function chestPositions(rooms, rand) {
     const eligible = [];
     for (let i = 1; i < rooms.length - 1; i++) eligible.push(i);
     for (let i = eligible.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(rand() * (i + 1));
       [eligible[i], eligible[j]] = [eligible[j], eligible[i]];
     }
     const count  = Math.max(1, Math.floor(eligible.length / 3));
@@ -288,8 +299,8 @@ const Dungeon = (() => {
     for (let k = 0; k < count && k < eligible.length; k++) {
       const r = rooms[eligible[k]];
       chests.push({
-        gx: r.x + 1 + Math.floor(Math.random() * (r.w - 2)),
-        gy: r.y + 1 + Math.floor(Math.random() * (r.h - 2)),
+        gx: r.x + 1 + Math.floor(rand() * (r.w - 2)),
+        gy: r.y + 1 + Math.floor(rand() * (r.h - 2)),
         opened: false,
       });
     }
@@ -329,9 +340,11 @@ const Dungeon = (() => {
   }
 
   /* ── Main generate function ──────────────────── */
-  function generate(floor) {
-    const TARGET     = 8 + Math.floor(Math.random() * 6) + Math.min(floor * 2, 14);
-    const cols       = Math.min(80, 40 + Math.floor(TARGET / 4) * 2);
+  function generate(floor, seed) {
+    seed = seed ?? (floor * 0x9e3779b9 ^ (Date.now() & 0xffffffff));
+    const rand = makeRNG(seed);
+
+    const cols       = Math.min(70, 18 + floor * 2);
     const rows       = cols;
     const BOSS_MIN_W = 9, BOSS_MIN_H = 9;
     const MIN_W = 4, MAX_W = 12;
@@ -353,10 +366,10 @@ const Dungeon = (() => {
     // ── Step 1: Spawn room (top-left third of grid) ──
     let startRoom = null;
     for (let a = 0; a < 200 && !startRoom; a++) {
-      const w = MIN_W + Math.floor(Math.random() * (MAX_W - MIN_W + 1));
-      const h = MIN_H + Math.floor(Math.random() * (MAX_H - MIN_H + 1));
-      const x = 2 + Math.floor(Math.random() * Math.max(1, cols / 3 - w - 2));
-      const y = 2 + Math.floor(Math.random() * Math.max(1, rows / 3 - h - 2));
+      const w = MIN_W + Math.floor(rand() * (MAX_W - MIN_W + 1));
+      const h = MIN_H + Math.floor(rand() * (MAX_H - MIN_H + 1));
+      const x = 2 + Math.floor(rand() * Math.max(1, cols / 3 - w - 2));
+      const y = 2 + Math.floor(rand() * Math.max(1, rows / 3 - h - 2));
       const r = { x, y, w, h, isConnected: false };
       if (inBounds(r)) { startRoom = r; }
     }
@@ -371,15 +384,15 @@ const Dungeon = (() => {
     const sc = roomCenter(startRoom);
     const MIN_BOSS_DIST = Math.floor(cols * 0.4);
     const MAX_BOSS_DIST = Math.floor(cols * 0.65);
-    const bw = BOSS_MIN_W + Math.floor(Math.random() * 2);
-    const bh = BOSS_MIN_H + Math.floor(Math.random() * 2);
+    const bw = BOSS_MIN_W + Math.floor(rand() * 2);
+    const bh = BOSS_MIN_H + Math.floor(rand() * 2);
 
     let bossRoom = null;
     const angles = Array.from({ length: 24 }, (_, i) => (i / 24) * Math.PI * 2)
-      .sort(() => Math.random() - 0.5);
+      .sort(() => rand() - 0.5);
 
     for (let di = 0; di < 4 && !bossRoom; di++) {
-      const dist = MIN_BOSS_DIST + Math.floor(Math.random() * (MAX_BOSS_DIST - MIN_BOSS_DIST + 1));
+      const dist = MIN_BOSS_DIST + Math.floor(rand() * (MAX_BOSS_DIST - MIN_BOSS_DIST + 1));
       for (const angle of angles) {
         const cx = Math.round(sc.cx + dist * Math.cos(angle));
         const cy = Math.round(sc.cy + dist * Math.sin(angle));
@@ -395,10 +408,10 @@ const Dungeon = (() => {
 
     // ── Step 3: Regular rooms (avoid boss area + 2-tile pad) ──
     for (let a = 0; a < 500 && rooms.length < TARGET; a++) {
-      const w = MIN_W + Math.floor(Math.random() * (MAX_W - MIN_W + 1));
-      const h = MIN_H + Math.floor(Math.random() * (MAX_H - MIN_H + 1));
-      const x = 2 + Math.floor(Math.random() * (cols - w - 4));
-      const y = 2 + Math.floor(Math.random() * (rows - h - 4));
+      const w = MIN_W + Math.floor(rand() * (MAX_W - MIN_W + 1));
+      const h = MIN_H + Math.floor(rand() * (MAX_H - MIN_H + 1));
+      const x = 2 + Math.floor(rand() * (cols - w - 4));
+      const y = 2 + Math.floor(rand() * (rows - h - 4));
       const r = { x, y, w, h, isConnected: false };
       if (!overlapsAny(r, 2, bossRoom)) {
         carveRect(g, x, y, w, h);
@@ -461,16 +474,17 @@ const Dungeon = (() => {
       startRoom,
       bossRoom,
       bossEntrance,
-      lanterns: placeLanterns(g, [...rooms, bossRoom], cols, rows)
+      lanterns: placeLanterns(g, [...rooms, bossRoom], cols, rows, rand)
         .filter(l => !(l.x === bossEntrance.wallTx && l.y === bossEntrance.wallTy)),
-      spawns:   enemySpawnPoints(rooms, floor, bossRoom),
-      chests:   chestPositions(rooms),
+      spawns:   enemySpawnPoints(rooms, floor, bossRoom, rand),
+      chests:   chestPositions(rooms, rand),
       TILE,
       WALL_H,
       COLS: cols,
       ROWS: rows,
       toWorld,
       roomCenter,
+      seed,
     };
   }
 

@@ -255,15 +255,15 @@
   }
 
   // ─── Floor size / trap count ───────────────────────
-  function getRoomSize(floor) { return Math.min(18, 10 + Math.floor((floor - 1) / 5) * 2); }
-  function getTrapCount(floor) { return Math.min(35, 5 + Math.floor(floor * 1.8)); }
+  function getRoomSize(floor) { return Math.min(25, 2 + floor); }
+  function getTrapCount(floor) { return floor; }
 
   // ─── Build a floor ─────────────────────────────────
-  function buildFloor(floorNum) {
+  function buildFloor(floorNum, seed) {
     clearFloorObjects();
 
     const rooms  = getRoomSize(floorNum);
-    const result = MazeGen.generate(rooms, rooms);
+    const result = MazeGen.generate(rooms, rooms, seed);
     const { grid, W, H, start, exit } = result;
 
     md = {
@@ -359,7 +359,7 @@
     }
 
     // Damage traps in remaining corridor cells (after lava/fall placed)
-    const dmgCount = Math.min(20, 3 + Math.floor(floor * 1.2));
+    const dmgCount = floor;
     let dmgPlaced = 0;
     for (const c of corridors) {
       if (dmgPlaced >= dmgCount) break;
@@ -1461,8 +1461,12 @@
     if (!client) return;
     try {
       const { data: { session } } = await client.auth.getSession();
+      const playerNameInput = document.getElementById('playerName');
+      const playerName = playerNameInput?.value?.trim() || 'Player';
+
       await client.from('maze_runner_runs').insert({
         user_id:    session?.user?.id || getMazeRunnerGuestId(),
+        nickname:   playerName,
         floors:     gd.floor,
         score:      gd.score,
         time_ms:    Math.floor((gd.totalTime + gd.floorTime) * 1000),
@@ -1482,7 +1486,7 @@
     try {
       const { data, error } = await client
         .from('maze_runner_runs')
-        .select('user_id, floors, score, time_ms')
+        .select('nickname, floors, score, time_ms')
         .order('score', { ascending: false })
         .order('floors', { ascending: false })
         .limit(10);
@@ -1494,10 +1498,11 @@
       el.innerHTML = data.map((row, i) => {
         const score = Number(row.score) || 0;
         const floors = Number(row.floors) || 0;
+        const name = row.nickname || 'Player';
         return `
         <tr>
           <td>${i + 1}</td>
-          <td class="lb-name">${String(row.user_id || 'guest').slice(0, 8)}…</td>
+          <td class="lb-name">${name}</td>
           <td>${score.toLocaleString()}</td>
           <td>Floor ${floors}</td>
         </tr>`;
