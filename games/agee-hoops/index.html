@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Agee Hoops — A 3D basketball arcade game by Agee Gaming LLC. Shoot hoops and climb the leaderboard!" />
+  <title>Agee Hoops — Agee Arcade</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+
+  <!-- Game Styles -->
+  <link rel="stylesheet" href="./style.css" />
+
+  <!-- Google H5 Games Ads -->
+  <script async
+    data-ad-client="ca-pub-381246496"
+    data-ad-frequency-hint="60s"
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">
+  </script>
+</head>
+<body>
+
+  <div id="gameContainer">
+    <!-- Three.js Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD Overlay -->
+    <div id="hud" class="hud">
+      <div class="hud-left">
+        <div class="stat-block">
+          <div class="stat-label">SCORE</div>
+          <div class="stat-value" id="scoreDisplay">0</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">STREAK</div>
+          <div class="stat-value" id="streakDisplay">0</div>
+        </div>
+      </div>
+      <div class="hud-center">
+        <div class="stat-block">
+          <div class="stat-label">TIME</div>
+          <div class="stat-value" id="timerDisplay">60</div>
+        </div>
+      </div>
+      <div class="hud-right">
+        <div class="stat-block">
+          <div class="stat-label">SHOTS</div>
+          <div class="stat-value" id="shotsDisplay">0</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">ACCURACY</div>
+          <div class="stat-value" id="accuracyDisplay">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shot Meter -->
+    <div id="shotMeter" class="shot-meter" hidden>
+      <div class="meter-label">POWER</div>
+      <div class="meter-bar">
+        <div class="meter-fill" id="meterFill"></div>
+      </div>
+      <div class="meter-hint">RELEASE TO SHOOT</div>
+    </div>
+
+    <!-- Angle Display -->
+    <div id="angleDisplay" style="position: absolute; top: 120px; left: 20px; color: #ffcc00; font-family: Cinzel; font-size: 18px; display: none;"></div>
+
+    <!-- Splash Text (score popups) -->
+    <div id="splashContainer" class="splash-container"></div>
+
+    <!-- Title Screen -->
+    <div id="titleScreen" class="screen active">
+      <div class="screen-content">
+        <h1 class="title">AGEE HOOPS</h1>
+        <p class="subtitle">Shoot. Score. Dominate.</p>
+        <div class="best-score" id="bestScoreDisplay" style="display:none;">
+          Best: <span id="bestScoreValue">0</span>
+        </div>
+        <div class="instructions">
+          <p><strong>WASD:</strong> Move | <strong>Mouse:</strong> Aim | <strong>Click & Hold:</strong> Adjust Angle | <strong>Space & Hold:</strong> Charge Power</p>
+          <p>Click to reset angle. Each click and hold adjusts angle 0-60°. Hold space to charge power, release to shoot.</p>
+        </div>
+        <button class="btn btn-primary" id="startBtn">TAKE THE COURT</button>
+      </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameoverScreen" class="screen">
+      <div class="screen-content">
+        <h1 class="title">TIME'S UP!</h1>
+        <p id="finalMessage" class="subtitle">Great shooting!</p>
+        <div class="score-box">
+          <div class="score-line">
+            <span class="label">Final Score:</span>
+            <span class="value" id="finalScore">0</span>
+          </div>
+          <div class="score-line">
+            <span class="label">Best Streak:</span>
+            <span class="value" id="bestStreak">0</span>
+          </div>
+          <div class="score-line">
+            <span class="label">Shots Made:</span>
+            <span class="value" id="shotsMade">0</span>
+          </div>
+          <div class="score-line">
+            <span class="label">Accuracy:</span>
+            <span class="value" id="finalAccuracy">0%</span>
+          </div>
+        </div>
+        <div id="leaderboardPrompt" class="leaderboard-prompt" style="display:none;">
+          <p>Save your score to the leaderboard!</p>
+          <input type="text" id="playerName" maxlength="16" placeholder="Your name" />
+          <button class="btn btn-secondary" id="saveScoreBtn">SAVE SCORE</button>
+        </div>
+        <button class="btn btn-primary" id="restartBtn">SHOOT AGAIN</button>
+        <a class="btn btn-secondary" href="../../">BACK TO ARCADE</a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script>window.AGEE_GAME_ID = 'agee_hoops';</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous" defer></script>
+  <script src="../../js/analytics.js" defer></script>
+  <script src="../../js/arcade-auth.js" defer></script>
+  <script src="../../js/leaderboard-utils.js" defer></script>
+
+  <!-- Three.js r128 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous" defer></script>
+
+  <!-- Shared arcade engine (graphics + sound) -->
+  <script src="../../engine/sound/engine.js"   defer></script>
+  <script src="../../engine/sound/settings.js" defer></script>
+  <script src="../../engine/sound/tuner.js"    defer></script>
+  <script src="../../engine/arcade-engine.js"  defer></script>
+  <script src="../../engine/skeleton/skeleton-engine.js" defer></script>
+
+  <!-- Game Source -->
+  <script src="./src/utils/constants.js" defer></script>
+  <script src="./src/utils/math.js" defer></script>
+  <script src="./src/utils/animations.js" defer></script>
+  <script src="./src/core/Time.js" defer></script>
+  <script src="./src/core/Input.js" defer></script>
+  <script src="./src/core/State.js" defer></script>
+  <script src="./src/scene/createScene.js" defer></script>
+  <script src="./src/scene/createCamera.js" defer></script>
+  <script src="./src/scene/createLighting.js" defer></script>
+  <script src="./src/scene/createCourt.js" defer></script>
+  <script src="./src/scene/createHoop.js" defer></script>
+  <script src="./src/gameplay/Player.js" defer></script>
+  <script src="./src/gameplay/PlayerController.js" defer></script>
+  <script src="./src/gameplay/Ball.js" defer></script>
+  <script src="./src/gameplay/ShotSpots.js" defer></script>
+  <script src="./src/gameplay/HoopDetector.js" defer></script>
+  <script src="./src/gameplay/ShotController.js" defer></script>
+  <script src="./src/gameplay/ScoreSystem.js" defer></script>
+  <script src="./src/ui/HUD.js" defer></script>
+  <script src="./src/ui/ShotMeter.js" defer></script>
+  <script src="./src/ui/Splash.js" defer></script>
+  <script src="./src/ui/Menu.js" defer></script>
+  <script src="./src/systems/ParticleSystem.js" defer></script>
+  <script src="./src/systems/VisualEffects.js" defer></script>
+  <script src="./src/systems/MobileControls.js" defer></script>
+  <script src="./src/core/Game.js" defer></script>
+  <script src="./src/main.js" defer></script>
+
+</body>
+</html>
