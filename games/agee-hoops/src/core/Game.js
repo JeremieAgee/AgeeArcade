@@ -112,8 +112,10 @@ window.HoopsGame = (() => {
       onStartGame: startGame,
     });
 
-    // Initialize mobile controls if on mobile
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // Initialize mobile controls if on mobile (iPadOS Safari reports as
+    // "Mac" in the UA string, so it needs the touch-point check too)
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
     if (isMobile && window.HoopsMobileControls) {
       mobileControls = window.HoopsMobileControls.init(playerController, shotController, player, camera);
     }

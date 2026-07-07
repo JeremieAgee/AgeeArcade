@@ -399,6 +399,119 @@ html, body {
   box-shadow: 0 0 16px rgba(0, 255, 136, 0.3);
 }
 
+/* ── Mobile Controls ────────────────────────────────────────────── */
+.mobile-controls {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+}
+
+.mobile-controls.active {
+  display: flex;
+}
+
+.joystick-base {
+  width: 110px;
+  height: 110px;
+  background: rgba(20, 16, 40, 0.55);
+  border: 2px solid rgba(255, 215, 0, 0.6);
+  border-radius: 50%;
+  position: relative;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.joystick-stick {
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 215, 0, 0.85);
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+}
+
+.mobile-action-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  pointer-events: auto;
+}
+
+.mobile-charge-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 140px;
+}
+
+.mobile-charge-track {
+  height: 10px;
+  background: rgba(20, 16, 40, 0.7);
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.mobile-charge-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.05s linear;
+}
+
+.mobile-angle-fill {
+  background: linear-gradient(90deg, #00aaff, #00ff88);
+}
+
+.mobile-power-fill {
+  background: linear-gradient(90deg, #00ff88, #ffd700, #ff8800);
+}
+
+.mobile-action-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.mobile-btn {
+  border: 2px solid rgba(255, 215, 0, 0.6);
+  border-radius: 50%;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  color: #ffd700;
+  background: rgba(20, 16, 40, 0.6);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mobile-btn-angle {
+  width: 68px;
+  height: 68px;
+  font-size: 0.7rem;
+}
+
+.mobile-btn-shoot {
+  width: 84px;
+  height: 84px;
+  font-size: 0.85rem;
+  background: rgba(255, 102, 0, 0.35);
+  border-color: rgba(255, 140, 0, 0.8);
+}
+
+.mobile-btn:active {
+  background: rgba(255, 215, 0, 0.35);
+}
+
 /* ── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .hud {

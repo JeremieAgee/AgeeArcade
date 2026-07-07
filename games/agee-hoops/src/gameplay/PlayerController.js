@@ -17,6 +17,8 @@ window.HoopsPlayerController = (() => {
   let aimYaw = Math.PI;
   let aimPitch = 0;
   let canvas = null;
+  let autoAimTarget = null;
+  let externalMoveActive = false;
 
   function init(playerObj, cameraObj, canvasElement) {
     player = playerObj;
@@ -36,10 +38,14 @@ window.HoopsPlayerController = (() => {
       requestPointerLock,
       getAimPitch: () => aimPitch,
       getAimYaw: () => aimYaw,
-      isMoving: () => keys.w || keys.s || keys.a || keys.d,
-      moveWithAngle: (angle, magnitude) => {
+      isMoving: () => keys.w || keys.s || keys.a || keys.d || externalMoveActive,
+      // Auto-aim keeps the player facing a fixed world point (used on mobile,
+      // where there's no mouse to drive aimYaw via look deltas).
+      setAutoAimTarget: (target) => { autoAimTarget = target; },
+      moveWithAngle: (angle, magnitude, dt = 0.016) => {
         if (!player) return;
-        player.move(angle, magnitude, 0.016);
+        externalMoveActive = magnitude > 0.1;
+        player.move(angle, magnitude, dt);
       },
     };
   }
@@ -89,6 +95,10 @@ window.HoopsPlayerController = (() => {
     if (!player || !camera) return;
 
     const playerPos = player.getPosition();
+
+    if (autoAimTarget) {
+      aimYaw = Math.atan2(autoAimTarget.x - playerPos.x, autoAimTarget.z - playerPos.z);
+    }
 
     // Determine movement direction and magnitude
     let moveDirection = 0;

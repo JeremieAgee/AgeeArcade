@@ -1,201 +1,207 @@
 /**
- * MobileControls — Touch-based controls for mobile devices
+ * MobileControls — Touch controls for mobile: bottom-left joystick to move,
+ * plus ANGLE / SHOOT buttons that drive the same charge hooks the desktop
+ * mouse/spacebar controls use. Aim is automatic (always faces the hoop)
+ * since there's no mouse-look equivalent on touch.
  */
 window.HoopsMobileControls = (() => {
   'use strict';
 
+  const C = window.HOOPS_CONSTANTS;
+  const JOYSTICK_MAX_DIST = 45;
+
   let playerController = null;
   let shotController = null;
-  let player = null;
-  let camera = null;
 
-  let touchStartY = 0;
-  let angleAdjustment = 0;
-  let isChargingPower = false;
-  let lastTouchTime = 0;
+  let joystickBase = null;
+  let joystickStick = null;
+  let joystickTouchId = null;
+  let joystickDX = 0;
+  let joystickDY = 0;
 
-  const C = window.HOOPS_CONSTANTS;
-
-  function init(playerCtrl, shotCtrl, playerObj, cameraObj) {
+  function init(playerCtrl, shotCtrl, playerObj) {
     playerController = playerCtrl;
     shotController = shotCtrl;
-    player = playerObj;
-    camera = cameraObj;
+
+    if (playerController.setAutoAimTarget) {
+      playerController.setAutoAimTarget(C.HOOP_RIM_CENTER);
+    }
 
     createMobileUI();
-    attachTouchHandlers();
+    attachHandlers();
+    updateInstructions();
 
-    return {
-      update,
-      destroy,
-      getAngleAdjustment: () => angleAdjustment,
-    };
+    const mobileUI = document.getElementById('mobileUI');
+    if (mobileUI) mobileUI.classList.add('active');
+
+    return { update, destroy };
   }
 
   function createMobileUI() {
-    const html = `
-      <div id="mobileUI" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100;">
+    const container = document.getElementById('gameContainer');
+    if (!container) return;
 
-        <!-- Joystick Container -->
-        <div id="joystickContainer" style="width: 120px; height: 120px; background: rgba(0,0,0,0.5); border: 2px solid #ffcc00; border-radius: 50%; position: absolute; bottom: 180px; left: -60px;">
-          <div id="joystickStick" style="width: 40px; height: 40px; background: #ffcc00; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
+      <div id="mobileUI" class="mobile-controls">
+        <div id="joystickBase" class="joystick-base">
+          <div id="joystickStick" class="joystick-stick"></div>
         </div>
-
-        <!-- Angle Display -->
-        <div id="angleText" style="color: #ffcc00; font-size: 20px; font-family: Cinzel; margin-bottom: 20px; text-align: center;">ANGLE: 0°</div>
-
-        <!-- Power Display -->
-        <div id="powerBar" style="width: 200px; height: 20px; background: rgba(0,0,0,0.7); border: 2px solid #ffcc00; margin-bottom: 20px;">
-          <div id="powerFill" style="width: 0%; height: 100%; background: #ffcc00; transition: width 0.05s;"></div>
+        <div class="mobile-action-buttons">
+          <div class="mobile-charge-bars">
+            <div class="mobile-charge-track">
+              <div id="mobileAngleFill" class="mobile-charge-fill mobile-angle-fill"></div>
+            </div>
+            <div class="mobile-charge-track">
+              <div id="mobilePowerFill" class="mobile-charge-fill mobile-power-fill"></div>
+            </div>
+          </div>
+          <div class="mobile-action-row">
+            <button id="angleBtn" class="mobile-btn mobile-btn-angle">ANGLE</button>
+            <button id="shootBtn" class="mobile-btn mobile-btn-shoot">SHOOT</button>
+          </div>
         </div>
-
-        <!-- Buttons -->
-        <button id="aimAtGoalBtn" style="padding: 10px 20px; background: #ff6600; color: white; border: none; margin-right: 10px; font-family: Cinzel; cursor: pointer; font-size: 14px;">AIM AT GOAL</button>
-        <button id="shootBtn" style="padding: 10px 30px; background: #00aa00; color: white; border: none; font-family: Cinzel; cursor: pointer; font-size: 16px; font-weight: bold;">HOLD TO SHOOT</button>
       </div>
     `;
+    container.appendChild(wrapper.firstElementChild);
 
-    const container = document.getElementById('gameContainer');
-    if (container) {
-      const mobileDiv = document.createElement('div');
-      mobileDiv.innerHTML = html;
-      container.appendChild(mobileDiv);
-    }
+    joystickBase = document.getElementById('joystickBase');
+    joystickStick = document.getElementById('joystickStick');
   }
 
-  function attachTouchHandlers() {
-    const canvas = document.querySelector('#gameCanvas');
-    if (!canvas) return;
-
-    // Joystick controls
-    const joystickContainer = document.getElementById('joystickContainer');
-    canvas.addEventListener('touchstart', handleJoystickStart);
-    canvas.addEventListener('touchmove', handleJoystickMove);
-    canvas.addEventListener('touchend', handleJoystickEnd);
-
-    // Angle adjustment (up/down swipe)
-    canvas.addEventListener('touchstart', (e) => {
-      touchStartY = e.touches[0].clientY;
-    });
-    canvas.addEventListener('touchmove', (e) => {
-      const touchY = e.touches[0].clientY;
-      const deltaY = touchStartY - touchY;
-      angleAdjustment += deltaY * 0.001;
-      angleAdjustment = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, angleAdjustment));
-      touchStartY = touchY;
-      updateAngleDisplay();
-    });
-
-    // Aim at goal button
-    const aimBtn = document.getElementById('aimAtGoalBtn');
-    if (aimBtn) {
-      aimBtn.addEventListener('click', autoAimAtGoal);
+  function attachHandlers() {
+    if (joystickBase) {
+      joystickBase.addEventListener('touchstart', onJoystickStart, { passive: false });
+      joystickBase.addEventListener('touchmove', onJoystickMove, { passive: false });
+      joystickBase.addEventListener('touchend', onJoystickEnd, { passive: false });
+      joystickBase.addEventListener('touchcancel', onJoystickEnd, { passive: false });
     }
 
-    // Power button
-    const shootBtn = document.getElementById('shootBtn');
-    if (shootBtn) {
-      shootBtn.addEventListener('touchstart', startCharging);
-      shootBtn.addEventListener('touchend', releaseShot);
-      shootBtn.addEventListener('mousedown', startCharging);
-      shootBtn.addEventListener('mouseup', releaseShot);
+    bindHoldButton('angleBtn', startAngle, releaseAngle);
+    bindHoldButton('shootBtn', startCharge, releaseShot);
+  }
+
+  function bindHoldButton(id, onStart, onEnd) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); onStart(); }, { passive: false });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); onEnd(); }, { passive: false });
+    btn.addEventListener('touchcancel', (e) => { e.preventDefault(); onEnd(); }, { passive: false });
+  }
+
+  function findTouch(touchList, id) {
+    for (let i = 0; i < touchList.length; i++) {
+      if (touchList[i].identifier === id) return touchList[i];
     }
+    return null;
   }
 
-  function handleJoystickStart(e) {
-    if (e.target.id !== 'gameCanvas') return;
-    const touch = e.touches[0];
-    moveJoystick(touch.clientX, touch.clientY);
+  function onJoystickStart(e) {
+    e.preventDefault();
+    if (joystickTouchId !== null) return;
+    const touch = e.changedTouches[0];
+    joystickTouchId = touch.identifier;
+    updateJoystick(touch.clientX, touch.clientY);
   }
 
-  function handleJoystickMove(e) {
-    if (e.touches.length > 0) {
-      const touch = e.touches[0];
-      moveJoystick(touch.clientX, touch.clientY);
-    }
+  function onJoystickMove(e) {
+    e.preventDefault();
+    const touch = findTouch(e.changedTouches, joystickTouchId);
+    if (!touch) return;
+    updateJoystick(touch.clientX, touch.clientY);
   }
 
-  function handleJoystickEnd(e) {
-    // Center joystick
-    const stick = document.getElementById('joystickStick');
-    if (stick) {
-      stick.style.transform = 'translate(-50%, -50%)';
-    }
+  function onJoystickEnd(e) {
+    e.preventDefault();
+    const touch = findTouch(e.changedTouches, joystickTouchId);
+    if (!touch) return;
+    joystickTouchId = null;
+    joystickDX = 0;
+    joystickDY = 0;
+    if (joystickStick) joystickStick.style.transform = 'translate(-50%, -50%)';
   }
 
-  function moveJoystick(x, y) {
-    const canvas = document.querySelector('#gameCanvas');
-    const rect = canvas.getBoundingClientRect();
+  function updateJoystick(clientX, clientY) {
+    if (!joystickBase) return;
+    const rect = joystickBase.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
 
-    const dx = x - cx;
-    const dy = y - cy;
+    let dx = clientX - cx;
+    let dy = clientY - cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const maxDist = 100;
 
-    if (dist < maxDist) {
-      const stick = document.getElementById('joystickStick');
-      if (stick) {
-        stick.style.transform = `translate(calc(-50% + ${dx / 2}px), calc(-50% + ${dy / 2}px))`;
-      }
-
-      // Move player based on joystick
-      if (playerController && dist > 10) {
-        const angle = Math.atan2(dy, dx);
-        playerController.moveWithAngle(angle, dist / maxDist);
-      }
+    if (dist > JOYSTICK_MAX_DIST) {
+      dx = (dx / dist) * JOYSTICK_MAX_DIST;
+      dy = (dy / dist) * JOYSTICK_MAX_DIST;
     }
+
+    if (joystickStick) {
+      joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    }
+
+    joystickDX = dx / JOYSTICK_MAX_DIST;
+    joystickDY = dy / JOYSTICK_MAX_DIST;
   }
 
-  function autoAimAtGoal() {
-    if (!player) return;
-    const playerPos = player.getPosition();
-    const hoopPos = C.HOOP_RIM_CENTER;
+  function applyMovement(dt) {
+    if (!playerController) return;
+    const magnitude = Math.min(Math.sqrt(joystickDX * joystickDX + joystickDY * joystickDY), 1);
 
-    // Calculate angle to hoop
-    const dx = hoopPos.x - playerPos.x;
-    const dz = hoopPos.z - playerPos.z;
-    const aimAngle = Math.atan2(dx, dz);
+    // Always call through (even at zero magnitude) so the controller's
+    // "is moving" flag clears the instant the stick returns to center.
+    if (magnitude <= 0.1) {
+      playerController.moveWithAngle(0, 0, dt);
+      return;
+    }
 
-    player.rotate(aimAngle);
-    updateAngleDisplay();
+    // Joystick directions are relative to the way the player is currently
+    // facing (auto-aimed at the hoop), matching WASD's forward-is-aimYaw
+    // convention: up = toward the hoop, left/right = strafe.
+    const localAngle = Math.atan2(-joystickDX, -joystickDY);
+    const aimYaw = playerController.getAimYaw ? playerController.getAimYaw() : 0;
+    playerController.moveWithAngle(aimYaw + localAngle, magnitude, dt);
   }
 
-  function startCharging() {
-    if (!shotController) return;
-    isChargingPower = true;
-    shotController.startCharge();
-    updatePowerDisplay();
+  function startAngle() {
+    if (shotController) shotController.startAngle();
+  }
+
+  function releaseAngle() {
+    if (shotController) shotController.releaseAngle();
+  }
+
+  function startCharge() {
+    if (shotController) shotController.startCharge();
   }
 
   function releaseShot() {
-    if (!shotController || !isChargingPower) return;
-    isChargingPower = false;
-    shotController.releaseShot();
+    if (shotController) shotController.releaseShot();
   }
 
-  function updateAngleDisplay() {
-    const angleEl = document.getElementById('angleText');
-    if (angleEl) {
-      const degrees = Math.round((angleAdjustment || 0) * 180 / Math.PI);
-      angleEl.textContent = `ANGLE: ${degrees}°`;
-    }
-  }
-
-  function updatePowerDisplay() {
-    if (!shotController) return;
-    const powerEl = document.getElementById('powerFill');
-    if (powerEl) {
-      const ratio = shotController.getChargeRatio();
-      powerEl.style.width = (ratio * 100) + '%';
-    }
+  function updateInstructions() {
+    const instructions = document.querySelector('#titleScreen .instructions');
+    if (!instructions) return;
+    instructions.innerHTML = `
+      <p><strong>Joystick:</strong> Move | <strong>ANGLE:</strong> Hold to raise your shot arc | <strong>SHOOT:</strong> Hold to charge power, release to shoot</p>
+      <p>Aim is automatic — get to a shot spot and let it fly!</p>
+    `;
   }
 
   function update(dt) {
-    updateAngleDisplay();
-    if (isChargingPower) {
-      updatePowerDisplay();
+    applyMovement(dt);
+
+    if (!shotController) return;
+
+    const angleFill = document.getElementById('mobileAngleFill');
+    if (angleFill) {
+      const angleRatio = shotController.getChargeAngle() / (Math.PI / 3);
+      angleFill.style.width = Math.round(angleRatio * 100) + '%';
+    }
+
+    const powerFill = document.getElementById('mobilePowerFill');
+    if (powerFill) {
+      powerFill.style.width = Math.round(shotController.getChargeRatio() * 100) + '%';
     }
   }
 
