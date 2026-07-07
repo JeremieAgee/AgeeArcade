@@ -6,7 +6,7 @@
   <meta name="description" content="Depths of Ashenveil — A 3D browser dungeon crawler by Agee Gaming LLC. Play free, no download required." />
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    script-src  'self' 'unsafe-inline'
+    script-src  'self' 'unsafe-inline' 'wasm-unsafe-eval'
                 https://cdnjs.cloudflare.com
                 https://cdn.jsdelivr.net
                 https://*.googlesyndication.com
@@ -308,6 +308,7 @@
   <script src="../../engine/sound/settings.js"                    defer></script>
   <script src="../../engine/sound/tuner.js"                       defer></script>
   <script src="../../engine/arcade-engine.js"                     defer></script>
+  <script src="../../engine/skeleton/skeleton-engine.js"          defer></script>
   <script src="./js/engine/core/engine-state.js"                  defer></script>
   <script src="./js/engine/core/engine-core.js"                   defer></script>
   <script src="./js/engine/dungeon/engine-dungeon-renderer.js"    defer></script>

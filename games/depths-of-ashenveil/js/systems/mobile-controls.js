@@ -128,14 +128,14 @@
   function wireBtn(id, flag) {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('touchstart', e => {
+    el.addEventListener('pointerdown', e => {
       e.preventDefault();
       e.stopPropagation();
       window._mobileCtrl[flag] = true;
       el.classList.add('mob-pressed');
     }, { passive: false });
-    el.addEventListener('touchend',   e => { e.preventDefault(); el.classList.remove('mob-pressed'); }, { passive: false });
-    el.addEventListener('touchcancel', () => el.classList.remove('mob-pressed'));
+    el.addEventListener('pointerup',   e => { e.preventDefault(); el.classList.remove('mob-pressed'); }, { passive: false });
+    el.addEventListener('pointercancel', () => el.classList.remove('mob-pressed'));
   }
 
   wireBtn('mBtnAttack',   'attackPending');
@@ -145,17 +145,17 @@
 
   const invBtn = document.getElementById('mBtnInventory');
   if (invBtn) {
-    invBtn.addEventListener('touchstart', e => {
+    invBtn.addEventListener('pointerdown', e => {
       e.preventDefault();
       e.stopPropagation();
       if (typeof UI !== 'undefined' && UI.togglePanel) UI.togglePanel('inv');
       invBtn.classList.add('mob-pressed');
     }, { passive: false });
-    invBtn.addEventListener('touchend', e => {
+    invBtn.addEventListener('pointerup', e => {
       e.preventDefault();
       invBtn.classList.remove('mob-pressed');
     }, { passive: false });
-    invBtn.addEventListener('touchcancel', () => invBtn.classList.remove('mob-pressed'));
+    invBtn.addEventListener('pointercancel', () => invBtn.classList.remove('mob-pressed'));
   }
 
   /* ── Pause / contextual visibility ──────────────── */

@@ -57,6 +57,8 @@ window.Engine = {
 
   flashPlayer: (...args) => window.EngineCore.flashPlayer(...args),
   clearDynamic: (...args) => window.EngineCore.clearDynamic(...args),
+  spawnDamageNumber: (...args) => window.EngineCore.spawnDamageNumber(...args),
+  updateDamageNumbers: (...args) => window.EngineCore.updateDamageNumbers(...args),
   reregisterLights: (...args) => window.EngineCore.reregisterLights(...args),
   stashDungeonState: (...args) => window.EngineCore.stashDungeonState(...args),
   installDungeonState: (...args) => window.EngineCore.installDungeonState(...args),

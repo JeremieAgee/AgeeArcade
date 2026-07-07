@@ -28,8 +28,19 @@ const Game = (() => {
     cockpitY: 238,
   };
 
-  // ── Player fixed at stern ──────────────────────────────
-  const P = { x: BOAT.cx, y: BOAT.sternY - 18, angle: Math.PI * 0.5 };
+  // ── Boat movement (WASD / arrows steer the boat around the lake) ──
+  const BOAT_ACCEL = 260, BOAT_MAX_SPEED = 130, BOAT_DAMPING = 3.4;
+  const CAM_HEIGHT = 62, CAM_BACK = 44; // camera follow offset, matches original framing
+  const STERN_OFFSET_Y = (BOAT.sternY - 18) - BOAT.cy; // player's stand-spot, relative to boat center
+  const BOAT_MARGIN_X     = BOAT.maxW + 16;
+  const BOAT_MARGIN_FRONT = (BOAT.cy - BOAT.bowY) + 16;
+  const BOAT_MARGIN_BACK  = (BOAT.sternY - BOAT.cy) + 16;
+  const boatPos = { x: BOAT.cx, y: BOAT.cy };
+  const boatVel = { x: 0, y: 0 };
+  const keys = Object.create(null);
+
+  // ── Player fixed at the stern of the boat ──────────────
+  const P = { x: boatPos.x, y: boatPos.y + STERN_OFFSET_Y, angle: Math.PI * 0.5 };
 
   // ── Spear ──────────────────────────────────────────────
   const SPEAR_SPEED = 440;
@@ -80,7 +91,8 @@ const Game = (() => {
   // ── 3D context (shared arcade engine) ──────────────────
   let gfx, renderer, scene, camera, clock;
   let waterMesh, waterBase, seabed;
-  let boatGroup, playerGroup, spearGroup, ropeLine, aimLine;
+  let boatGroup, playerGroup, playerHumanoid, spearGroup, ropeLine, aimLine;
+  let skeletonRuntime;
   let sun;
   const fishMeshes = new Map();   // fish object → THREE.Group
   let parts = [], popups = [], ripples = [], caustics = [];
@@ -88,7 +100,7 @@ const Game = (() => {
   /* ════════════════════════════════════════════════════════
      SCENE BUILD
   ════════════════════════════════════════════════════════ */
-  function buildScene() {
+  async function buildScene() {
     gfx = ArcadeEngine.create3D({
       canvas: '#gameCanvas',
       mount: '#canvasMount',
@@ -107,6 +119,8 @@ const Game = (() => {
 
     camera.position.set(0, 62, 36);
     camera.lookAt(0, 0, 0);
+
+    skeletonRuntime = await window.SkeletonEngine.create();
 
     buildLights();
     buildWater();
@@ -334,31 +348,22 @@ const Game = (() => {
     mast.position.set(0, 5.5, cabinZ - cabinLen / 2 - 0.8);
     boatGroup.add(mast);
 
-    boatGroup.position.set(vx2w(BOAT.cx), 0.15, vy2w(BOAT.cy));
+    boatGroup.position.set(vx2w(boatPos.x), 0.15, vy2w(boatPos.y));
     scene.add(boatGroup);
   }
 
   function buildPlayer() {
-    playerGroup = new THREE.Group();
-    const skin = new THREE.MeshStandardMaterial({ color: 0xddaa78, roughness: 0.85 });
-    const vest = new THREE.MeshStandardMaterial({ color: 0xc8552a, roughness: 0.8 });
-    const pants = new THREE.MeshStandardMaterial({ color: 0x2a3a55, roughness: 0.9 });
+    const B = window.SkeletonEngine.HumanoidBone;
+    const materials = {
+      body: new THREE.MeshStandardMaterial({ color: 0xc8552a, roughness: 0.8 }),
+      eyes: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 }),
+    };
+    playerHumanoid = window.SkeletonEngine.createHumanoid(skeletonRuntime.skeleton, materials);
+    playerGroup = playerHumanoid.group;
 
-    const legs = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 0.8, 8), pants);
-    legs.position.y = 0.4;
-    playerGroup.add(legs);
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.34, 0.9, 8), vest);
-    torso.position.y = 1.15;
-    torso.castShadow = true;
-    playerGroup.add(torso);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 10), skin);
-    head.position.y = 1.95;
-    playerGroup.add(head);
-    // Throwing arm — points toward aim
-    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.85, 6), skin);
-    arm.rotation.z = Math.PI / 2;
-    arm.position.set(0.5, 1.45, 0);
-    playerGroup.add(arm);
+    // Throwing arm — held forward, toward the aim direction
+    playerHumanoid.pivots[B.UPPER_ARM_R].pivot.rotation.x = Math.PI / 2.3;
+    playerHumanoid.pivots[B.LOWER_ARM_R].pivot.rotation.x = -0.25;
 
     playerGroup.position.set(vx2w(P.x), 1.45, vy2w(P.y));
     scene.add(playerGroup);
@@ -606,9 +611,44 @@ const Game = (() => {
      GAME LOGIC (unchanged from the 2D version)
   ════════════════════════════════════════════════════════ */
   function boatDist(x, y) {
-    const dx = (x - BOAT.cx) / (BOAT.maxW * 1.2);
-    const dy = (y - BOAT.cy) / ((BOAT.sternY - BOAT.bowY) / 1.8);
+    const dx = (x - boatPos.x) / (BOAT.maxW * 1.2);
+    const dy = (y - boatPos.y) / ((BOAT.sternY - BOAT.bowY) / 1.8);
     return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function updateBoat(dt) {
+    let ix = 0, iy = 0;
+    if (keys.KeyW || keys.ArrowUp)    iy -= 1;
+    if (keys.KeyS || keys.ArrowDown)  iy += 1;
+    if (keys.KeyA || keys.ArrowLeft)  ix -= 1;
+    if (keys.KeyD || keys.ArrowRight) ix += 1;
+
+    if (ix || iy) {
+      const len = Math.hypot(ix, iy);
+      boatVel.x += (ix / len) * BOAT_ACCEL * dt;
+      boatVel.y += (iy / len) * BOAT_ACCEL * dt;
+    } else {
+      const damp = Math.max(0, 1 - BOAT_DAMPING * dt);
+      boatVel.x *= damp; boatVel.y *= damp;
+    }
+    const spd = Math.hypot(boatVel.x, boatVel.y);
+    if (spd > BOAT_MAX_SPEED) {
+      boatVel.x = (boatVel.x / spd) * BOAT_MAX_SPEED;
+      boatVel.y = (boatVel.y / spd) * BOAT_MAX_SPEED;
+    }
+
+    boatPos.x += boatVel.x * dt;
+    boatPos.y += boatVel.y * dt;
+
+    const minX = BOAT_MARGIN_X, maxX = VW - BOAT_MARGIN_X;
+    const minY = BOAT_MARGIN_FRONT, maxY = VH - BOAT_MARGIN_BACK;
+    if (boatPos.x < minX) { boatPos.x = minX; boatVel.x = Math.max(0, boatVel.x); }
+    if (boatPos.x > maxX) { boatPos.x = maxX; boatVel.x = Math.min(0, boatVel.x); }
+    if (boatPos.y < minY) { boatPos.y = minY; boatVel.y = Math.max(0, boatVel.y); }
+    if (boatPos.y > maxY) { boatPos.y = maxY; boatVel.y = Math.min(0, boatVel.y); }
+
+    P.x = boatPos.x;
+    P.y = boatPos.y + STERN_OFFSET_Y;
   }
   function rockMinDist(x, y) {
     let min = Infinity;
@@ -843,8 +883,24 @@ const Game = (() => {
     }
     if (saveBtn) {
       saveBtn.onclick = () => {
-        saveLeaderboardScore(input ? input.value : 'FISHER');
+        const playerName = (input ? input.value : 'FISHER').trim().substring(0, 16) || 'FISHER';
+        saveLeaderboardScore(playerName);
         if (prompt) prompt.style.display = 'none';
+
+        // Show success message
+        const successMsg = document.createElement('div');
+        successMsg.style.cssText = `
+          position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+          background: rgba(0, 0, 0, 0.9); color: #8f8; padding: 12px 24px;
+          border-radius: 4px; z-index: 1000; font-size: 14px; border: 1px solid #484;
+        `;
+        successMsg.textContent = `✓ Score submitted! "${playerName}" added to leaderboard.`;
+        document.body.appendChild(successMsg);
+        setTimeout(() => successMsg.remove(), 3000);
+
+        // Scroll to leaderboard
+        const lbSection = document.getElementById('leaderboard') || document.querySelector('[id*="leaderboard"]');
+        if (lbSection) setTimeout(() => lbSection.scrollIntoView({ behavior: 'smooth' }), 300);
       };
     }
   }
@@ -879,6 +935,8 @@ const Game = (() => {
 
     timer -= dt;
     if (timer <= 0) { timer = 0; endGame(); return; }
+
+    updateBoat(dt);
 
     // Spear flight
     if (SP.state === 'flying') {
@@ -920,7 +978,7 @@ const Game = (() => {
         f.wanderT = 0.9 + Math.random() * 2.5;
       }
       if (boatDist(f.x, f.y) < 1.3) {
-        const av = Math.atan2(f.y - BOAT.cy, f.x - BOAT.cx);
+        const av = Math.atan2(f.y - boatPos.y, f.x - boatPos.x);
         f.vx += Math.cos(av) * 130 * dt; f.vy += Math.sin(av) * 130 * dt;
         const spd = Math.sqrt(f.vx * f.vx + f.vy * f.vy);
         if (spd > f.spd * 1.6) { f.vx = (f.vx / spd) * f.spd * 1.6; f.vy = (f.vy / spd) * f.spd * 1.6; }
@@ -979,11 +1037,16 @@ const Game = (() => {
 
     // Boat + player bob on the swell
     const bob = Math.sin(wt * 0.9) * 0.18;
-    boatGroup.position.y = 0.15 + bob;
+    boatGroup.position.set(vx2w(boatPos.x), 0.15 + bob, vy2w(boatPos.y));
     boatGroup.rotation.z = Math.sin(wt * 0.7) * 0.018;
     boatGroup.rotation.x = Math.sin(wt * 0.55 + 1.2) * 0.014;
     playerGroup.position.set(vx2w(P.x), 1.45 + bob, vy2w(P.y));
-    playerGroup.rotation.y = -P.angle + Math.PI / 2;
+    // Humanoid rig faces local -Z; add PI so it faces the aim direction.
+    playerGroup.rotation.y = -P.angle + Math.PI / 2 + Math.PI;
+
+    // Camera follows the boat, keeping the original framing/angle
+    camera.position.set(vx2w(boatPos.x), CAM_HEIGHT, vy2w(boatPos.y) + CAM_BACK);
+    camera.lookAt(vx2w(boatPos.x), 0, vy2w(boatPos.y));
 
     // Seaweed sway
     for (const w of weedBlades) {
@@ -1043,6 +1106,7 @@ const Game = (() => {
   // ── Game loop ──────────────────────────────────────────
   function loop() {
     const dt = Math.min(clock.getDelta(), 0.1);
+    if (skeletonRuntime) skeletonRuntime.step(dt);
     update(dt);
     syncScene(dt);
     renderer.render(scene, camera);
@@ -1050,8 +1114,8 @@ const Game = (() => {
   }
 
   // ── Init ───────────────────────────────────────────────
-  function init() {
-    buildScene();
+  async function init() {
+    await buildScene();
     setTimeout(syncLocalLeaderboard, 0);
     trackEvent('game_loaded');
     window.addEventListener('beforeunload', () => {
@@ -1064,6 +1128,16 @@ const Game = (() => {
         window.dispatchEvent(new Event('arcade:exit-game'));
       }
     }, { once: false });
+    const BOAT_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+    window.addEventListener('keydown', (e) => {
+      if (!BOAT_KEYS.includes(e.code)) return;
+      keys[e.code] = true;
+      e.preventDefault();
+    });
+    window.addEventListener('keyup', (e) => {
+      if (!BOAT_KEYS.includes(e.code)) return;
+      keys[e.code] = false;
+    });
     const el = renderer.domElement;
     el.addEventListener('mousemove', onMouseMove);
     el.addEventListener('click', onMouseClick);

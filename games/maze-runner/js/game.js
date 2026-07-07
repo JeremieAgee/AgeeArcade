@@ -109,9 +109,11 @@
   let floorMesh   = null;
   let exitMesh    = null;
   let lootGroup   = null;
-  let playerGroup = null;  // humanoid THREE.Group
-  let playerParts = {};    // { head, torso, armL, armR, legL, legR }
-  let playerMats  = [];    // individual material instances (for death color anim)
+  let playerGroup = null;  // humanoid THREE.Group (shared skeleton rig)
+  let humanoid    = null;  // HumanoidData from SkeletonEngine.createHumanoid
+  let playerMats  = [];    // [body, eyes] material instances (for death color anim)
+  let torch = { group: null, flame: null, flameTip: null, flameMat: null, tipMat: null };
+  let skeletonRuntime = null;
 
   let playerLight, exitLight, lavaLight;
 
@@ -128,7 +130,6 @@
   let deathAnim   = null; // { type:'lava'|'fall', timer, duration, origY }
 
   // Walk animation
-  let walkCycle = 0;
   let isMoving  = false;
 
   // Post-respawn immunity (prevents re-triggering trap or exit immediately)
@@ -211,17 +212,6 @@
     });
   }
 
-  function makePlayerMaterials() {
-    // Returns fresh material instances (so death animation can tint them)
-    return {
-      armor:  new THREE.MeshStandardMaterial({ color: 0x2255dd, roughness: 0.35, metalness: 0.75 }),
-      suit:   new THREE.MeshStandardMaterial({ color: 0x112266, roughness: 0.5, metalness: 0.5 }),
-      skin:   new THREE.MeshStandardMaterial({ color: 0xddaa88, roughness: 0.8, metalness: 0.0 }),
-      visor:  new THREE.MeshStandardMaterial({ color: 0x553300, roughness: 0.3, metalness: 0.0 }),
-      boot:   new THREE.MeshStandardMaterial({ color: 0x111122, roughness: 0.6, metalness: 0.6 }),
-    };
-  }
-
   // ─── Renderer & Scene — built by the shared arcade engine ──
   function initRenderer() {
     const g = ArcadeEngine.create3D({
@@ -302,12 +292,17 @@
     damageTrapObjects = [];
     damageCooldown    = 0;
     if (lootGroup)   { scene.remove(lootGroup);   lootGroup   = null; }
-    if (playerGroup) { scene.remove(playerGroup); playerGroup = null; }
+    if (humanoid && skeletonRuntime) {
+      window.SkeletonEngine.cleanupHumanoid(humanoid, skeletonRuntime.skeleton);
+    }
+    if (playerGroup) scene.remove(playerGroup);
+    playerGroup = null;
+    humanoid    = null;
     if (jumpShadow)  { scene.remove(jumpShadow);  jumpShadow  = null; }
     exitLight.intensity = 0;
     lavaLight.intensity = 0;
     deathAnim = null;
-    playerParts = {};
+    torch = { group: null, flame: null, flameTip: null, flameMat: null, tipMat: null };
     playerMats  = [];
   }
 
@@ -766,102 +761,15 @@
 
   // ─── Humanoid player ───────────────────────────────
   function buildPlayer() {
-    const pm = makePlayerMaterials();
-    playerMats = Object.values(pm); // store for death animation
+    const B = window.SkeletonEngine.HumanoidBone;
+    const materials = {
+      body: new THREE.MeshStandardMaterial({ color: 0x2255dd, roughness: 0.45, metalness: 0.6 }),
+      eyes: new THREE.MeshStandardMaterial({ color: 0x111122, roughness: 0.4 }),
+    };
+    playerMats = [materials.body, materials.eyes]; // store for death/damage color anim
 
-    playerGroup = new THREE.Group();
-
-    // Torso (armored chest plate)
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.58, 0.30), pm.armor);
-    torso.position.set(0, 0.82, 0);
-    torso.castShadow = true;
-    playerGroup.add(torso);
-    playerParts.torso = torso;
-
-    // Shoulder pads
-    const padGeo = new THREE.BoxGeometry(0.20, 0.16, 0.24);
-    const padL = new THREE.Mesh(padGeo, pm.armor);
-    padL.position.set(-0.36, 1.04, 0);
-    padL.castShadow = true;
-    playerGroup.add(padL);
-    const padR = new THREE.Mesh(padGeo, pm.armor);
-    padR.position.set(0.36, 1.04, 0);
-    padR.castShadow = true;
-    playerGroup.add(padR);
-
-    // Head
-    const headGeo = new THREE.BoxGeometry(0.36, 0.36, 0.34);
-    const head = new THREE.Mesh(headGeo, pm.armor);
-    head.position.set(0, 1.28, 0);
-    head.castShadow = true;
-    playerGroup.add(head);
-    playerParts.head = head;
-
-    // Visor (face plate — slightly in front)
-    const visorGeo = new THREE.BoxGeometry(0.28, 0.14, 0.06);
-    const visor = new THREE.Mesh(visorGeo, pm.visor);
-    visor.position.set(0, 1.30, 0.20);
-    playerGroup.add(visor);
-
-    // Upper arms
-    const uArmGeo = new THREE.BoxGeometry(0.18, 0.32, 0.18);
-    const armL = new THREE.Mesh(uArmGeo, pm.suit);
-    armL.position.set(-0.38, 0.76, 0);
-    armL.castShadow = true;
-    playerGroup.add(armL);
-    playerParts.armL = armL;
-
-    // Right upper arm — hangs straight down from shoulder
-    const armR = new THREE.Mesh(uArmGeo, pm.suit);
-    armR.position.set(0.38, 0.76, 0);  // center; top=0.92, bottom(elbow)=0.60
-    armR.castShadow = true;
-    playerGroup.add(armR);
-    playerParts.armR = armR;
-
-    // Forearms / gauntlets
-    const fArmGeo = new THREE.BoxGeometry(0.16, 0.26, 0.16);
-    const fArmL = new THREE.Mesh(fArmGeo, pm.armor);
-    fArmL.position.set(-0.38, 0.48, 0);
-    playerGroup.add(fArmL);
-    playerParts.fArmL = fArmL;
-
-    // Right forearm — 90° from upper arm, extends forward in +Z from elbow
-    const fArmR = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.30), pm.armor);
-    fArmR.position.set(0.38, 0.60, 0.15);  // elbow at z=0, hand at z=0.30
-    playerGroup.add(fArmR);
-    playerParts.fArmR = fArmR;
-
-    // Hips / belt
-    const hipGeo = new THREE.BoxGeometry(0.50, 0.16, 0.28);
-    const hips = new THREE.Mesh(hipGeo, pm.suit);
-    hips.position.set(0, 0.50, 0);
-    playerGroup.add(hips);
-
-    // Thighs
-    const thighGeo = new THREE.BoxGeometry(0.20, 0.30, 0.22);
-    const legL = new THREE.Mesh(thighGeo, pm.suit);
-    legL.position.set(-0.15, 0.30, 0);
-    legL.castShadow = true;
-    playerGroup.add(legL);
-    playerParts.legL = legL;
-
-    const legR = new THREE.Mesh(thighGeo, pm.suit);
-    legR.position.set(0.15, 0.30, 0);
-    legR.castShadow = true;
-    playerGroup.add(legR);
-    playerParts.legR = legR;
-
-    // Shins / boots
-    const shinGeo = new THREE.BoxGeometry(0.18, 0.26, 0.20);
-    const shinL = new THREE.Mesh(shinGeo, pm.boot);
-    shinL.position.set(-0.15, 0.08, 0);
-    playerGroup.add(shinL);
-    playerParts.shinL = shinL;
-
-    const shinR = new THREE.Mesh(shinGeo, pm.boot);
-    shinR.position.set(0.15, 0.08, 0);
-    playerGroup.add(shinR);
-    playerParts.shinR = shinR;
+    humanoid = window.SkeletonEngine.createHumanoid(skeletonRuntime.skeleton, materials);
+    playerGroup = humanoid.group;
 
     // ── Torch (held in right hand) ──────────────────
     const torchGroup = new THREE.Group();
@@ -890,15 +798,11 @@
     tip.position.y = 0.58;
     torchGroup.add(tip);
 
-    // Torch at hand — end of forearm, pointing straight up (90° from forearm)
-    torchGroup.position.set(0.38, 0.60, 0.32);
-    torchGroup.rotation.set(0, 0, 0);  // fully upright
-    playerGroup.add(torchGroup);
-    playerParts.torchGroup = torchGroup;
-    playerParts.flame      = flame;
-    playerParts.flameTip   = tip;
-    playerParts.flameMat   = flameMat;
-    playerParts.tipMat     = tipMat;
+    // Torch held in the right hand — attached to the lower-right-arm pivot
+    torchGroup.position.set(0, -0.32, 0.03);
+    torchGroup.rotation.set(0, 0, 0); // fully upright
+    humanoid.pivots[B.LOWER_ARM_R].pivot.add(torchGroup);
+    torch = { group: torchGroup, flame, flameTip: tip, flameMat, tipMat };
 
     scene.add(playerGroup);
 
@@ -928,7 +832,8 @@
 
     if (playerGroup) {
       playerGroup.position.set(px, 0, pz);
-      playerGroup.rotation.y = 0;
+      // Humanoid rig faces local -Z; add PI so it faces the default direction.
+      playerGroup.rotation.y = Math.PI;
       playerGroup.scale.set(1, 1, 1);
       resetPlayerAppearance();
     }
@@ -950,19 +855,18 @@
     playerGroup.scale.set(1, 1, 1);
     playerGroup.position.y = 0;
 
-    // Rebuild fresh materials to clear any death tinting
-    const pm = makePlayerMaterials();
-    playerMats = Object.values(pm);
-    playerParts.torso  && (playerParts.torso.material  = pm.armor);
-    playerParts.head   && (playerParts.head.material   = pm.armor);
-    playerParts.armL   && (playerParts.armL.material   = pm.suit);
-    playerParts.armR   && (playerParts.armR.material   = pm.suit);
-    playerParts.fArmL  && (playerParts.fArmL.material  = pm.armor);
-    playerParts.fArmR  && (playerParts.fArmR.material  = pm.armor);
-    playerParts.legL   && (playerParts.legL.material   = pm.suit);
-    playerParts.legR   && (playerParts.legR.material   = pm.suit);
-    playerParts.shinL  && (playerParts.shinL.material  = pm.boot);
-    playerParts.shinR  && (playerParts.shinR.material  = pm.boot);
+    // Clear any death/damage tinting on the shared body/eye materials
+    const [body, eyes] = playerMats;
+    if (body) {
+      body.color.setHex(0x2255dd);
+      body.emissive.setRGB(0, 0, 0);
+      body.emissiveIntensity = 0;
+    }
+    if (eyes) {
+      eyes.color.setHex(0x111122);
+      eyes.emissive.setRGB(0, 0, 0);
+      eyes.emissiveIntensity = 0;
+    }
   }
 
   // ─── Collision ─────────────────────────────────────
@@ -1043,7 +947,8 @@
 
     if (playerGroup) {
       playerGroup.position.set(px, playerY, pz);
-      if (isMoving) playerGroup.rotation.y = Math.atan2(dx, dz);
+      // Humanoid rig faces local -Z; add PI so it faces the movement direction.
+      if (isMoving) playerGroup.rotation.y = Math.atan2(dx, dz) + Math.PI;
     }
 
     // Jump shadow: visible + scales down the higher the player is
@@ -1060,7 +965,8 @@
     }
 
     // Torch light follows the torch world position
-    const pa = playerGroup ? playerGroup.rotation.y : 0;
+    // (rig rotation.y is offset by PI from the facing angle — see movePlayer)
+    const pa = (playerGroup ? playerGroup.rotation.y : 0) - Math.PI;
     if (window.SFX) SFX.setFootsteps(false);
 
     playerLight.position.set(
@@ -1069,24 +975,8 @@
       pz + Math.sin(pa) * 0.50 * 0.9
     );
 
-    // Walk cycle leg/arm swing
-    if (isMoving) {
-      walkCycle += dt * 8.0;
-      const swing = Math.sin(walkCycle) * 0.45;
-      if (playerParts.legL)  playerParts.legL.rotation.x  =  swing;
-      if (playerParts.legR)  playerParts.legR.rotation.x  = -swing;
-      if (playerParts.shinL) playerParts.shinL.rotation.x =  Math.max(0, swing) * 0.8;
-      if (playerParts.shinR) playerParts.shinR.rotation.x =  Math.max(0, -swing) * 0.8;
-      if (playerParts.armL)  playerParts.armL.rotation.x  = -swing * 0.6;
-      if (playerParts.armR)  playerParts.armR.rotation.x  =  swing * 0.6;
-      if (playerParts.fArmL) playerParts.fArmL.rotation.x = -swing * 0.4;
-      if (playerParts.fArmR) playerParts.fArmR.rotation.x =  swing * 0.4;
-    } else {
-      walkCycle = 0;
-      ['legL','legR','shinL','shinR','armL','armR','fArmL','fArmR'].forEach(k => {
-        if (playerParts[k]) playerParts[k].rotation.x = 0;
-      });
-    }
+    // Walk cycle leg/arm swing (shared humanoid rig)
+    if (humanoid) window.SkeletonEngine.animateHumanoidWalk(humanoid, dt, isMoving);
 
     // Minimap
     const { gc, gr } = gridOf(px, pz);
@@ -1470,11 +1360,35 @@
         floors:     gd.floor,
         score:      gd.score,
         time_ms:    Math.floor((gd.totalTime + gd.floorTime) * 1000),
-        lives_left: gd.lives,
-        hp_left:    gd.hp,
       });
+
+      // Show success message
+      const successMsg = document.createElement('div');
+      successMsg.style.cssText = `
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.9); color: #8f8; padding: 12px 24px;
+        border-radius: 4px; z-index: 1000; font-size: 14px; border: 1px solid #484;
+      `;
+      successMsg.textContent = `✓ Score submitted! "${playerName}" added to leaderboard.`;
+      document.body.appendChild(successMsg);
+      setTimeout(() => successMsg.remove(), 3000);
+
+      // Load and focus leaderboard
+      await loadLeaderboard();
+      const lbSection = document.getElementById('leaderboard');
+      if (lbSection) setTimeout(() => lbSection.scrollIntoView({ behavior: 'smooth' }), 300);
+
     } catch (e) {
       console.warn('[MazeRunner] Score submit failed:', e.message);
+      const errorMsg = document.createElement('div');
+      errorMsg.style.cssText = `
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.9); color: #f88; padding: 12px 24px;
+        border-radius: 4px; z-index: 1000; font-size: 14px; border: 1px solid #844;
+      `;
+      errorMsg.textContent = `✗ Score submission failed. Please try again.`;
+      document.body.appendChild(errorMsg);
+      setTimeout(() => errorMsg.remove(), 3000);
     }
   }
 
@@ -1841,24 +1755,25 @@
       playerGroup.position.y = playerY + 0.03 * Math.sin(t * 1.8);
     }
     // Airborne: tuck legs up slightly
-    if (playerGroup && !isGrounded) {
-      if (playerParts.legL)  playerParts.legL.rotation.x  = -0.5;
-      if (playerParts.legR)  playerParts.legR.rotation.x  = -0.5;
-      if (playerParts.shinL) playerParts.shinL.rotation.x =  0.8;
-      if (playerParts.shinR) playerParts.shinR.rotation.x =  0.8;
+    if (humanoid && !isGrounded) {
+      const B = window.SkeletonEngine.HumanoidBone;
+      humanoid.pivots[B.UPPER_LEG_L].pivot.rotation.x = -0.5;
+      humanoid.pivots[B.UPPER_LEG_R].pivot.rotation.x = -0.5;
+      humanoid.pivots[B.LOWER_LEG_L].pivot.rotation.x =  0.8;
+      humanoid.pivots[B.LOWER_LEG_R].pivot.rotation.x =  0.8;
     }
 
-    // Torch light always flickers — not gated on playerParts so it works from frame 1
+    // Torch light always flickers — not gated on the torch mesh so it works from frame 1
     playerLight.intensity = 3.5 + 0.7 * Math.sin(t * 11.5) + 0.4 * Math.sin(t * 6.9);
 
     // Flame mesh animation — only when the player torch exists
-    if (playerParts.flame && playerParts.flameMat) {
+    if (torch.flame && torch.flameMat) {
       const flicker  = 0.85 + 0.18 * Math.sin(t * 14.3) + 0.10 * Math.sin(t * 9.1) + 0.07 * Math.sin(t * 23.7);
-      playerParts.flame.scale.setScalar(flicker);
-      playerParts.flame.position.y   = 0.48 + 0.04 * Math.sin(t * 11.0);
-      playerParts.flameMat.emissiveIntensity = 3.5 + 2.0 * Math.sin(t * 12.0) + 1.0 * Math.sin(t * 7.3);
-      if (playerParts.tipMat) {
-        playerParts.tipMat.emissiveIntensity = 4.0 + 2.5 * Math.sin(t * 15.0);
+      torch.flame.scale.setScalar(flicker);
+      torch.flame.position.y   = 0.48 + 0.04 * Math.sin(t * 11.0);
+      torch.flameMat.emissiveIntensity = 3.5 + 2.0 * Math.sin(t * 12.0) + 1.0 * Math.sin(t * 7.3);
+      if (torch.tipMat) {
+        torch.tipMat.emissiveIntensity = 4.0 + 2.5 * Math.sin(t * 15.0);
       }
     }
   }
@@ -1867,6 +1782,8 @@
   function loop() {
     requestAnimationFrame(loop);
     const dt = Math.min(clock.getDelta(), 0.05);
+
+    if (skeletonRuntime) skeletonRuntime.step(dt);
 
     if (respawnImmunity > 0) respawnImmunity -= dt;
     if (damageCooldown  > 0) damageCooldown  -= dt;
@@ -2004,8 +1921,9 @@
   }
 
   // ─── Bootstrap ─────────────────────────────────────
-  function init() {
+  async function init() {
     initRenderer();
+    skeletonRuntime = await window.SkeletonEngine.create();
     buildMaterials();
     initInput();
     trackEvent('game_loaded');

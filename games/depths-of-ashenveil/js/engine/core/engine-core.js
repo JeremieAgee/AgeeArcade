@@ -7,7 +7,7 @@ window.EngineCore = (() => {
 
   /* ── Internal state ──────────────────────────── */
   let renderer, scene, camera;
-  let playerMesh, torchLight, ambientLight, hemiLight;
+  let playerMesh, playerHumanoid, playerSkeleton, torchLight, ambientLight, hemiLight;
   let _ambientColor = { r: 0.29, g: 0.22, b: 0.16 }; // Default dungeon color
   let _blobMat = null;
   let enemyMeshes   = {};
@@ -1516,109 +1516,42 @@ function updateChests(dt) {
 
   /* ── Player mesh ─────────────────────────────── */
   function buildPlayerMesh(player) {
+    if (!playerSkeleton) playerSkeleton = window.SkeletonEngine.createSkeletonOnly();
+    if (playerHumanoid) window.SkeletonEngine.cleanupHumanoid(playerHumanoid, playerSkeleton);
     if (playerMesh) scene.remove(playerMesh);
 
-    const group   = new THREE.Group();
-    const skinMat = new THREE.MeshLambertMaterial({ color: 0xd4a060 });
-    const bootMat = new THREE.MeshStandardMaterial({ color: 0x1a0e06, roughness: 0.9 });
-    const legMat  = new THREE.MeshLambertMaterial({ color: 0x2a1a0a });
+    const B = window.SkeletonEngine.HumanoidBone;
 
-    // Thighs + shins + boots — in pivot groups so they swing when walking
-    ['left', 'right'].forEach((side, i) => {
-      const lx = i === 0 ? -0.13 : 0.13;
-      const legPivot = new THREE.Group();
-      legPivot.position.set(lx, 0.76, 0); // hip pivot
-      legPivot.userData.isLeg = side;
-
-      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.38, 7), legMat);
-      thigh.position.set(0, -0.19, 0); legPivot.add(thigh);
-
-      const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.095, 0.34, 7), legMat);
-      shin.position.set(0, -0.54, 0); legPivot.add(shin);
-
-      const boot = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.16, 0.28), bootMat);
-      boot.position.set(0, -0.68, 0.04); legPivot.add(boot);
-
-      group.add(legPivot);
-    });
-
-    // Belt
-    const beltMat = new THREE.MeshStandardMaterial({ color: 0x3a2208, roughness: 0.7, metalness: 0.3 });
-    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.1, 10), beltMat);
-    belt.position.y = 0.77; group.add(belt);
-    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.05), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.2 }));
-    buckle.position.set(0, 0.77, 0.31); group.add(buckle);
-
-    // Torso
     const armor    = player && player.inventory
       ? player.inventory.find(i => i.type === 'armor' && i.equipped) : null;
     const armorCol = rarityArmorColor(armor ? armor.rarity : 'common');
     const armorMat = new THREE.MeshStandardMaterial({ color: armorCol, metalness: 0.7, roughness: 0.35 });
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 0.9, 10), armorMat);
-    body.position.y = 1.07; body.castShadow = true; body.receiveShadow = true; group.add(body);
+    const eyesMat  = new THREE.MeshStandardMaterial({ color: 0x1a1008, roughness: 0.4 });
 
-    // Chest plate ridge
-    const chest = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.38, 0.06), armorMat);
-    chest.position.set(0, 1.1, 0.26); group.add(chest);
+    playerHumanoid = window.SkeletonEngine.createHumanoid(playerSkeleton, { body: armorMat, eyes: eyesMat });
+    const group = playerHumanoid.group;
 
-    // Pauldrons
-    [-0.34, 0.34].forEach(px => {
-      const pauMesh = new THREE.Mesh(new THREE.SphereGeometry(0.145, 7, 5), armorMat);
-      pauMesh.position.set(px, 1.26, 0); pauMesh.scale.set(1.1, 0.72, 0.95); group.add(pauMesh);
-    });
-
-    // Cape
-    const capeMat = new THREE.MeshLambertMaterial({ color: 0x2a1800, side: THREE.DoubleSide });
-    const cape    = new THREE.Mesh(new THREE.PlaneGeometry(0.52, 0.86), capeMat);
-    cape.position.set(0, 1.02, -0.29); group.add(cape);
-
-    // Head
-    const helmCol = armorCol;
-    const helmMat = new THREE.MeshStandardMaterial({ color: helmCol, metalness: 0.78, roughness: 0.25 });
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 10, 8), skinMat);
-    head.position.y = 1.68; group.add(head);
-    // Helmet bowl + brim + nasal guard
-    const helmBowl = new THREE.Mesh(new THREE.SphereGeometry(0.27, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), helmMat);
-    helmBowl.position.y = 1.72; group.add(helmBowl);
-    const helmBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.05, 10), helmMat);
-    helmBrim.position.y = 1.62; group.add(helmBrim);
-    const nasal = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.14, 0.06), helmMat);
-    nasal.position.set(0, 1.64, 0.27); group.add(nasal);
-
-    // Right arm + torch — pivot group at shoulder so arm swings when walking
-    const torchArmGroup = new THREE.Group();
-    torchArmGroup.position.set(0.38, 1.30, 0);
-    torchArmGroup.userData.isTorchArm = true;
-
-    const rUpperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.07, 0.3, 7), armorMat);
-    rUpperArm.position.set(0, -0.12, 0); rUpperArm.rotation.z = 0.2; torchArmGroup.add(rUpperArm);
-    const rForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.3, 7), skinMat);
-    rForearm.position.set(0.06, -0.34, 0); rForearm.rotation.z = 0.15; torchArmGroup.add(rForearm);
-
-    group.add(torchArmGroup);
+    // Right arm — carried-torch hand position is read off this shoulder pivot
+    const torchArm = playerHumanoid.pivots[B.UPPER_ARM_R].pivot;
 
     // Left weapon arm — shoulder pivot for swing animation
-    const weaponArmGroup = new THREE.Group();
-    weaponArmGroup.position.set(-0.38, 1.38, 0);
-    weaponArmGroup.rotation.z = -0.15;
-    weaponArmGroup.userData.isWeaponArm = true;
-    weaponArmGroup.userData.swinging    = false;
-    weaponArmGroup.userData.swingT      = 0;
-    const wUpperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.07, 0.3, 7), armorMat);
-    wUpperArm.position.set(0, -0.15, 0); weaponArmGroup.add(wUpperArm);
-    const wForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.3, 7), skinMat);
-    wForearm.position.set(0, -0.42, 0); weaponArmGroup.add(wForearm);
+    const weaponArm = playerHumanoid.pivots[B.UPPER_ARM_L].pivot;
+    weaponArm.rotation.z      = -0.15;
+    weaponArm.userData.isWeaponArm = true;
+    weaponArm.userData.swinging    = false;
+    weaponArm.userData.swingT      = 0;
     const wg = new THREE.Group(); wg.userData.isWeaponGroup = true;
     wg.position.set(0, -0.58, 0);
-    wg.rotation.x = -Math.PI / 2;
+    // Positive tilt (not negative) points the blade along local -Z, matching
+    // the player's front — the negated tilt pointed it out the character's back.
+    wg.rotation.x = Math.PI / 2;
     buildWeaponMesh(wg, player);
-    weaponArmGroup.add(wg);
-    group.add(weaponArmGroup);
+    weaponArm.add(wg);
 
     group.userData.armorMat  = armorMat;
-    group.userData.helmMat   = helmMat;
-    group.userData.torchArm  = torchArmGroup;
-    group.userData.weaponArm = weaponArmGroup;
+    group.userData.helmMat   = armorMat;
+    group.userData.torchArm  = torchArm;
+    group.userData.weaponArm = weaponArm;
 
     playerMesh = group;
     playerMesh.traverse(child => {
@@ -2409,43 +2342,43 @@ function updateChests(dt) {
     const fireGlowM = new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0xff4400, emissiveIntensity: 3.0, transparent: true, opacity: .65 });
 
     function drk(geo, mat, px, py, pz, rx, ry, rz, def) {
-      if (def) organicDeform(geo, def);
+      if (def) distortGeometry(geo, def);
       const m=new THREE.Mesh(geo, mat||scaleM); m.position.set(px||0,py||0,pz||0);
       if (rx||ry||rz) m.rotation.set(rx||0,ry||0,rz||0); m.castShadow=true; group.add(m); return m;
     }
 
     // 5-segment body (rear-wide tapering to shoulders)
     [[r*.92,r*.80,h*.20,0,h*.22,r*.04],[r*.80,r*.72,h*.19,0,h*.36,r*.02],[r*.70,r*.64,h*.18,0,h*.48,0],[r*.56,r*.50,h*.16,0,h*.58,-r*.02],[r*.42,r*.38,h*.14,0,h*.66,-r*.06]].forEach(([rb,rt,ht,px,py,pz]) => {
-      const g=new THREE.CylinderGeometry(rt,rb,ht,10,3); organicDeform(g,.04); const m=new THREE.Mesh(g,scaleM); m.position.set(px,py,pz); m.castShadow=true; group.add(m);
+      const g=new THREE.CylinderGeometry(rt,rb,ht,10,3); distortGeometry(g,.04); const m=new THREE.Mesh(g,scaleM); m.position.set(px,py,pz); m.castShadow=true; group.add(m);
     });
     // Belly plate strips
-    for (let i=0;i<4;i++) { const bg=new THREE.BoxGeometry(r*.58,h*.05,r*.42); organicDeform(bg,.02); const bm=new THREE.Mesh(bg,bellyM); bm.position.set(0,h*(.22+i*.10),r*.36); bm.rotation.x=-.2; group.add(bm); }
+    for (let i=0;i<4;i++) { const bg=new THREE.BoxGeometry(r*.58,h*.05,r*.42); distortGeometry(bg,.02); const bm=new THREE.Mesh(bg,bellyM); bm.position.set(0,h*(.22+i*.10),r*.36); bm.rotation.x=-.2; group.add(bm); }
     // Dorsal spine ridge
-    for (let i=0;i<7;i++) { const sg=new THREE.ConeGeometry(.048-i*.004,h*(.13-i*.01),5); organicDeform(sg,.018); const sm=new THREE.Mesh(sg,darkM); sm.position.set(0,h*(.34+i*.06),-r*.66); sm.rotation.x=.50+i*.03; group.add(sm); }
+    for (let i=0;i<7;i++) { const sg=new THREE.ConeGeometry(.048-i*.004,h*(.13-i*.01),5); distortGeometry(sg,.018); const sm=new THREE.Mesh(sg,darkM); sm.position.set(0,h*(.34+i*.06),-r*.66); sm.rotation.x=.50+i*.03; group.add(sm); }
 
     // 4-section tapering tail
     [[r*.55,r*.62,h*.16],[r*.36,r*.55,h*.14],[r*.20,r*.36,h*.14],[r*.08,r*.20,h*.15]].forEach(([rt,rb,ht],i) => {
-      const tg=new THREE.CylinderGeometry(rt,rb,ht,8,2); organicDeform(tg,.045);
+      const tg=new THREE.CylinderGeometry(rt,rb,ht,8,2); distortGeometry(tg,.045);
       const tm=new THREE.Mesh(tg,scaleM); tm.position.set(0,h*(.09-i*.02),-r*(.55+i*.55)); tm.rotation.x=.3+i*.15; tm.castShadow=true; group.add(tm);
     });
     drk(new THREE.ConeGeometry(.06,h*.14,5), darkM, 0,-h*.04,-r*2.48, .90,0,0, .02);
 
     // 3-segment neck
     [[r*.44,h*.18,-r*.08],[r*.36,h*.16,-r*.12],[r*.28,h*.14,-r*.08]].forEach(([rad,ht,zOff],i) => {
-      const ng=new THREE.CylinderGeometry(rad*.82,rad,ht,8,2); organicDeform(ng,.04);
+      const ng=new THREE.CylinderGeometry(rad*.82,rad,ht,8,2); distortGeometry(ng,.04);
       const nm=new THREE.Mesh(ng,scaleM); nm.position.set(0,h*(.72+i*.14),zOff+i*r*.30); nm.rotation.x=-.35-i*.12; nm.castShadow=true; group.add(nm);
     });
 
     // Head + snout + lower jaw + eye ridges + eyes + nostrils + teeth + horns
-    const headG=new THREE.SphereGeometry(r*.44,10,8); organicDeform(headG,.04);
+    const headG=new THREE.SphereGeometry(r*.44,10,8); distortGeometry(headG,.04);
     const head=new THREE.Mesh(headG,scaleM); head.position.set(0,h*.86,r*.54); head.scale.set(1.08,.82,1.28); head.castShadow=true; group.add(head);
     drk(new THREE.CylinderGeometry(r*.18,r*.26,h*.26,7,2), scaleM, 0,h*.78,r*.86, Math.PI/2,0,0, .032);
     drk(new THREE.CylinderGeometry(r*.16,r*.24,h*.22,7,2), bellyM, 0,h*.71,r*.86, Math.PI/2,0,0, .028);
-    [-1,1].forEach(s => { const erg=new THREE.BoxGeometry(.14,r*.06,.10); organicDeform(erg,.02); const erm=new THREE.Mesh(erg,darkM); erm.position.set(s*r*.24,h*.90,r*.46); erm.rotation.z=s*.25; group.add(erm); });
+    [-1,1].forEach(s => { const erg=new THREE.BoxGeometry(.14,r*.06,.10); distortGeometry(erg,.02); const erm=new THREE.Mesh(erg,darkM); erm.position.set(s*r*.24,h*.90,r*.46); erm.rotation.z=s*.25; group.add(erm); });
     [-1,1].forEach(s => { const eg=new THREE.SphereGeometry(.092,7,6); const em=new THREE.Mesh(eg,eyeM); em.position.set(s*r*.24,h*.88,r*.46); group.add(em); });
     [-1,1].forEach(s => { const ng=new THREE.SphereGeometry(.04,5,4); const nm=new THREE.Mesh(ng,darkM); nm.position.set(s*.10,h*.82,r*1.04); group.add(nm); });
     for (let i=0;i<5;i++) { const tg=new THREE.ConeGeometry(.032,.09,4); const tm=new THREE.Mesh(tg,new THREE.MeshLambertMaterial({color:0xeeddbb})); tm.position.set((i-2)*.13,h*.70,r*.84); tm.rotation.x=Math.PI; group.add(tm); }
-    [-1,1].forEach(s => { const hrG=new THREE.ConeGeometry(.045,h*.18,5); organicDeform(hrG,.02); const hrM=new THREE.Mesh(hrG,hornM); hrM.position.set(s*r*.30,h*.96,r*.30); hrM.rotation.set(-.20,0,s*.30); group.add(hrM); });
+    [-1,1].forEach(s => { const hrG=new THREE.ConeGeometry(.045,h*.18,5); distortGeometry(hrG,.02); const hrM=new THREE.Mesh(hrG,hornM); hrM.position.set(s*r*.30,h*.96,r*.30); hrM.rotation.set(-.20,0,s*.30); group.add(hrM); });
 
     // Wings — bone struts + 2 membrane panels per side
     [-1,1].forEach(s => {
@@ -2455,16 +2388,16 @@ function updateChests(dt) {
 
     // Legs + foot + talons
     [-1,1].forEach(s => {
-      const lgG=new THREE.CylinderGeometry(r*.22,r*.26,h*.25,7); organicDeform(lgG,.04); const lg=new THREE.Mesh(lgG,scaleM); lg.position.set(s*r*.75,h*.12,r*.10); lg.rotation.z=s*.25; lg.castShadow=true; group.add(lg);
-      const ftG=new THREE.SphereGeometry(r*.22,7,6); organicDeform(ftG,.05); const ft=new THREE.Mesh(ftG,darkM); ft.position.set(s*r*.88,h*.02,r*.22); ft.scale.set(1,.65,1.2); group.add(ft);
-      for (let c=0;c<3;c++) { const cg=new THREE.ConeGeometry(.04,h*.08,4); organicDeform(cg,.01); const cm=new THREE.Mesh(cg,hornM); cm.position.set(s*(r*.82+(c-1)*.12),0,r*(.35+c*.06)); cm.rotation.x=.5; group.add(cm); }
+      const lgG=new THREE.CylinderGeometry(r*.22,r*.26,h*.25,7); distortGeometry(lgG,.04); const lg=new THREE.Mesh(lgG,scaleM); lg.position.set(s*r*.75,h*.12,r*.10); lg.rotation.z=s*.25; lg.castShadow=true; group.add(lg);
+      const ftG=new THREE.SphereGeometry(r*.22,7,6); distortGeometry(ftG,.05); const ft=new THREE.Mesh(ftG,darkM); ft.position.set(s*r*.88,h*.02,r*.22); ft.scale.set(1,.65,1.2); group.add(ft);
+      for (let c=0;c<3;c++) { const cg=new THREE.ConeGeometry(.04,h*.08,4); distortGeometry(cg,.01); const cm=new THREE.Mesh(cg,hornM); cm.position.set(s*(r*.82+(c-1)*.12),0,r*(.35+c*.06)); cm.rotation.x=.5; group.add(cm); }
     });
 
     // Right attackArm + claws
     const arm=new THREE.Group(); arm.position.set(r*.88,h*.56,0); group.userData.attackArm=arm;
-    const ra1G=new THREE.CylinderGeometry(r*.18,r*.22,h*.24,7,2); organicDeform(ra1G,.04); const ra1=new THREE.Mesh(ra1G,scaleM); ra1.position.y=-h*.13; arm.add(ra1);
-    const ra2G=new THREE.CylinderGeometry(r*.12,r*.18,h*.20,6,2); organicDeform(ra2G,.04); const ra2=new THREE.Mesh(ra2G,scaleM); ra2.position.y=-h*.35; arm.add(ra2);
-    for (let c=0;c<3;c++) { const cg=new THREE.ConeGeometry(.04,h*.09,4); organicDeform(cg,.01); const cm=new THREE.Mesh(cg,hornM); cm.position.set((c-1)*.12,-h*.48,.08); cm.rotation.x=.5; arm.add(cm); }
+    const ra1G=new THREE.CylinderGeometry(r*.18,r*.22,h*.24,7,2); distortGeometry(ra1G,.04); const ra1=new THREE.Mesh(ra1G,scaleM); ra1.position.y=-h*.13; arm.add(ra1);
+    const ra2G=new THREE.CylinderGeometry(r*.12,r*.18,h*.20,6,2); distortGeometry(ra2G,.04); const ra2=new THREE.Mesh(ra2G,scaleM); ra2.position.y=-h*.35; arm.add(ra2);
+    for (let c=0;c<3;c++) { const cg=new THREE.ConeGeometry(.04,h*.09,4); distortGeometry(cg,.01); const cm=new THREE.Mesh(cg,hornM); cm.position.set((c-1)*.12,-h*.48,.08); cm.rotation.x=.5; arm.add(cm); }
     // Fire breath glow at mouth
     const fg=new THREE.Mesh(new THREE.SphereGeometry(r*.14,6,5),fireGlowM); fg.position.set(0,h*.75,r*1.04); group.add(fg);
     group.add(arm);
@@ -3363,16 +3296,19 @@ function updateTorchInteractionAnimations(dt) {
       const dy = player._descentY || 0;
       playerMesh.visible = dy < 1.2; // hide while inside arrival portal (y≈3.5), emerge below it
       playerMesh.position.set(player.x, dy, player.z);
-      playerMesh.rotation.y = -aimAngle + Math.PI / 2;
+      // Humanoid rig faces local -Z; add PI so it faces the aim direction.
+      playerMesh.rotation.y = -aimAngle + Math.PI / 2 + Math.PI;
 
       // ── Walking leg & arm animation ───────────────
       if (player._moving) player._walkT = (player._walkT || 0) + (dt || 0.016) * 7.5;
       const walkSwing = player._moving ? Math.sin(player._walkT) * 0.48 : 0;
-      playerMesh.children.forEach(c => {
-        if (!c.userData.isLeg) return;
-        const target = c.userData.isLeg === 'left' ? walkSwing : -walkSwing;
-        c.rotation.x += (target - c.rotation.x) * 0.25;
-      });
+      if (playerHumanoid) {
+        const B = window.SkeletonEngine.HumanoidBone;
+        const legL = playerHumanoid.pivots[B.UPPER_LEG_L].pivot;
+        const legR = playerHumanoid.pivots[B.UPPER_LEG_R].pivot;
+        legL.rotation.x += (walkSwing - legL.rotation.x) * 0.25;
+        legR.rotation.x += (-walkSwing - legR.rotation.x) * 0.25;
+      }
       const torchArmMesh  = playerMesh.userData.torchArm;
       const weaponArmMesh = playerMesh.userData.weaponArm;
       const chestReach = chestOpenAmount();

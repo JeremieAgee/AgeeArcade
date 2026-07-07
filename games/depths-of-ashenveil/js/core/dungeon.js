@@ -346,9 +346,19 @@ const Dungeon = (() => {
 
     const cols       = Math.min(70, 18 + floor * 2);
     const rows       = cols;
-    const BOSS_MIN_W = 9, BOSS_MIN_H = 9;
-    const MIN_W = 4, MAX_W = 12;
-    const MIN_H = 4, MAX_H = 10;
+    const BOSS_MIN_W = Math.min(9, 6 + Math.floor((cols - 20) / 10));
+    const BOSS_MIN_H = Math.min(9, 6 + Math.floor((cols - 20) / 10));
+    // Regular room sizes below were tuned for a 40x40 grid (reached at floor 11).
+    // Scale them down on smaller early floors so rooms + boss room + corridor
+    // padding actually fit the 500-attempt placement budget instead of crowding
+    // and overlapping on tiny grids like floor 1's 20x20. Floors >= 40 cols are
+    // unaffected (ROOM_SCALE caps at 1).
+    const ROOM_SCALE = Math.min(1, cols / 40);
+    const MIN_W = Math.max(3, Math.round(4 * ROOM_SCALE));
+    const MAX_W = Math.max(MIN_W + 2, Math.round(12 * ROOM_SCALE));
+    const MIN_H = Math.max(3, Math.round(4 * ROOM_SCALE));
+    const MAX_H = Math.max(MIN_H + 2, Math.round(10 * ROOM_SCALE));
+    const TARGET = Math.max(6, Math.floor(cols / 5));
 
     const g     = makeGrid(cols, rows);
     const rooms = [];
@@ -419,11 +429,15 @@ const Dungeon = (() => {
       }
     }
     if (rooms.length < 3) {
+      // Sized/positioned relative to cols/rows (not hardcoded) so this never
+      // lands out of bounds on small grids like floor 1's 20x20.
+      const fw = Math.max(MIN_W, Math.min(7, MAX_W, cols - 6));
+      const fh = Math.max(MIN_H, Math.min(7, MAX_H, rows - 8));
       for (const r of [
-        { x: 15, y: 5,  w: 7, h: 7, isConnected: false },
-        { x: 28, y: 2,  w: 9, h: 9, isConnected: false },
+        { x: 2, y: Math.floor(rows / 2), w: fw, h: fh, isConnected: false },
+        { x: Math.max(2, cols - fw - 3), y: 2, w: fw, h: fh, isConnected: false },
       ]) {
-        if (!overlapsAny(r, 2, bossRoom)) { carveRect(g, r.x, r.y, r.w, r.h); rooms.push(r); }
+        if (inBounds(r) && !overlapsAny(r, 2, bossRoom)) { carveRect(g, r.x, r.y, r.w, r.h); rooms.push(r); }
       }
     }
 

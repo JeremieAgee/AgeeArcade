@@ -310,6 +310,21 @@ const UI = (() => {
     }
 
     hideLeaderboardPrompt();
+
+    // Show success message
+    const successMsg = document.createElement('div');
+    successMsg.style.cssText = `
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.9); color: #8f8; padding: 12px 24px;
+      border-radius: 4px; z-index: 1000; font-size: 14px; border: 1px solid #484;
+    `;
+    successMsg.textContent = `✓ Score submitted! "${input.value}" added to leaderboard.`;
+    document.body.appendChild(successMsg);
+    setTimeout(() => successMsg.remove(), 3000);
+
+    // Scroll to leaderboard
+    const lbSection = document.querySelector('[id*="leaderboard"]');
+    if (lbSection) setTimeout(() => lbSection.scrollIntoView({ behavior: 'smooth' }), 300);
   }
 
   function hideTitleAndDeath() {
