@@ -35,7 +35,7 @@ window.ArcadeAds = (() => {
     },
     {
       placementKey: 'arcade_wall_left_02',
-      pos:          [-14.7, 3.8, -6],
+      pos:          [-14.7, 3.8, 8],
       rotY:         Math.PI / 2,
       normal:       [1, 0, 0],
       frameW: 3.2, frameH: 2.2,

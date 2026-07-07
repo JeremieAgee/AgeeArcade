@@ -16,7 +16,7 @@
     frame-src   'none';
     object-src  'none';
   ">
-  <title>Analytics â€” Agee Arcade Admin</title>
+  <title>Analytics - Agee Arcade Admin</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -38,12 +38,13 @@
       --red:       #cc2244;
     }
 
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 16px; }
     body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
     a { color: var(--accent); text-decoration: none; }
 
-    /* â”€â”€ Auth gate â”€â”€ */
+    /* == Auth gate == */
     #authGate { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; }
     .auth-box {
       background: var(--surface); border: 1px solid var(--border-2);
@@ -66,10 +67,10 @@
     .auth-btn:hover { background: #8a5aff; }
     #authError { color: var(--red); font-size: 13px; margin-top: 0.75rem; display: none; }
 
-    /* â”€â”€ Dashboard â”€â”€ */
+    /* == Dashboard == */
     #dashboard { display: none; }
 
-    /* â”€â”€ Header â”€â”€ */
+    /* == Header == */
     .dash-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 2rem; height: 60px;
@@ -96,13 +97,13 @@
     }
     .sign-out-btn:hover { color: var(--red); border-color: var(--red); }
 
-    /* â”€â”€ Loading bar â”€â”€ */
+    /* == Loading bar == */
     #loadingBar {
       height: 3px; background: var(--accent); width: 0%;
       transition: width 0.3s; position: fixed; top: 60px; left: 0; right: 0; z-index: 100;
     }
 
-    /* â”€â”€ View label â”€â”€ */
+    /* == View label == */
     .view-label {
       font-family: 'Orbitron', sans-serif; font-size: 10px; letter-spacing: 2px;
       color: var(--muted); text-transform: uppercase;
@@ -110,10 +111,10 @@
       border-bottom: 1px solid var(--border);
     }
 
-    /* â”€â”€ Body â”€â”€ */
+    /* == Body == */
     .dash-body { padding: 2rem; max-width: 1400px; margin: 0 auto; }
 
-    /* â”€â”€ Stat cards â”€â”€ */
+    /* == Stat cards == */
     .stat-row {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 1rem; margin-bottom: 2rem;
@@ -129,14 +130,14 @@
     .c-orange { color: var(--accent3); } .c-blue   { color: var(--accent4); }
     .c-red    { color: var(--red); }     .c-muted  { color: var(--muted); }
 
-    /* â”€â”€ Grid layouts â”€â”€ */
+    /* == Grid layouts == */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
     .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
     @media (max-width: 900px)  { .grid-2 { grid-template-columns: 1fr; } }
     @media (max-width: 1100px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 700px)  { .grid-3 { grid-template-columns: 1fr; } }
 
-    /* â”€â”€ Panel â”€â”€ */
+    /* == Panel == */
     .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1.5rem; }
     .panel-head {
       display: flex; align-items: center; justify-content: space-between;
@@ -145,7 +146,7 @@
     .panel-head h2 { font-family: 'Orbitron', sans-serif; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; }
     .panel-head-count { font-size: 12px; color: var(--muted); }
 
-    /* â”€â”€ Bar chart â”€â”€ */
+    /* == Bar chart == */
     .bar-chart { padding: 1rem 1.25rem; }
     .bar-row { display: flex; align-items: center; gap: .75rem; margin-bottom: .6rem; }
     .bar-row:last-child { margin-bottom: 0; }
@@ -154,7 +155,7 @@
     .bar-fill  { height: 100%; border-radius: 3px; background: var(--accent); transition: width 0.5s ease; }
     .bar-val   { font-size: 12px; color: var(--muted); width: 40px; text-align: right; flex-shrink: 0; }
 
-    /* â”€â”€ Funnel â”€â”€ */
+    /* == Funnel == */
     .funnel { padding: 1rem 1.25rem; }
     .funnel-step { display: flex; align-items: center; gap: 1rem; margin-bottom: .75rem; position: relative; }
     .funnel-step:not(:last-child)::after {
@@ -169,7 +170,7 @@
     .funnel-track { width: 100px; height: 4px; background: var(--surface-3); border-radius: 2px; overflow: hidden; }
     .funnel-bar   { height: 100%; border-radius: 2px; background: var(--accent2); transition: width 0.5s ease; }
 
-    /* â”€â”€ Table â”€â”€ */
+    /* == Table == */
     .data-table { width: 100%; border-collapse: collapse; }
     .data-table th {
       font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted);
@@ -184,7 +185,7 @@
     .badge-orange { background: rgba(255,153,34,.12);  color: var(--accent3); }
     .badge-blue   { background: rgba(34,170,255,.12);  color: var(--accent4); }
 
-    /* â”€â”€ Activity feed â”€â”€ */
+    /* == Activity feed == */
     .feed { padding: 0; max-height: 340px; overflow-y: auto; }
     .feed-item { display: flex; align-items: flex-start; gap: .75rem; padding: .7rem 1.25rem; border-bottom: 1px solid var(--border); font-size: 12px; }
     .feed-item:last-child { border-bottom: none; }
@@ -194,7 +195,7 @@
     .feed-text { flex: 1; color: var(--text); line-height: 1.5; }
     .feed-time { color: var(--muted); flex-shrink: 0; }
 
-    /* â”€â”€ Context nav â”€â”€ */
+    /* == Context nav == */
     .ctx-nav {
       display: flex; align-items: stretch; gap: .75rem;
       margin-bottom: 2rem; flex-wrap: wrap;
@@ -211,10 +212,10 @@
     .ctx-btn__icon  { font-size: 20px; line-height: 1; }
     .ctx-btn__label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap; }
 
-    /* â”€â”€ Empty / error â”€â”€ */
+    /* == Empty / error == */
     .empty { padding: 2rem 1.25rem; text-align: center; color: var(--muted); font-size: 13px; }
 
-    /* â”€â”€ Scrollbar â”€â”€ */
+    /* == Scrollbar == */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: var(--surface); }
     ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
@@ -222,21 +223,21 @@
 </head>
 <body>
 
-<!-- â”€â”€ Auth Gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<!-- Auth Gate ==================================================== -->
 <div id="authGate">
   <div class="auth-box">
     <h1>AGEE ARCADE</h1>
-    <p>Analytics dashboard â€” sign in with your admin account.</p>
+    <p>Analytics dashboard - sign in with your admin account.</p>
     <label for="emailInput">Email</label>
     <input id="emailInput" type="email" placeholder="you@example.com" autocomplete="email" />
     <label for="passInput">Password</label>
-    <input id="passInput" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password" />
+    <input id="passInput" type="password" placeholder="••••••••" autocomplete="current-password" />
     <button class="auth-btn" onclick="Admin.login()">SIGN IN</button>
     <p id="authError">Sign-in failed. Check your credentials or confirm your account has admin access.</p>
   </div>
 </div>
 
-<!-- â”€â”€ Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<!-- Dashboard ================================================== -->
 <div id="dashboard">
 
   <div id="loadingBar"></div>
@@ -259,7 +260,7 @@
 
   <div class="dash-body">
 
-    <!-- â”€â”€ Context nav: Arcade + each game â”€â”€ -->
+    <!-- Context nav: Arcade + each game -->
     <div class="ctx-nav" id="ctxNav">
       <button class="ctx-btn ctx-btn--active" data-view="arcade" onclick="Admin.switchView('arcade')">
         <span class="ctx-btn__icon">&#x1F3AE;</span>
@@ -283,11 +284,11 @@
       </button>
     </div>
 
-    <!-- â”€â”€ KPI row â€” swapped by view â”€â”€ -->
+    <!-- KPI row - swapped by view -->
     <div class="stat-row" id="kpiRow"></div>
 
     <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         ARCADE VIEW
+    ARCADE VIEW
     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="arcade-view">
 
@@ -318,7 +319,7 @@
     </div><!-- /arcade-view -->
 
     <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         GAME VIEW
+    GAME VIEW
     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="game-view" hidden>
 
@@ -366,7 +367,7 @@
 
     </div><!-- /game-view -->
 
-    <!-- â”€â”€ Comments â€” shared across all views, filtered by active context â”€â”€ -->
+    <!-- Comments - shared across all views, filtered by active context -->
     <div class="panel" style="margin-top:1.5rem;">
       <div class="panel-head">
         <h2>Comments</h2>
@@ -391,7 +392,7 @@ const Admin = (() => {
 
   const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  /* â”€â”€ Inactivity timeout (30 min) â”€â”€ */
+  /* == Inactivity timeout (30 min) == */
   let _inactiveTimer = null;
   function _resetTimer() { clearTimeout(_inactiveTimer); _inactiveTimer = setTimeout(signOut, 30 * 60 * 1000); }
   function _startInactivityWatch() {
@@ -399,7 +400,7 @@ const Admin = (() => {
     _resetTimer();
   }
 
-  /* â”€â”€ Auth â”€â”€ */
+  /* == Auth == */
   async function login() {
     const email = document.getElementById('emailInput').value.trim();
     const pass  = document.getElementById('passInput').value;
@@ -424,7 +425,7 @@ const Admin = (() => {
     reload();
   }
 
-  /* â”€â”€ View switcher â”€â”€ */
+  /* == View switcher == */
   const GAME_DEFS = {
     'depths-of-ashenveil': { label: 'Depths of Ashenveil', ids: ['depths-of-ashenveil', 'depths_of_ashenveil'], comments: 'depths-of-ashenveil', metaTable: 'depths_player_meta', progress: 'Floor', score: 'Level' },
     'maze-runner': { label: 'Maze Runner', ids: ['maze-runner', 'maze_runner'], comments: 'maze-runner', progress: 'Floor', score: 'Score' },
@@ -470,21 +471,21 @@ const Admin = (() => {
     if (scoreHead) scoreHead.textContent = score;
   }
 
-  /* â”€â”€ Date range â”€â”€ */
+  /* == Date range == */
   function _since() {
     const days = parseInt(document.getElementById('rangeSelect').value, 10);
     if (!days) return null;
     const d = new Date(); d.setDate(d.getDate() - days); return d.toISOString();
   }
 
-  /* â”€â”€ Loading bar â”€â”€ */
+  /* == Loading bar == */
   let _loadPct = 0;
   function _startLoad() { _loadPct = 10; _setLoad(); }
   function _tickLoad()  { _loadPct = Math.min(_loadPct + 10, 90); _setLoad(); }
   function _doneLoad()  { _loadPct = 100; _setLoad(); setTimeout(() => { _loadPct = 0; _setLoad(); }, 400); }
   function _setLoad()   { document.getElementById('loadingBar').style.width = _loadPct + '%'; }
 
-  /* â”€â”€ Reload â”€â”€ */
+  /* == Reload == */
   async function reload() {
     _startLoad();
     if (_currentView() === 'arcade') {
@@ -511,10 +512,10 @@ const Admin = (() => {
     _doneLoad();
   }
 
-  /* â”€â”€ Helpers â”€â”€ */
+  /* == Helpers == */
   function _fmt(n)  { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n); }
   function _fmtDur(secs) {
-    if (!secs || secs <= 0) return 'â€”';
+    if (!secs || secs <= 0) return '—';
     if (secs < 60) return secs + 's';
     return Math.floor(secs / 60) + 'm ' + (secs % 60) + 's';
   }
@@ -546,7 +547,7 @@ const Admin = (() => {
   const SOURCE_CLASS  = { linkedin:'badge-blue', direct:'badge-green', github_pages:'badge-purple' };
 
   /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     ARCADE VIEW LOADERS
+  ARCADE VIEW LOADERS
   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
   async function loadArcadeKPIs() {
@@ -689,7 +690,7 @@ const Admin = (() => {
   }
 
   /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     GAME VIEW LOADERS
+  GAME VIEW LOADERS
   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
   async function loadGameKPIs() {
@@ -713,7 +714,7 @@ const Admin = (() => {
     document.getElementById('kpiRow').innerHTML = `
       <div class="stat-card"><div class="stat-card__label">Game Starts</div><div class="stat-card__value c-purple">${_fmt(gsCount||0)}</div><div class="stat-card__sub">${_escHtml(gameName)}</div></div>
       <div class="stat-card"><div class="stat-card__label">Avg Play Time</div><div class="stat-card__value c-green">${_fmtDur(avgPlay)}</div><div class="stat-card__sub">sessions &gt; 30s</div></div>
-      <div class="stat-card"><div class="stat-card__label">Best Floor</div><div class="stat-card__value c-orange">${maxFloor||'â€”'}</div><div class="stat-card__sub">all time highest</div></div>
+      <div class=”stat-card”><div class=”stat-card__label”>Best Floor</div><div class=”stat-card__value c-orange”>${maxFloor||'—'}</div><div class=”stat-card__sub”>all time highest</div></div>
       <div class="stat-card"><div class="stat-card__label">Total Deaths</div><div class="stat-card__value c-red">${_fmt(deaths)}</div><div class="stat-card__sub">player_died events</div></div>`;
     _tickLoad();
   }
@@ -774,7 +775,7 @@ const Admin = (() => {
         <td><span class="badge ${sc}">${_escHtml(SOURCE_LABELS[src]||src)}</span></td>
         <td>${r.max_floor||1}</td><td>${r.max_level||1}</td>
         <td>${_fmtDur(r.duration_seconds)}</td>
-        <td><span class="badge ${rc}">${_escHtml(r.end_reason||'â€”')}</span></td>
+        <td><span class=”badge ${rc}”>${_escHtml(r.end_reason||'—')}</span></td>
         <td style="color:var(--muted)">${_timeAgo(r.started_at)}</td>
       </tr>`;
     }).join('');
@@ -811,7 +812,7 @@ const Admin = (() => {
     thead.innerHTML = '<tr>' + cols.map(c => `<th>${_escHtml(c.replace(/_/g,' '))}</th>`).join('') + '</tr>';
     tbody.innerHTML  = data.map(row => '<tr>' + cols.map(c => {
       const val = row[c];
-      if (val === null || val === undefined) return '<td style="color:var(--muted)">â€”</td>';
+      if (val === null || val === undefined) return '<td style=”color:var(--muted)”>—</td>';
       if (typeof val === 'object') return `<td style="font-family:monospace;font-size:11px">${_escHtml(JSON.stringify(val))}</td>`;
       if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val))
         return `<td style="color:var(--muted);font-size:12px" title="${_escHtml(val)}">${_timeAgo(val)}</td>`;
@@ -820,7 +821,7 @@ const Admin = (() => {
     _tickLoad();
   }
 
-  /* â”€â”€ Event feed (shared, rendered into separate containers per view) â”€â”€ */
+  /* == Event feed (shared, rendered into separate containers per view) == */
   async function loadEventFeed(view) {
     const containerId = view === 'arcade' ? 'eventFeedArcade' : 'eventFeedGame';
     let q = _sb.from('arcade_events')
@@ -846,7 +847,7 @@ const Admin = (() => {
     el.innerHTML = data.map(e => {
       const info   = ICONS[e.event_type] || { dot: '', text: e.event_type.replace(/_/g,' ') };
       const detail = e.event_data && Object.keys(e.event_data).length
-        ? ' â€” ' + Object.entries(e.event_data).map(([k,v]) => k+': '+v).join(', ') : '';
+        ? ' | ' + Object.entries(e.event_data).map(([k,v]) => k+': '+v).join(', ') : '';
       return `<div class="feed-item">
         <div class="feed-dot ${info.dot}"></div>
         <span class="feed-text">${_escHtml(info.text)}${_escHtml(detail)}</span>
@@ -856,7 +857,7 @@ const Admin = (() => {
     _tickLoad();
   }
 
-  /* â”€â”€ Init â”€â”€ */
+  /* == Init == */
   (async function init() {
     const { data: { session } } = await _sb.auth.getSession();
     if (session && session.user?.app_metadata?.role === 'admin') { showDashboard(); return; }

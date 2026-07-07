@@ -205,8 +205,8 @@ window.ArcadePlayer = (() => {
       const moveZ = Math.cos(_charYaw) * moveInput * SPEED * dt;
 
       // Clamp to room bounds; cabinets sit against the back wall (z=-14.3)
-      _x = Math.max(-13.5, Math.min(13.5, _x + moveX));
-      _z = Math.max(-13.5, Math.min(13.5, _z + moveZ));
+      _x = Math.max(-14.8, Math.min(13.5, _x + moveX));
+      _z = Math.max(-18, Math.min(13.5, _z + moveZ));
       // Cabinet collision. Keep the player's body far enough forward that the
       // head and hat cannot clip through the protruding control panel.
       if (window.ArcadeCabinets) {

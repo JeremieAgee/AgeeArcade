@@ -85,15 +85,19 @@ window.ArcadeCabinets = (() => {
       ],
     },
     {
-      id:       'coming-soon',
-      title:    'Coming\nSoon',
-      marquee:  'COMING SOON',
-      url:      null,
+      id:       'agee-hoops',
+      title:    'Agee\nHoops',
+      marquee:  'AGEE HOOPS',
+      url:      './games/agee-hoops/',
+      image:    '../images/agee-hoops.png',
       position: [12, 0, -14.3],
-      neon:     0x4488ff,
-      neonHex:  '#4488ff',
-      screen:   0x000a1a,
-      urls:     [],
+      neon:     0xffd700,
+      neonHex:  '#ffd700',
+      screen:   0x0a0a0f,
+      urls:     [
+        './games/agee-hoops/',
+        './games/agee-hoops/style.css',
+      ],
     },
   ];
 
