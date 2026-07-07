@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Agee Arcade Hall of Fame. Legendary players and record-breaking achievements.">
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src  'self' 'unsafe-inline'
+                  https://cdnjs.cloudflare.com
+                  https://cdn.jsdelivr.net
+                  https://pagead2.googlesyndication.com
+                  https://ep2.adtrafficquality.google;
+      style-src   'self' 'unsafe-inline'
+                  https://fonts.googleapis.com;
+      font-src    'self'
+                  https://fonts.gstatic.com;
+      connect-src 'self'
+                  https://xdvrgeaivfqpcsmuqeyi.supabase.co
+                  wss://xdvrgeaivfqpcsmuqeyi.supabase.co
+                  https://pagead2.googlesyndication.com
+                  https://googleads.g.doubleclick.net
+                  https://ep1.adtrafficquality.google;
+      img-src     'self' data: blob:
+                  https://www.googletagmanager.com
+                  https://pagead2.googlesyndication.com
+                  https://googleads.g.doubleclick.net;
+      frame-src   https://googleads.g.doubleclick.net;
+      object-src  'none';
+      base-uri    'self';
+      form-action 'self';
+    ">
+    <title>Hall of Fame - Agee Arcade</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link rel="stylesheet" href="../css/main.css">
+    <style>
+      :root {
+        --hof-gold: #ffd700;
+        --hof-silver: #c0c0c0;
+        --hof-bronze: #cd7f32;
+      }
+
+      .halloffame-hero {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        background: linear-gradient(135deg, rgba(212, 136, 10, 0.1), rgba(0, 255, 136, 0.05));
+        border-bottom: 2px solid rgba(160, 80, 255, 0.3);
+        margin-bottom: 2rem;
+      }
+
+      .halloffame-hero__eyebrow {
+        font-size: 0.875rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--accent-secondary);
+        margin-bottom: 0.5rem;
+      }
+
+      .halloffame-title {
+        font-size: 3rem;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        margin: 0.5rem 0;
+        background: linear-gradient(135deg, var(--hof-gold), var(--accent-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .halloffame-subtitle {
+        font-size: 1.125rem;
+        color: var(--text-secondary);
+        margin: 1rem 0 0;
+      }
+
+      .halloffame-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+      }
+
+      .halloffame-card {
+        background: linear-gradient(135deg, rgba(20, 16, 42, 0.8), rgba(14, 11, 26, 0.6));
+        border: 1px solid rgba(160, 80, 255, 0.3);
+        border-radius: 8px;
+        padding: 1.5rem;
+        backdrop-filter: blur(8px);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .halloffame-card::before {
+        content: '';
+        position: absolute;
+        top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: radial-gradient(circle, rgba(160, 80, 255, 0.05), transparent);
+        pointer-events: none;
+        transition: all 0.3s ease;
+      }
+
+      .halloffame-card:hover {
+        border-color: rgba(160, 80, 255, 0.6);
+        box-shadow: 0 0 24px rgba(160, 80, 255, 0.15);
+        transform: translateY(-4px);
+      }
+
+      .halloffame-card-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+        letter-spacing: 0.05em;
+        position: relative;
+        z-index: 1;
+      }
+
+      .halloffame-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .halloffame-list-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid rgba(160, 80, 255, 0.1);
+        position: relative;
+        z-index: 1;
+      }
+
+      .halloffame-list-item:last-child {
+        border-bottom: none;
+      }
+
+      .halloffame-rank {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        margin-right: 1rem;
+        font-weight: 700;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+      }
+
+      .halloffame-rank.rank-1 {
+        background: rgba(255, 215, 0, 0.2);
+        color: var(--hof-gold);
+        border: 1px solid var(--hof-gold);
+      }
+
+      .halloffame-rank.rank-2 {
+        background: rgba(192, 192, 192, 0.15);
+        color: var(--hof-silver);
+        border: 1px solid var(--hof-silver);
+      }
+
+      .halloffame-rank.rank-3 {
+        background: rgba(205, 127, 50, 0.15);
+        color: var(--hof-bronze);
+        border: 1px solid var(--hof-bronze);
+      }
+
+      .halloffame-item-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .halloffame-item-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .halloffame-item-meta {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+      }
+
+      .halloffame-item-score {
+        text-align: right;
+        margin-left: 1rem;
+        flex-shrink: 0;
+      }
+
+      .halloffame-item-value {
+        font-weight: 700;
+        color: var(--accent-secondary);
+        font-size: 1rem;
+      }
+
+      .halloffame-item-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+      }
+
+      .halloffame-section {
+        margin-bottom: 3rem;
+      }
+
+      .halloffame-section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid rgba(160, 80, 255, 0.3);
+        letter-spacing: 0.05em;
+      }
+
+      .halloffame-achievements {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 1rem;
+        margin-bottom: 3rem;
+      }
+
+      .halloffame-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, rgba(212, 136, 10, 0.1), rgba(160, 80, 255, 0.05));
+        border: 1px solid rgba(212, 136, 10, 0.4);
+        border-radius: 8px;
+        text-align: center;
+        transition: all 0.3s ease;
+      }
+
+      .halloffame-badge:hover {
+        background: linear-gradient(135deg, rgba(212, 136, 10, 0.2), rgba(160, 80, 255, 0.1));
+        border-color: rgba(212, 136, 10, 0.7);
+        transform: scale(1.05);
+      }
+
+      .halloffame-badge-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .halloffame-badge-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .halloffame-badge-count {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-top: 0.25rem;
+      }
+
+      .halloffame-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+      }
+
+      .halloffame-stat-box {
+        background: linear-gradient(135deg, rgba(0, 204, 255, 0.1), rgba(160, 80, 255, 0.05));
+        border: 1px solid rgba(0, 204, 255, 0.3);
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+      }
+
+      .halloffame-stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--accent-secondary);
+        margin-bottom: 0.5rem;
+      }
+
+      .halloffame-stat-label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        letter-spacing: 0.05em;
+      }
+
+      .halloffame-loading {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        color: var(--text-secondary);
+      }
+
+      .halloffame-error {
+        text-align: center;
+        padding: 2rem 1.5rem;
+        background: rgba(255, 68, 68, 0.1);
+        border: 1px solid rgba(255, 68, 68, 0.3);
+        border-radius: 8px;
+        color: var(--text-secondary);
+      }
+
+      @media (max-width: 768px) {
+        .halloffame-title {
+          font-size: 2rem;
+        }
+
+        .halloffame-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .halloffame-achievements {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9709866738532619"
+         crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <header class="site-header">
+        <a class="logo" href="../">AGEE ARCADE</a>
+        <nav class="site-nav">
+            <span>Created By Jeremie Agee</span>
+            <a href="../leaderboards/">Leaderboards</a>
+            <a href="./" style="color:var(--text-primary);">Hall of Fame</a>
+            <a href="../about/">About</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="halloffame-hero container">
+            <p class="halloffame-hero__eyebrow">✦ Legendary Records ✦</p>
+            <h1 class="halloffame-title">HALL OF FAME</h1>
+            <p class="halloffame-subtitle">Celebrate the greatest champions and record-breaking achievements of the Arcade</p>
+        </section>
+
+        <!-- Global Statistics -->
+        <section class="halloffame-section container">
+            <h2 class="halloffame-section-title">⚡ Arcade Statistics</h2>
+            <div class="halloffame-stats-grid" id="statsContainer">
+                <div class="halloffame-loading">Loading statistics...</div>
+            </div>
+        </section>
+
+        <!-- Game Records -->
+        <section class="halloffame-section container">
+            <h2 class="halloffame-section-title">🏆 Game Records</h2>
+            <div class="halloffame-grid" id="recordsContainer">
+                <div class="halloffame-loading">Loading game records...</div>
+            </div>
+        </section>
+
+        <!-- Top Players Overall -->
+        <section class="halloffame-section container">
+            <h2 class="halloffame-section-title">👑 Top Players</h2>
+            <div class="halloffame-card">
+                <h3 class="halloffame-card-title">Most Completed Runs</h3>
+                <ul class="halloffame-list" id="topPlayersContainer">
+                    <li class="halloffame-loading">Loading top players...</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Achievements -->
+        <section class="halloffame-section container">
+            <h2 class="halloffame-section-title">🎖️ Achievements</h2>
+            <div class="halloffame-achievements" id="achievementsContainer">
+                <div class="halloffame-loading">Loading achievements...</div>
+            </div>
+        </section>
+
+        <!-- All-Time Leaderboard Snapshot -->
+        <section class="halloffame-section container">
+            <h2 class="halloffame-section-title">⭐ Hall of Fame Champions</h2>
+            <div class="halloffame-grid" id="leaderboardsContainer">
+                <div class="halloffame-loading">Loading champions...</div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <p>&copy; <span id="footer-year"></span> Created By Jeremie Agee. All rights reserved.</p>
+    </footer>
+
+    <!-- Fixed bottom ad banner -->
+    <div class="ad-bottom-strip">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-9709866738532619"
+             data-ad-slot="7890789789"
+             data-ad-format="horizontal"></ins>
+    </div>
+
+    <script src="../js/vendor/supabase.min.js"></script>
+    <script src="./halloffame.js" defer></script>
+    <script defer>
+      document.addEventListener('DOMContentLoaded', function () {
+        const yr = document.getElementById('footer-year');
+        if (yr) yr.textContent = new Date().getFullYear();
+      });
+    </script>
+
+</body>
+</html>

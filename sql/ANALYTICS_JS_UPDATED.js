@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   Agee Arcade — Analytics
+   Agee Arcade — Analytics [UPDATED FOR NEW SCHEMA]
    Requires window.supabase (Supabase UMD SDK) to be loaded first.
    Sets window.AgeeAnalytics synchronously; all DB ops are fire-and-forget.
 ═══════════════════════════════════════════════════════════════════════ */
@@ -79,45 +79,46 @@
 
   var referrer    = document.referrer || '';
   var source      = _source(referrer);
-  var isReturning = localStorage.getItem('agee_arcade.has_visited') === 'true';
-  localStorage.setItem('agee_arcade.has_visited', 'true');
 
   /* ── Session init ─────────────────────────────── */
   async function _initSession() {
     var sb = getClient();
     if (!sb) return;
     try {
-      // First: ensure visitor exists (ignore if already exists)
-      try {
-        await sb.from('arcade_visitors').insert({
-          visitor_id:     visitorId,
-          primary_source: source,
-          primary_referrer: referrer,
-        });
-      } catch (visitorErr) {
-        // Visitor already exists, that's OK — continue
-      }
-
-      // Second: create session (now visitor FK is satisfied)
-      await sb.from('arcade_sessions').insert({
-        session_id:    sessionId,
-        visitor_id:    visitorId,
-        referrer:      referrer,
-        source:        source,
-        landing_page:  location.pathname,
-        current_page:  location.pathname,
-        user_agent:    navigator.userAgent,
-        language:      navigator.language,
-        platform:      navigator.platform,
-        screen_width:  window.screen.width,
-        screen_height: window.screen.height,
-        is_returning:  isReturning,
+      // Call RPC function to upsert session (handles visitor tracking)
+      const { data, error } = await sb.rpc('upsert_session', {
+        p_session_id:     sessionId,
+        p_visitor_id:     visitorId,
+        p_referrer:       referrer,
+        p_source:         source,
+        p_landing_page:   location.pathname,
+        p_user_agent:     navigator.userAgent,
+        p_language:       navigator.language,
+        p_platform:       navigator.platform,
+        p_screen_width:   window.screen.width,
+        p_screen_height:  window.screen.height
       });
+
+      if (error) {
+        console.warn('[Analytics] Session init error:', error);
+      }
     } catch (e) {
-      console.warn('[Analytics] Session init failed:', e.message);
+      console.warn('[Analytics] Session init exception:', e);
     }
     _trackPageView();
   }
+
+  /* ── Heartbeat (every 30 seconds) ──────────── */
+  setInterval(async function () {
+    var sb = getClient();
+    if (!sb) return;
+    try {
+      await sb.rpc('heartbeat_session', {
+        p_session_id:   sessionId,
+        p_current_page: location.pathname
+      });
+    } catch (_) {}
+  }, 30000);
 
   /* ── Public API ───────────────────────────────── */
   async function _trackPageView() {
@@ -155,14 +156,15 @@
     var sb = getClient();
     if (!sb) return null;
     try {
-      var res = await sb.from('arcade_game_sessions').insert({
-        session_id: sessionId,
-        visitor_id: visitorId,
-        game_id:    gameId || GAME_ID,
-      }).select('id').single();
-      if (!res.error && res.data) {
-        window.AGEE_CURRENT_GAME_SESSION_ID = res.data.id;
-        return res.data.id;
+      const { data, error } = await sb.rpc('start_game_session', {
+        p_session_id: sessionId,
+        p_visitor_id: visitorId,
+        p_game_id:    gameId || GAME_ID
+      });
+
+      if (!error && data) {
+        window.AGEE_CURRENT_GAME_SESSION_ID = data;
+        return data;
       }
     } catch (_) {}
     return null;
@@ -174,17 +176,18 @@
     if (!id || !sb) return;
     var s = stats || {};
     try {
-      await sb.from('arcade_game_sessions').update({
-        ended_at:         new Date().toISOString(),
-        duration_seconds: s.duration_seconds || 0,
-        max_floor:        s.max_floor        || 1,
-        max_level:        s.max_level        || 1,
-        deaths:           s.deaths           || 0,
-        bosses_defeated:  s.bosses_defeated  || 0,
-        chests_opened:    s.chests_opened    || 0,
-        enemies_killed:   s.enemies_killed   || 0,
-        end_reason:       s.end_reason       || 'unknown',
-      }).eq('id', id);
+      await sb.rpc('end_game_session', {
+        p_game_session_id: id,
+        p_visitor_id:      visitorId,
+        p_duration_seconds: s.duration_seconds || 0,
+        p_max_floor:        s.max_floor        || 1,
+        p_max_level:        s.max_level        || 1,
+        p_deaths:           s.deaths           || 0,
+        p_bosses_defeated:  s.bosses_defeated  || 0,
+        p_chests_opened:    s.chests_opened    || 0,
+        p_enemies_killed:   s.enemies_killed   || 0,
+        p_end_reason:       s.end_reason       || 'unknown'
+      });
     } catch (_) {}
     window.AGEE_CURRENT_GAME_SESSION_ID = null;
   }
@@ -196,41 +199,33 @@
     window.AGEE_CURRENT_GAME_SESSION_ID = null;
     var s = stats || {};
     try {
-      fetch(SUPABASE_URL + '/rest/v1/arcade_game_sessions?id=eq.' + id, {
-        method: 'PATCH',
+      // Build JSON body for RPC call
+      var body = {
+        p_game_session_id: id,
+        p_visitor_id:      visitorId,
+        p_duration_seconds: s.duration_seconds || 0,
+        p_max_floor:        s.max_floor        || 1,
+        p_max_level:        s.max_level        || 1,
+        p_deaths:           s.deaths           || 0,
+        p_bosses_defeated:  s.bosses_defeated  || 0,
+        p_chests_opened:    s.chests_opened    || 0,
+        p_enemies_killed:   s.enemies_killed   || 0,
+        p_end_reason:       s.end_reason       || 'unknown'
+      };
+
+      fetch(SUPABASE_URL + '/rest/v1/rpc/end_game_session', {
+        method: 'POST',
         headers: {
           'apikey':        SUPABASE_ANON_KEY,
           'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
           'Content-Type':  'application/json',
           'Prefer':        'return=minimal',
         },
-        body: JSON.stringify({
-          ended_at:         new Date().toISOString(),
-          duration_seconds: s.duration_seconds || 0,
-          max_floor:        s.max_floor        || 1,
-          max_level:        s.max_level        || 1,
-          deaths:           s.deaths           || 0,
-          bosses_defeated:  s.bosses_defeated  || 0,
-          chests_opened:    s.chests_opened    || 0,
-          enemies_killed:   s.enemies_killed   || 0,
-          end_reason:       s.end_reason       || 'unknown',
-        }),
+        body: JSON.stringify(body),
         keepalive: true,
       });
     } catch (_) {}
   }
-
-  /* ── Heartbeat ────────────────────────────────── */
-  setInterval(async function () {
-    var sb = getClient();
-    if (!sb) return;
-    try {
-      await sb.from('arcade_sessions').update({
-        last_seen:    new Date().toISOString(),
-        current_page: location.pathname,
-      }).eq('session_id', sessionId);
-    } catch (_) {}
-  }, 30000);
 
   /* ── Expose ───────────────────────────────────── */
   window.AgeeAnalytics = {
