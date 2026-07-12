@@ -64,6 +64,7 @@
     // Expired or missing — start a new session
     var id = _uuid();
     sessionStorage.setItem('agee_arcade.session_id', id);
+    sessionStorage.removeItem('agee_arcade.session_registered');
     localStorage.setItem('agee_arcade.session_ts', now);
     return id;
   }
@@ -82,24 +83,32 @@
   var isReturning = localStorage.getItem('agee_arcade.has_visited') === 'true';
   localStorage.setItem('agee_arcade.has_visited', 'true');
 
-  /* ── Session init ─────────────────────────────── */
+  /* ── Session init ─────────────────────────────────────────────────────
+     Both the visitor and the session row only need to be written once —
+     re-running this on every page load (same tab/session) would just hit
+     the unique-key constraint again. A duplicate-key response (23505) still
+     shows up as a failed request in devtools even though it's caught, so
+     we track "already written" locally and skip the request entirely once
+     we know the row exists server-side.                                  */
   async function _initSession() {
     var sb = getClient();
     if (!sb) return;
-    try {
-      // First: ensure visitor exists (ignore if already exists)
-      try {
-        await sb.from('arcade_visitors').insert({
-          visitor_id:     visitorId,
-          primary_source: source,
-          primary_referrer: referrer,
-        });
-      } catch (visitorErr) {
-        // Visitor already exists, that's OK — continue
-      }
 
-      // Second: create session (now visitor FK is satisfied)
-      await sb.from('arcade_sessions').insert({
+    if (localStorage.getItem('agee_arcade.visitor_registered') !== 'true') {
+      var visitorRes = await sb.from('arcade_visitors').insert({
+        visitor_id:     visitorId,
+        primary_source: source,
+        primary_referrer: referrer,
+      });
+      if (!visitorRes.error || visitorRes.error.code === '23505') {
+        localStorage.setItem('agee_arcade.visitor_registered', 'true');
+      } else {
+        console.warn('[Analytics] Visitor init failed:', visitorRes.error.message);
+      }
+    }
+
+    if (sessionStorage.getItem('agee_arcade.session_registered') !== 'true') {
+      var sessionRes = await sb.from('arcade_sessions').insert({
         session_id:    sessionId,
         visitor_id:    visitorId,
         referrer:      referrer,
@@ -113,9 +122,13 @@
         screen_height: window.screen.height,
         is_returning:  isReturning,
       });
-    } catch (e) {
-      console.warn('[Analytics] Session init failed:', e.message);
+      if (!sessionRes.error || sessionRes.error.code === '23505') {
+        sessionStorage.setItem('agee_arcade.session_registered', 'true');
+      } else {
+        console.warn('[Analytics] Session init failed:', sessionRes.error.message);
+      }
     }
+
     _trackPageView();
   }
 
