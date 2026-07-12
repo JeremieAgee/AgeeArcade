@@ -72,6 +72,10 @@ function extractAssets(html, baseUrl) {
   for (const pattern of patterns) {
     let match;
     while ((match = pattern.re.exec(html))) {
+      // <link> tags like preconnect/dns-prefetch point at a bare origin
+      // (no path) rather than a fetchable resource — skip those or the
+      // browser ends up requesting e.g. "https://fonts.googleapis.com/" and 404s.
+      if (/<link\b/i.test(match[0]) && /\brel=["'][^"']*(preconnect|dns-prefetch|prerender)/i.test(match[0])) continue;
       try {
         const href = new URL(match[1], baseUrl).href;
         if (seenAssets.has(href)) continue;
